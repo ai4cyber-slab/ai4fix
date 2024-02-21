@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "install",
+			"path": "vscode-plugin",
+			"group": "clean",
+			"problemMatcher": [],
+			"label": "npm: install - vscode-plugin",
+			"detail": "install dependencies from package"
+		}
+	]
+}

@@ -1,0 +1,15 @@
+.idea/
+target/
+*.iml
+
+main.log
+
+config.properties
+supported_problem_types.properties
+
+test-project/.classpath
+test-project/.columbus_java
+test-project/.project
+test-project/.settings
+test-project/target
+node_modules/
