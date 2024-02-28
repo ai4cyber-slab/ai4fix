@@ -398,100 +398,68 @@ export function init(
 
   const fs = require('fs').promises;
   async function generateTestForFile(filePath: string) {
-    let pythonScriptPath: string | undefined = "";
-    if (
-      vscode.workspace
-        .getConfiguration()
-        .get<string>("aifix4seccode.analyzer.pythonScriptPath")
-    ) {
-      pythonScriptPath = vscode.workspace
-        .getConfiguration()
-        .get<string>("aifix4seccode.analyzer.pythonScriptPath");
-    } else {
-      vscode.window.showErrorMessage("Python script path is not set in the extension settings.");
-      return;
-    }
-    let testFolderPath: string | undefined = "";
-    if (
-      vscode.workspace
-        .getConfiguration()
-        .get<string>("aifix4seccode.analyzer.testFolderPath")
-    ) {
-      testFolderPath = vscode.workspace
-        .getConfiguration()
-        .get<string>("aifix4seccode.analyzer.testFolderPath");
-    } else {
-      vscode.window.showErrorMessage("Test folder path is not set in the extension settings.");
-      return;
-    }
-    let generatedPatchesPath: string | undefined = "";
-    if (
-      vscode.workspace
-        .getConfiguration()
-        .get<string>("aifix4seccode.analyzer.generatedPatchesPath")
-    ) {
-      generatedPatchesPath = vscode.workspace
-        .getConfiguration()
-        .get<string>("aifix4seccode.analyzer.generatedPatchesPath");
-    } else {
-      vscode.window.showErrorMessage("Generated patches path is not set in the extension settings.");
-      return;
-    }
     try {
-      vscode.window.withProgress(
+      const pythonScriptPath = await getConfigSetting("aifix4seccode.analyzer.pythonScriptPath", "Python script path is not set in the extension settings.");
+      const testFolderPath = await getConfigSetting("aifix4seccode.analyzer.testFolderPath", "Test folder path is not set in the extension settings.");
+      const generatedPatchesPath = await getConfigSetting("aifix4seccode.analyzer.generatedPatchesPath", "Generated patches path is not set in the extension settings.");
+  
+      await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
           title: "Generating test...",
           cancellable: false,
         },
         async () => {
-          const fileExtension = path.extname(filePath);
-          const baseFileName = path.basename(filePath, fileExtension);
-          const TestFileName = `${baseFileName}Test${fileExtension}`;
-          const TestFilePath = path.join(testFolderPath, TestFileName);
-
-          const generatedTestFileName = `${baseFileName}AITest${fileExtension}`;
-          const generatedTestFilePath = path.join(testFolderPath, generatedTestFileName);
-
-          const diffFilePath = await findRelevantDiffFile((`${baseFileName}${fileExtension}`), generatedPatchesPath);
-
-          const testCode: string = await runPythonScript(pythonScriptPath!, filePath, TestFilePath, diffFilePath) as string;
-
-          if (testCode.includes('```')) {
-            let startIndex;
-            let endIndex;
-            if (testCode.includes('```java')){
-              startIndex = testCode.indexOf('```java');
-              endIndex = testCode.indexOf('```', startIndex + 7);
-            }else{
-              startIndex = testCode.indexOf('```');
-              endIndex = testCode.indexOf('```', startIndex + 3);
-            }
-            let filteredTestCode = '';
-            if (startIndex !== -1 && endIndex !== -1) {
-              if (testCode.includes('```java')){
-                filteredTestCode = testCode.substring(startIndex + 7, endIndex).trim();
-              }else{
-                filteredTestCode = testCode.substring(startIndex + 3, endIndex).trim();
-              }
-            } else {
-              console.error('Generated test may be empty.');
-            }
-
-            await fs.writeFile(generatedTestFilePath, filteredTestCode);
-          } else {
-            await fs.writeFile(generatedTestFilePath, testCode);
-          }
+          const generatedTestFilePath = await generateAndSaveTest(filePath, pythonScriptPath, testFolderPath, generatedPatchesPath);
           vscode.window.showInformationMessage(`Test file created: ${generatedTestFilePath}`);
           logging.LogInfo("Test generated successfully.");
           runGeneratedTest(filePath);
         }
       );
-
     } catch (error) {
       vscode.window.showErrorMessage("Error in test generation: " + error);
       logging.LogError("Error in test generation");
     }
+  }
+  
+  async function generateAndSaveTest(filePath: string, pythonScriptPath: string, testFolderPath: string, generatedPatchesPath: string): Promise<string> {
+    const fileExtension = path.extname(filePath);
+    const baseFileName = path.basename(filePath, fileExtension);
+    const generatedTestFileName = `${baseFileName}AITest${fileExtension}`;
+    const generatedTestFilePath = path.join(testFolderPath, generatedTestFileName);
+    const diffFilePath = await findRelevantDiffFile(`${baseFileName}${fileExtension}`, generatedPatchesPath);
+  
+    const testCode: string = await runPythonScript(pythonScriptPath, filePath, path.join(testFolderPath, `${baseFileName}Test${fileExtension}`), diffFilePath) as string;
+    const filteredTestCode = extractTestCode(testCode);
+  
+    await fs.writeFile(generatedTestFilePath, filteredTestCode);
+    return generatedTestFilePath;
+  }
+  
+  function extractTestCode(testCode: string): string {
+    if (!testCode.includes('```')) {
+      return testCode;
+    }
+  
+    const codeBlockStart = testCode.includes('```java') ? '```java' : '```';
+    const startIndex = testCode.indexOf(codeBlockStart);
+    const endIndex = testCode.indexOf('```', startIndex + codeBlockStart.length);
+  
+    if (startIndex === -1 || endIndex === -1) {
+      console.error('Generated test may be empty.');
+      return '';
+    }
+  
+    return testCode.substring(startIndex + codeBlockStart.length, endIndex).trim();
+  }
+
+  async function getConfigSetting(settingKey: string, errorMessage: string): Promise<string> {
+    const settingValue = vscode.workspace.getConfiguration().get<string>(settingKey);
+    if (!settingValue) {
+      vscode.window.showErrorMessage(errorMessage);
+      throw new Error(errorMessage);
+    }
+    return settingValue;
   }
 
   let retryCount = 0;
