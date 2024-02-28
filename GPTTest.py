@@ -8,12 +8,13 @@ load_dotenv()
 
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
-if len(sys.argv) < 3:
-    print("Error: Not enough arguments provided. Expected file paths for Java code, test code.")
+if len(sys.argv) < 4:
+    print("Error: Not enough arguments provided. Expected file paths for Java code, diff, test code.")
     sys.exit(1)
 
 java_file_path = sys.argv[1]
 test_file_path = sys.argv[2]
+diff_file_path = sys.argv[3]
 
 def read_file(file_path):
     try:
@@ -25,9 +26,10 @@ def read_file(file_path):
 
 java_code = read_file(java_file_path)
 java_test = read_file(test_file_path)
+diff_file = read_file(diff_file_path)
 
 # prompt
-prompt = f"Updated Java Code:\n{java_code}\n\nOriginal Test Code:\n{java_test}\n\nPlease suggest an updated test code considering the above changes. Only write the code, no additional comment. You should return with the whole original test file with the extra modifications."
+prompt = f"Original Java Code:\n{java_code}\n\nDiff for the Original Java Code:\n{diff_file}\n\nTest Code for the Original Java Code:\n{java_test}\n\nPlease suggest an updated test code considering the above changes. Only write the code, no additional comment. You should return with the whole original test file with the extra modifications."
 response = openai.ChatCompletion.create(
     model="gpt-4",
     messages=[

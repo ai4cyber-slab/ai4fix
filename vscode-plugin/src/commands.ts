@@ -424,6 +424,19 @@ export function init(
       vscode.window.showErrorMessage("Test folder path is not set in the extension settings.");
       return;
     }
+    let generatedPatchesPath: string | undefined = "";
+    if (
+      vscode.workspace
+        .getConfiguration()
+        .get<string>("aifix4seccode.analyzer.generatedPatchesPath")
+    ) {
+      generatedPatchesPath = vscode.workspace
+        .getConfiguration()
+        .get<string>("aifix4seccode.analyzer.generatedPatchesPath");
+    } else {
+      vscode.window.showErrorMessage("Generated patches path is not set in the extension settings.");
+      return;
+    }
     try {
       vscode.window.withProgress(
         {
@@ -433,7 +446,6 @@ export function init(
         },
         async () => {
           const fileExtension = path.extname(filePath);
-
           const baseFileName = path.basename(filePath, fileExtension);
           const TestFileName = `${baseFileName}Test${fileExtension}`;
           const TestFilePath = path.join(testFolderPath, TestFileName);
@@ -441,9 +453,9 @@ export function init(
           const generatedTestFileName = `${baseFileName}AITest${fileExtension}`;
           const generatedTestFilePath = path.join(testFolderPath, generatedTestFileName);
 
-          const testCode: string = await runPythonScript(pythonScriptPath!, filePath, TestFilePath) as string;
+          const diffFilePath = await findRelevantDiffFile((`${baseFileName}${fileExtension}`), generatedPatchesPath);
 
-          logging.LogInfo(testCode);
+          const testCode: string = await runPythonScript(pythonScriptPath!, filePath, TestFilePath, diffFilePath) as string;
 
           if (testCode.includes('```')) {
             let startIndex;
@@ -519,11 +531,38 @@ export function init(
       }
     );
   }
+  
+  const cp = require('child_process');
+  const fs2 = require('fs');
+  
+  async function findRelevantDiffFile(baseFileName: any, generatedPatchesPath: string | undefined) {
+    const files = await fs2.promises.readdir(generatedPatchesPath);
+    for (const file of files) {
+        const filePath = path.join(generatedPatchesPath, file);
+        const content = await fs2.promises.readFile(filePath, 'utf8');
+        if (isRelevantDiff(content, baseFileName)) {
+            return filePath;
+        }
+    }
+    return null;
+}
 
-  function runPythonScript(scriptPath: string, filePath: string, testFilePath: string) {
+function isRelevantDiff(diffContent: string, baseFileName: string) {
+    const regex = /--- a\/.+\/([^\/]+)\n\+\+\+ b\/.+\/([^\/]+)/g;
+    let match;
+    while ((match = regex.exec(diffContent)) !== null) {
+        const [, oldFileName, newFileName] = match;
+        if (baseFileName === oldFileName || baseFileName === newFileName) {
+            return true;
+        }
+    }
+    return false;
+}
+
+  function runPythonScript(scriptPath: string, filePath: string, testFilePath: string, diffFilePath: string) {
     return new Promise((resolve, reject) => {
-      const command = `python "${scriptPath}" "${filePath}" "${testFilePath}"`;
-      cp.exec(command, (error: any, stdout: unknown, stderr: any) => {
+      const command = `python "${scriptPath}" "${filePath}" "${testFilePath}" "${diffFilePath}"`;
+      cp.exec(command, (error: any, stdout: string, stderr: any) => {
         if (error) {
           console.error("Error during running the python script:", stderr);
           reject(error);
@@ -532,16 +571,13 @@ export function init(
         }
       });
     });
-  }
-
-  const cp = require('child_process');
+  } 
 
   async function runMavenTest(pomPath: string, testClassName: string) {
     logging.LogInfo("===== Running generated test for current file. =====");
     return new Promise((resolve, reject) => {
       cp.exec(`mvn -f "${pomPath}" test -Dtest=${testClassName}`, (error: any, stdout: any, stderr: any) => {
         if (error) {
-          console.error('An error occured during running the test: ', stderr);
           reject(error);
         } else {
           resolve(stdout);
