@@ -396,13 +396,16 @@ export function init(
     return generateTestForFile(currentFilePath);
   }
 
+  // problems view --> szeparáljuk issue csoportokat
+  // patchek helyett issuek a problem viewbe
+
   const fs = require('fs').promises;
   async function generateTestForFile(filePath: string) {
     try {
       const pythonScriptPath = await getConfigSetting("aifix4seccode.analyzer.pythonScriptPath", "Python script path is not set in the extension settings.");
       const testFolderPath = await getConfigSetting("aifix4seccode.analyzer.testFolderPath", "Test folder path is not set in the extension settings.");
       const generatedPatchesPath = await getConfigSetting("aifix4seccode.analyzer.generatedPatchesPath", "Generated patches path is not set in the extension settings.");
-  
+
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
@@ -421,35 +424,35 @@ export function init(
       logging.LogError("Error in test generation");
     }
   }
-  
+
   async function generateAndSaveTest(filePath: string, pythonScriptPath: string, testFolderPath: string, generatedPatchesPath: string): Promise<string> {
     const fileExtension = path.extname(filePath);
     const baseFileName = path.basename(filePath, fileExtension);
     const generatedTestFileName = `${baseFileName}AITest${fileExtension}`;
     const generatedTestFilePath = path.join(testFolderPath, generatedTestFileName);
     const diffFilePath = await findRelevantDiffFile(`${baseFileName}${fileExtension}`, generatedPatchesPath);
-  
+
     const testCode: string = await runPythonScript(pythonScriptPath, filePath, path.join(testFolderPath, `${baseFileName}Test${fileExtension}`), diffFilePath) as string;
     const filteredTestCode = extractTestCode(testCode);
-  
+
     await fs.writeFile(generatedTestFilePath, filteredTestCode);
     return generatedTestFilePath;
   }
-  
+
   function extractTestCode(testCode: string): string {
     if (!testCode.includes('```')) {
       return testCode;
     }
-  
+
     const codeBlockStart = testCode.includes('```java') ? '```java' : '```';
     const startIndex = testCode.indexOf(codeBlockStart);
     const endIndex = testCode.indexOf('```', startIndex + codeBlockStart.length);
-  
+
     if (startIndex === -1 || endIndex === -1) {
       console.error('Generated test may be empty.');
       return '';
     }
-  
+
     return testCode.substring(startIndex + codeBlockStart.length, endIndex).trim();
   }
 
@@ -499,33 +502,33 @@ export function init(
       }
     );
   }
-  
+
   const cp = require('child_process');
   const fs2 = require('fs');
-  
+
   async function findRelevantDiffFile(baseFileName: any, generatedPatchesPath: string | undefined) {
     const files = await fs2.promises.readdir(generatedPatchesPath);
     for (const file of files) {
-        const filePath = path.join(generatedPatchesPath, file);
-        const content = await fs2.promises.readFile(filePath, 'utf8');
-        if (isRelevantDiff(content, baseFileName)) {
-            return filePath;
-        }
+      const filePath = path.join(generatedPatchesPath, file);
+      const content = await fs2.promises.readFile(filePath, 'utf8');
+      if (isRelevantDiff(content, baseFileName)) {
+        return filePath;
+      }
     }
     return null;
-}
+  }
 
-function isRelevantDiff(diffContent: string, baseFileName: string) {
+  function isRelevantDiff(diffContent: string, baseFileName: string) {
     const regex = /--- a\/.+\/([^\/]+)\n\+\+\+ b\/.+\/([^\/]+)/g;
     let match;
     while ((match = regex.exec(diffContent)) !== null) {
-        const [, oldFileName, newFileName] = match;
-        if (baseFileName === oldFileName || baseFileName === newFileName) {
-            return true;
-        }
+      const [, oldFileName, newFileName] = match;
+      if (baseFileName === oldFileName || baseFileName === newFileName) {
+        return true;
+      }
     }
     return false;
-}
+  }
 
   function runPythonScript(scriptPath: string, filePath: string, testFilePath: string, diffFilePath: string) {
     return new Promise((resolve, reject) => {
@@ -539,7 +542,7 @@ function isRelevantDiff(diffContent: string, baseFileName: string) {
         }
       });
     });
-  } 
+  }
 
   async function runMavenTest(pomPath: string, testClassName: string) {
     logging.LogInfo("===== Running generated test for current file. =====");
@@ -692,6 +695,12 @@ function isRelevantDiff(diffContent: string, baseFileName: string) {
             );
             // set selection of warning:
             await setIssueSelectionInEditor(patchPath);
+            const targetLine = await extractLineFromPatch(upath.join(PATCH_FOLDER, patchPath));
+            if (vscode.window.activeTextEditor) {
+              const position = new vscode.Position(targetLine - 1, 0);
+              vscode.window.activeTextEditor.selection = new vscode.Selection(position, position);
+              vscode.window.activeTextEditor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
+            }
           }
         );
       });
@@ -722,6 +731,17 @@ function isRelevantDiff(diffContent: string, baseFileName: string) {
     );
     editor!.selection = newSelection;
   }
+
+  async function extractLineFromPatch(patchPath: string) {
+    const patchContent = await fs2.promises.readFile(patchPath, 'utf8');
+    const match = /@@ -(\d+),\d+ \+\d+,\d+ @@/.exec(patchContent);
+
+    if (match && match[1]) {
+        return parseInt(match[1])+5;
+    } else {
+        throw new Error("Unable to extract line number from patch file.");
+    }
+}
 
   function loadPatch(patchPath: string) {
     logging.LogInfo("===== Executing loadPatch command. =====");
