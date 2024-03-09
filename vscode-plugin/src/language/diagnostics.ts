@@ -19,88 +19,24 @@ export async function refreshDiagnostics(
 ) {
   try {
     const diagnostics: vscode.Diagnostic[] = [];
-    initIssues().then(() => {
-      // for each issue we create a diagnosctic.
-      if (issueGroups) {
-        Object.values(issueGroups).forEach((issues: any) => {
-          issues.forEach((issue: any) => {
-            const fixRange = issue.textRange;
-            issue.patches.forEach((fix: IFix) => {
-              const fixText = fix.explanation;
-              const patchPath = fix.path;
-              var patch = "";
-              var patch_folder = PATCH_FOLDER;
+    await initIssues();
 
-              if (process.platform === 'win32') {
-                if (patch_folder[0] === '/' || patch_folder[0] === '\\') {
-                  patch_folder = patch_folder.substring(1);
-                }
-              }
+    if (issueGroups) {
 
-              try {
-                patch = readFileSync(upath.join(patch_folder, patchPath), "utf8");
-              } catch (err) {
-                logging.LogErrorAndShowErrorMessage(
-                  "Error with readFileSync patch file: " + err,
-                  "Cannot refresh diagnostics! There was a problem with patch file: " +
-                  err
-                );
-              }
-
-              var sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patch);
-              var sourceFilePath: string;
-
-              if (sourceFileMatch && sourceFileMatch[1]) {
-                sourceFilePath = sourceFileMatch[1];
-              } else {
-                logging.LogErrorAndShowErrorMessage(
-                  "Unable to find source file in '" + patch + "'",
-                  "Unable to find source file in '" + patch + "'"
-                );
-                throw Error("Unable to find source file in '" + patch + "'");
-              }
-
-              let openedFilePath =
-                vscode.window.activeTextEditor?.document.uri.path;
-              let projectFolder = PROJECT_FOLDER;
-
-              sourceFilePath = upath.normalize(
-                upath
-                  .join(PROJECT_FOLDER, vscode.Uri.file(sourceFilePath).fsPath)
-                  .toLowerCase()
-              );
-              openedFilePath = upath.normalize(
-                vscode.Uri.file(openedFilePath!).fsPath.toLowerCase()
-              );
-              if (
-                process.platform === "linux" ||
-                process.platform === "darwin"
-              ) {
-                if (sourceFilePath![0] !== "/")
-                  sourceFilePath = "/" + sourceFilePath;
-                if (openedFilePath![0] !== "/")
-                  openedFilePath = "/" + openedFilePath;
-              }
-
-              if (process.platform === 'win32') {
-                if (sourceFilePath[0] === '/' || sourceFilePath[0] === '\\') {
-                  sourceFilePath = sourceFilePath.substring(1);
-                }
-              }
-
-              if (sourceFilePath === openedFilePath) {
-                diagnostics.push(createDiagnostic(doc, fixText, fixRange));
-              }
-            });
-          });
+      Object.values(issueGroups).forEach((issues: any) => {
+        issues.forEach((issue: any) => {
+          if (issue.JavaFileName === (upath.basename(doc.uri.fsPath))) {
+            const diagnostic = createItemDiagnostic(doc, issue);
+            diagnostics.push(diagnostic);
+          }
         });
-      }
-      // we should filter diagnostics that only apply to the current file.
-      aiFixCodeDiagnostics.set(doc.uri, diagnostics);
-    });
+      });
+    }
+
+    aiFixCodeDiagnostics.set(doc.uri, diagnostics);
     logging.LogInfo("Finished diagnosis.");
   } catch (error) {
-    console.log(error);
+    console.error("Unable to run diagnosis on file:", error);
     logging.LogErrorAndShowErrorMessage(
       "Unable to run diagnosis on file: " + error,
       "Unable to run diagnosis on file: " + error
@@ -108,24 +44,35 @@ export async function refreshDiagnostics(
   }
 }
 
-function createDiagnostic(
+function createItemDiagnostic(
   doc: vscode.TextDocument,
-  lineOfText: string,
-  issueRange: IIssueRange
+  issue: any
 ): vscode.Diagnostic {
   const range = new vscode.Range(
-    issueRange.startLine - 1,
-    issueRange.startColumn,
-    issueRange.endLine - 1,
-    issueRange.endColumn
+    issue.textRange.startLine - 1,
+    issue.textRange.startColumn,
+    issue.textRange.endLine - 1,
+    issue.textRange.endColumn
   );
+
+  const message = `${issue.issueName}: ${issue.explanation}`;
 
   const diagnostic = new vscode.Diagnostic(
     range,
-    lineOfText,
+    message,
     vscode.DiagnosticSeverity.Information
   );
   diagnostic.code = ANALYZER_MENTION;
+
+  let relatedInformation: vscode.DiagnosticRelatedInformation[] = issue.patches.map((patch: any) => {
+    return new vscode.DiagnosticRelatedInformation(
+      new vscode.Location(doc.uri, range),
+      patch.explanation
+    );
+  });
+
+  diagnostic.relatedInformation = relatedInformation;
+
   return diagnostic;
 }
 

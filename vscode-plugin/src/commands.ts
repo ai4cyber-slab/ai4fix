@@ -100,13 +100,6 @@ export function init(
   context: vscode.ExtensionContext,
   jsonOutlineProvider: any
 ) {
-  context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument(document => {
-      if (document.uri.scheme === 'file') {
-        generateTestForCurrentFile();
-      }
-    })
-  );
   // Set working directory as PROJECT_FOLDER if no path was given in config:
   if (!PROJECT_FOLDER) {
     if (
@@ -395,9 +388,6 @@ export function init(
     const currentFilePath = activeEditor.document.uri.fsPath;
     return generateTestForFile(currentFilePath);
   }
-
-  // problems view --> szeparáljuk issue csoportokat
-  // patchek helyett issuek a problem viewbe
 
   const fs = require('fs').promises;
   async function generateTestForFile(filePath: string) {
