@@ -92,9 +92,9 @@ code --install-extension <extension-vsix-path>
 ```
 You can find the .vsix file in the vscode-plugin subdirectory of the project e.g. d:\\AIFix4SecCode\\vscode-plugin\\aifix4seccode-vscode-1.0.26.vsix
 
-## Test Generation with AI
+## Test and issue generation with AI
 
-To use AI for generating tests, a `.env` file is required in the same directory as your Python script (`GPTTest.py`). This file should contain your OpenAI API key as follows:
+To use AI for generating tests or issues, a `.env` file is required in the same directory as your Python script (`GPTTest.py`, `aifix.py`). This file should contain your OpenAI API key as follows:
 
 ```env
 OPENAI_API_KEY=your_api_key_here

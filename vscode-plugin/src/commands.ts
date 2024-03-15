@@ -392,10 +392,10 @@ export function init(
   const fs = require('fs').promises;
   async function generateTestForFile(filePath: string) {
     try {
-      const pythonScriptPath = await getConfigSetting("aifix4seccode.analyzer.pythonScriptPath", "Python script path is not set in the extension settings.");
+      let pythonScriptPath = await getConfigSetting("aifix4seccode.analyzer.pythonScriptPath", "Python script path is not set in the extension settings.");
       const testFolderPath = await getConfigSetting("aifix4seccode.analyzer.testFolderPath", "Test folder path is not set in the extension settings.");
       const generatedPatchesPath = await getConfigSetting("aifix4seccode.analyzer.generatedPatchesPath", "Generated patches path is not set in the extension settings.");
-
+      pythonScriptPath = path.join(pythonScriptPath, 'GPTTest.py');
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
@@ -547,7 +547,6 @@ export function init(
     });
   }
 
-  let hasRunGenerateTestForCurrentFile = false;
   function startAnalyzingFileSync() {
     return new Promise<void>((resolve) => {
       if (!ANALYZER_EXE_PATH) {
@@ -566,27 +565,88 @@ export function init(
         var currentFilePath = upath.normalize(
           vscode.window.activeTextEditor!.document.uri.path
         );
+        let issuesPath: string | undefined = "";
+        if (
+          vscode.workspace
+            .getConfiguration()
+            .get<string>("aifix4seccode.analyzer.issuesPath")
+        ) {
+          issuesPath = vscode.workspace
+            .getConfiguration()
+            .get<string>("aifix4seccode.analyzer.issuesPath");
+        }
+        
+        let generatedPatchesPath: string | undefined = "";
+        if (
+          vscode.workspace
+            .getConfiguration()
+            .get<string>("aifix4seccode.analyzer.generatedPatchesPath")
+        ) {
+          generatedPatchesPath = vscode.workspace
+            .getConfiguration()
+            .get<string>("aifix4seccode.analyzer.generatedPatchesPath");
+        }
+
+        let subjectProjectPath: string | undefined = "";
+        if (
+          vscode.workspace
+            .getConfiguration()
+            .get<string>("aifix4seccode.analyzer.subjectProjectPath")
+        ) {
+          subjectProjectPath = vscode.workspace
+            .getConfiguration()
+            .get<string>("aifix4seccode.analyzer.subjectProjectPath");
+        }
+
+        let pythonScriptPath: string | undefined = "";
+        if (
+          vscode.workspace
+            .getConfiguration()
+            .get<string>("aifix4seccode.analyzer.pythonScriptPath")
+        ) {
+          pythonScriptPath = vscode.workspace
+            .getConfiguration()
+            .get<string>("aifix4seccode.analyzer.pythonScriptPath");
+        }
 
         if (process.platform === "win32" && currentFilePath.startsWith("/")) {
           currentFilePath = currentFilePath.substring(1);
+        }
+        let jsonFilePath;
+
+        try {
+            const data = readFileSync(issuesPath as any, "utf8");
+            let lines = data.split("\n");
+            let currentFileName = path.basename(currentFilePath);
+            jsonFilePath = lines.find((line: any) => path.basename(line) === currentFileName + '.json');
+        
+            if (!jsonFilePath) {
+                logging.LogError("Relevant JSON file path not found for the current file.");
+                return;
+            }
+        } catch (err) {
+            logging.LogError("Error reading the issuesPath file");
+            return;
         }
 
         // run analyzer with terminal (read params and analyzer path from config):
         logging.LogInfo("Analyzer executable started.");
         logging.LogInfo("Running " + ANALYZER_PARAMETERS + " -cu=" + currentFilePath);
 
+        let fullPathToPythonScript = path.join(pythonScriptPath, 'aifix.py');
         var child = cp.exec(
-          ANALYZER_PARAMETERS + " -cu=" + currentFilePath,
+          `python "${fullPathToPythonScript}" "${currentFilePath}" "${jsonFilePath}" "${generatedPatchesPath}" "${subjectProjectPath}" "${ANALYZER_PARAMETERS}" "${ANALYZER_EXE_PATH}"`,
           { cwd: ANALYZER_EXE_PATH },
           (error: { toString: () => string; }) => {
             if (error) {
               logging.LogErrorAndShowErrorMessage(
                 error.toString(),
-                "Unable to run analyzer! " + error.toString()
+                "Unable to run Python script! " + error.toString()
               );
             }
           }
         );
+        
         child.stdout.pipe(process.stdout);
         // waiting for analyzer to finish, only then read the output.
         child.on("exit", function () {
@@ -623,11 +683,6 @@ export function init(
             "===== Finished analysis. =====",
             "Finished analysis of project!"
           );
-          if (!hasRunGenerateTestForCurrentFile) {
-            hasRunGenerateTestForCurrentFile = true;
-          } else {
-            generateTestForCurrentFile();
-          }
           //process.exit();
         });
       }
