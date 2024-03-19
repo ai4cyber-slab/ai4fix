@@ -40,14 +40,19 @@ def generate_diff(java_code, issue_data):
     return response.choices[0].message['content']
 
 def generate_explanation(diff_content):
-    prompt = f"Given the following diff:\n{diff_content}\n\nPlease provide a few words of explanation for these changes:"
+    prompt = (
+        f"Given this diff:\n{diff_content}\n\n"
+        f"Summarize the purpose of these changes in a short single sentence:"
+    )
     response = openai.ChatCompletion.create(
         model="gpt-4",
         messages=[
             {"role": "user", "content": prompt}
-        ]
+        ],
+        max_tokens=40
     )
     return response.choices[0].message['content']
+
 
 def write_to_file(file_path, content):
     with open(file_path, 'w') as file:
@@ -110,27 +115,28 @@ def main():
             if item['patches']:
                 sys.exit(1)
 
+
     relative_path = get_relative_path(subject_project_path, java_file_path)
-
     java_code = read_file(java_file_path)
-    issue_data = json.dumps(json.loads(read_file(json_file_path)), indent=4)
+    original_issue_data = json.loads(read_file(json_file_path))
 
-    diff_content = generate_diff(java_code, issue_data)
-    explanation = generate_explanation(diff_content)
-    modified_diff_content = replace_diff_paths(extract_diff_content(diff_content), relative_path)
+    for i, item in enumerate(original_issue_data[0]['items']):
+        issue_data = json.dumps([{"items": [item]}], indent=4)
+        diff_content = generate_diff(java_code, issue_data)
+        explanation = generate_explanation(diff_content)
+        modified_diff_content = replace_diff_paths(extract_diff_content(diff_content), relative_path)
 
-    diff_file_path = os.path.join(patches_dir_path, "generated_diff.diff")
-    write_to_file(diff_file_path, modified_diff_content)
+        diff_file_name = f"generated_diff_{i}.diff"
+        diff_file_path = os.path.join(patches_dir_path, diff_file_name)
+        write_to_file(diff_file_path, modified_diff_content)
 
-    with open(json_file_path, 'r+') as json_file:
-        data = json.load(json_file)
-        data[0]['items'][0]['patches'].append({
-            "path": os.path.basename(diff_file_path),
+        original_issue_data[0]['items'][i]['patches'].append({
+            "path": diff_file_name,
             "explanation": explanation
         })
-        json_file.seek(0)
-        json_file.truncate()
-        json.dump(data, json_file, indent=4)
+
+    with open(json_file_path, 'w') as json_file:
+        json.dump(original_issue_data, json_file, indent=4)
 
 if __name__ == "__main__":
     main()
