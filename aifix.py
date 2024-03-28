@@ -14,20 +14,20 @@ def read_file(file_path):
 
 def generate_diff(java_code, issue_data):
     issue_data_dict = json.loads(issue_data)
-    text_range = issue_data_dict[0]['items'][0]['textRange']
+    main_explanation = issue_data_dict['explanation']
+    text_range = issue_data_dict['items'][0]['textRange']
     start_line = text_range['startLine']
     end_line = text_range['endLine']
-    
+
     relevant_lines = java_code.split('\n')[start_line-1:end_line]
     relevant_code = '\n'.join(relevant_lines)
 
     prompt = (
         f"I have a Java file, and I need to generate a diff for a specific issue. "
         f"The issue is in the following lines (lines {start_line} to {end_line}):\n\n"
-        f"relevant code: {relevant_code}\n\n"
-        f"Here's the full Java file so you know which lines needs to be changed and create a full diff file: {java_code}\n\n"
-        f"The rest of the file should remain unchanged. Here is the detailed issue information:\n"
-        f"{issue_data}\n\n"
+        f"Relevant code: {relevant_code}\n\n"
+        f"Here's the full Java file so you know which lines need to be changed to create a full diff file: {java_code}\n\n"
+        f"The main issue explanation: {main_explanation}\n"
         f"Based on this, please generate the necessary diff snippet for these lines only."
     )
 
@@ -38,6 +38,7 @@ def generate_diff(java_code, issue_data):
         ]
     )
     return response.choices[0].message['content']
+
 
 def generate_explanation(diff_content):
     prompt = (
@@ -97,46 +98,94 @@ def run_command(command, working_directory):
     except subprocess.CalledProcessError as e:
         sys.exit(1)
 
+def process_file(java_file_path, json_file_path, patches_dir_path, subject_project_path, start_diff_index=0):
+    relative_path = get_relative_path(subject_project_path, java_file_path)
+    java_code = read_file(java_file_path)
+    original_issue_data = json.loads(read_file(json_file_path))
+
+    processed_items_count = 0
+
+    for issue in original_issue_data:
+        for i, item in enumerate(issue['items']):
+            if 'patches' not in item:
+                item['patches'] = []
+
+            issue_data_with_explanation = json.dumps({
+                "explanation": issue.get('explanation', ''),  # Include explanation if available
+                "items": [item]
+            }, indent=4)
+
+            diff_content = generate_diff(java_code, issue_data_with_explanation)
+            explanation = generate_explanation(diff_content)
+            modified_diff_content = replace_diff_paths(extract_diff_content(diff_content), relative_path)
+
+            diff_file_name = f"generated_diff_{i + start_diff_index}.diff"
+            diff_file_path = os.path.join(patches_dir_path, diff_file_name)
+            write_to_file(diff_file_path, modified_diff_content)
+
+            item['patches'].append({
+                "path": diff_file_name,
+                "explanation": explanation
+            })
+
+            processed_items_count += 1
+
+    with open(json_file_path, 'w') as json_file:
+        json.dump(original_issue_data, json_file, indent=4)
+
+    return processed_items_count
+
+def find_java_file(base_path, java_file_name):
+    for root, dirs, files in os.walk(base_path):
+        if java_file_name in files:
+            return os.path.join(root, java_file_name)
+    return None
+
 def main():
     if len(sys.argv) < 7:
         sys.exit(1)
 
     java_file_path = sys.argv[1]
-    json_file_path = sys.argv[2]
+    json_file_paths = sys.argv[2].split(",")
     patches_dir_path = sys.argv[3]
     subject_project_path = sys.argv[4]
-    analyzer_parameters = sys.argv[5] + " -cu=" + java_file_path
+    analyzer_parameters = sys.argv[5]
     analyzer_exe_path = sys.argv[6]
 
-    run_command(analyzer_parameters, analyzer_exe_path)
-    with open(json_file_path, 'r') as file:
-        data = json.load(file)
-        for item in data[0]['items']:
-            if item['patches']:
-                sys.exit(1)
+    diff_index = 0
 
+    if java_file_path and java_file_path.strip() != "":
+        # Single file processing
+        analyzer_parameters_with_file = analyzer_parameters + " -cu=" + java_file_path
+        run_command(analyzer_parameters_with_file, analyzer_exe_path)
 
-    relative_path = get_relative_path(subject_project_path, java_file_path)
-    java_code = read_file(java_file_path)
-    original_issue_data = json.loads(read_file(json_file_path))
+        for json_file_path in json_file_paths:
+            processed_items = process_file(java_file_path, json_file_path, patches_dir_path, subject_project_path, diff_index)
+            diff_index += processed_items
+    else:
+        # Multiple file processing
+        run_command(analyzer_parameters, analyzer_exe_path)
 
-    for i, item in enumerate(original_issue_data[0]['items']):
-        issue_data = json.dumps([{"items": [item]}], indent=4)
-        diff_content = generate_diff(java_code, issue_data)
-        explanation = generate_explanation(diff_content)
-        modified_diff_content = replace_diff_paths(extract_diff_content(diff_content), relative_path)
+        for json_file_path in json_file_paths:
+            java_file_basename = os.path.splitext(os.path.basename(json_file_path))[0]
+            java_file = find_java_file(subject_project_path, java_file_basename)
 
-        diff_file_name = f"generated_diff_{i}.diff"
-        diff_file_path = os.path.join(patches_dir_path, diff_file_name)
-        write_to_file(diff_file_path, modified_diff_content)
+            if java_file is None:
+                print(f"Java file {java_file_basename} not found in project path.")
+                continue
 
-        original_issue_data[0]['items'][i]['patches'].append({
-            "path": diff_file_name,
-            "explanation": explanation
-        })
+            with open(json_file_path, 'r') as file:
+                issues_data = json.load(file)
 
-    with open(json_file_path, 'w') as json_file:
-        json.dump(original_issue_data, json_file, indent=4)
+            for issue in issues_data:
+                processed_items = process_file(java_file, json_file_path, patches_dir_path, subject_project_path, diff_index)
+                diff_index += processed_items
 
 if __name__ == "__main__":
     main()
+
+# retrieval augmented generation
+# RAG --> nagyobb kontextus
+# példa repora classify
+# open search (hugging face) modellek kipróbálása
+# lokálisan futtatható modelleket találni kb 2 oldalnyi anyag

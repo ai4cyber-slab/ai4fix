@@ -76,6 +76,10 @@ function createItemDiagnostic(
   return diagnostic;
 }
 
+
+
+
+
 export function subscribeToDocumentChanges(
   context: vscode.ExtensionContext,
   emojiDiagnostics: vscode.DiagnosticCollection

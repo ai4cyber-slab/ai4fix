@@ -40,10 +40,12 @@ import { basename, dirname } from "path";
 import { applyPatchToFile } from "./patch";
 import { getSafeFsPath } from "./path";
 import { initActionCommands } from "./language/codeActions";
+
 import * as cp from "child_process";
 
 const parseJson = require("parse-json");
 const parseDiff = require("parse-diff");
+const { applyPatchWithWhitespaceIgnore } = require('../utils/applyPatchWrapper');
 const diff = require("diff");
 var path = require("path");
 var upath = require("upath");
@@ -306,6 +308,45 @@ export function init(
   }
 
   function startAnalyzingProjectSync() {
+    let issuesPath = vscode.workspace
+      .getConfiguration()
+      .get<string>("aifix4seccode.analyzer.issuesPath") ?? "";
+
+    let generatedPatchesPath = vscode.workspace
+      .getConfiguration()
+      .get<string>("aifix4seccode.analyzer.generatedPatchesPath") ?? "";
+
+    let subjectProjectPath = vscode.workspace
+      .getConfiguration()
+      .get<string>("aifix4seccode.analyzer.subjectProjectPath") ?? "";
+
+    let pythonScriptPath = vscode.workspace
+      .getConfiguration()
+      .get<string>("aifix4seccode.analyzer.pythonScriptPath") ?? "";
+    let jsonFilePaths: string | any[] = [];
+
+    var currentFilePath = upath.normalize(
+      vscode.window.activeTextEditor!.document.uri.path
+    );
+    if (process.platform === "win32" && currentFilePath.startsWith("/")) {
+      currentFilePath = currentFilePath.substring(1);
+    }
+
+    try {
+      const data = readFileSync(issuesPath, "utf8");
+      let lines = data.split("\n");
+
+      jsonFilePaths = lines.filter((line: string) => line.trim().endsWith('.json'));
+
+      if (jsonFilePaths.length === 0) {
+        logging.LogError("No JSON file paths found in the issuesPath file.");
+        return;
+      }
+    } catch (err) {
+      logging.LogError("Error reading the issuesPath file: " + err);
+      return;
+    }
+
     return new Promise<void>((resolve) => {
       if (!ANALYZER_EXE_PATH) {
         logging.LogErrorAndShowErrorMessage(
@@ -323,9 +364,9 @@ export function init(
         // run analyzer with terminal (read params and analyzer path from config):
         logging.LogInfo("Analyzer executable started.");
         logging.LogInfo("Running " + ANALYZER_PARAMETERS);
-
+        let fullPathToPythonScript = path.join(pythonScriptPath, 'aifix.py');
         var child = cp.exec(
-          ANALYZER_PARAMETERS,
+          `python "${fullPathToPythonScript}" "" "${jsonFilePaths}" "${generatedPatchesPath}" "${subjectProjectPath}" "${ANALYZER_PARAMETERS}" "${ANALYZER_EXE_PATH}"`,
           { cwd: ANALYZER_EXE_PATH },
           (error: { toString: () => string; }) => {
             if (error) {
@@ -565,49 +606,22 @@ export function init(
         var currentFilePath = upath.normalize(
           vscode.window.activeTextEditor!.document.uri.path
         );
-        let issuesPath: string | undefined = "";
-        if (
-          vscode.workspace
-            .getConfiguration()
-            .get<string>("aifix4seccode.analyzer.issuesPath")
-        ) {
-          issuesPath = vscode.workspace
-            .getConfiguration()
-            .get<string>("aifix4seccode.analyzer.issuesPath");
-        }
-        
-        let generatedPatchesPath: string | undefined = "";
-        if (
-          vscode.workspace
-            .getConfiguration()
-            .get<string>("aifix4seccode.analyzer.generatedPatchesPath")
-        ) {
-          generatedPatchesPath = vscode.workspace
-            .getConfiguration()
-            .get<string>("aifix4seccode.analyzer.generatedPatchesPath");
-        }
 
-        let subjectProjectPath: string | undefined = "";
-        if (
-          vscode.workspace
-            .getConfiguration()
-            .get<string>("aifix4seccode.analyzer.subjectProjectPath")
-        ) {
-          subjectProjectPath = vscode.workspace
-            .getConfiguration()
-            .get<string>("aifix4seccode.analyzer.subjectProjectPath");
-        }
+        let issuesPath = vscode.workspace
+          .getConfiguration()
+          .get<string>("aifix4seccode.analyzer.issuesPath") ?? "";
 
-        let pythonScriptPath: string | undefined = "";
-        if (
-          vscode.workspace
-            .getConfiguration()
-            .get<string>("aifix4seccode.analyzer.pythonScriptPath")
-        ) {
-          pythonScriptPath = vscode.workspace
-            .getConfiguration()
-            .get<string>("aifix4seccode.analyzer.pythonScriptPath");
-        }
+        let generatedPatchesPath = vscode.workspace
+          .getConfiguration()
+          .get<string>("aifix4seccode.analyzer.generatedPatchesPath") ?? "";
+
+        let subjectProjectPath = vscode.workspace
+          .getConfiguration()
+          .get<string>("aifix4seccode.analyzer.subjectProjectPath") ?? "";
+
+        let pythonScriptPath = vscode.workspace
+          .getConfiguration()
+          .get<string>("aifix4seccode.analyzer.pythonScriptPath") ?? "";
 
         if (process.platform === "win32" && currentFilePath.startsWith("/")) {
           currentFilePath = currentFilePath.substring(1);
@@ -615,18 +629,18 @@ export function init(
         let jsonFilePath;
 
         try {
-            const data = readFileSync(issuesPath as any, "utf8");
-            let lines = data.split("\n");
-            let currentFileName = path.basename(currentFilePath);
-            jsonFilePath = lines.find((line: any) => path.basename(line) === currentFileName + '.json');
-        
-            if (!jsonFilePath) {
-                logging.LogError("Relevant JSON file path not found for the current file.");
-                return;
-            }
-        } catch (err) {
-            logging.LogError("Error reading the issuesPath file");
+          const data = readFileSync(issuesPath as any, "utf8");
+          let lines = data.split("\n");
+          let currentFileName = path.basename(currentFilePath);
+          jsonFilePath = lines.find((line: any) => path.basename(line) === currentFileName + '.json');
+
+          if (!jsonFilePath) {
+            logging.LogError("Relevant JSON file path not found for the current file.");
             return;
+          }
+        } catch (err) {
+          logging.LogError("Error reading the issuesPath file");
+          return;
         }
 
         // run analyzer with terminal (read params and analyzer path from config):
@@ -646,7 +660,7 @@ export function init(
             }
           }
         );
-        
+
         child.stdout.pipe(process.stdout);
         // waiting for analyzer to finish, only then read the output.
         child.on("exit", function () {
@@ -782,11 +796,11 @@ export function init(
     const match = /@@ -(\d+),\d+ \+\d+,\d+ @@/.exec(patchContent);
 
     if (match && match[1]) {
-        return parseInt(match[1])+5;
+      return parseInt(match[1]) + 5;
     } else {
-        throw new Error("Unable to extract line number from patch file.");
+      throw new Error("Unable to extract line number from patch file.");
     }
-}
+  }
 
   function loadPatch(patchPath: string) {
     logging.LogInfo("===== Executing loadPatch command. =====");
@@ -839,7 +853,7 @@ export function init(
       }
 
       var original = readFileSync(sourceFile, "utf8");
-      var patched = diff.applyPatch(original, patch);
+      var patched = applyPatchWithWhitespaceIgnore(original, patch);
 
       if (!patched) {
         vscode.window.showErrorMessage(
