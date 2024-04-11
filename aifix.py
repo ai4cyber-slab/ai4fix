@@ -111,7 +111,7 @@ def process_file(java_file_path, json_file_path, patches_dir_path, subject_proje
                 item['patches'] = []
 
             issue_data_with_explanation = json.dumps({
-                "explanation": issue.get('explanation', ''),  # Include explanation if available
+                "explanation": issue.get('explanation', ''),
                 "items": [item]
             }, indent=4)
 
@@ -183,9 +183,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# retrieval augmented generation
-# RAG --> nagyobb kontextus
-# példa repora classify
-# open search (hugging face) modellek kipróbálása
-# lokálisan futtatható modelleket találni kb 2 oldalnyi anyag
