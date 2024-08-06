@@ -58,7 +58,7 @@ def generate_text(input_text):
         return None
 
 # gpt-4o
-""" openai.api_key = os.getenv('OPENAI_API_KEY')
+"""
 def generate_text(input_text):
     response = openai.ChatCompletion.create(
         model="gpt-4o",
