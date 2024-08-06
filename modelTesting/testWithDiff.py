@@ -29,7 +29,7 @@ collect_warnings_script = r'path_to_collect_warnings_script\collectWarnings.py'
 dotenv_path = find_dotenv()
 load_dotenv(dotenv_path)
 bearer_token = os.getenv('HUGGINGFACE_API_TOKEN')
-print(bearer_token)
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 API_URL = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct"
 headers = {"Authorization": f"Bearer {bearer_token}"}
