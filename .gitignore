@@ -13,3 +13,8 @@ test-project/.project
 test-project/.settings
 test-project/target
 node_modules/
+.env
+__pycache__
+demo-project/
+semo-project/
+tester-project/
