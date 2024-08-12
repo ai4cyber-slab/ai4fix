@@ -1,0 +1,80 @@
+2024-08-07 08:44:54:statuscollector:INFO:Status: Started.
+2024-08-07 08:44:54:statuscollector:INFO:{'self': <__main__.Sorter object at 0x000001FA8C108DC0>, 'patchesPath': 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\patches.txt', 'basePath': '', 'vectorizer': 'glove', 'comparer': 'triangle', 'filePatcherMode': 'partial', 'fileLogLevel': 10, 'streamLogLevel': 10}
+2024-08-07 08:44:54:statuscollector:INFO:Status changed from Started to OriginalExtracted.
+2024-08-07 08:44:54:statuscollector:DEBUG:patchOriginal called with 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\prioritizer_patch_0.diff'
+2024-08-07 08:44:54:statuscollector:INFO:Status changed from OriginalExtracted to FilesPatched.
+2024-08-07 08:44:54:statuscollector:INFO:Status changed from FilesPatched to Vectorized.
+2024-08-07 08:44:54:statuscollector:INFO:Status changed from Vectorized to Compared.
+2024-08-07 08:44:54:statuscollector:INFO:Execution time: 0.0096 seconds
+2024-08-07 08:45:10:statuscollector:INFO:Status: Started.
+2024-08-07 08:45:10:statuscollector:INFO:{'self': <__main__.Sorter object at 0x00000211D8458DC0>, 'patchesPath': 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\patches.txt', 'basePath': '', 'vectorizer': 'glove', 'comparer': 'triangle', 'filePatcherMode': 'partial', 'fileLogLevel': 10, 'streamLogLevel': 10}
+2024-08-07 08:45:10:statuscollector:INFO:Status changed from Started to OriginalExtracted.
+2024-08-07 08:45:10:statuscollector:DEBUG:patchOriginal called with 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\prioritizer_patch_0.diff'
+2024-08-07 08:45:10:statuscollector:INFO:Status changed from OriginalExtracted to FilesPatched.
+2024-08-07 08:45:10:statuscollector:INFO:Status changed from FilesPatched to Vectorized.
+2024-08-07 08:45:10:statuscollector:INFO:Status changed from Vectorized to Compared.
+2024-08-07 08:45:10:statuscollector:INFO:Execution time: 0.0049 seconds
+2024-08-07 09:41:26:statuscollector:INFO:Status: Started.
+2024-08-07 09:41:26:statuscollector:INFO:{'self': <__main__.Sorter object at 0x000001AE55688DC0>, 'patchesPath': 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\patches.txt', 'basePath': '', 'vectorizer': 'glove', 'comparer': 'triangle', 'filePatcherMode': 'partial', 'fileLogLevel': 10, 'streamLogLevel': 10}
+2024-08-07 09:41:26:statuscollector:INFO:Status changed from Started to OriginalExtracted.
+2024-08-07 09:41:26:statuscollector:DEBUG:patchOriginal called with 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\prioritizer_patch_0.diff'
+2024-08-07 09:41:26:statuscollector:INFO:Status changed from OriginalExtracted to FilesPatched.
+2024-08-07 09:41:26:statuscollector:INFO:Status changed from FilesPatched to Vectorized.
+2024-08-07 09:41:26:statuscollector:INFO:Status changed from Vectorized to Compared.
+2024-08-07 09:41:26:statuscollector:INFO:Execution time: 0.0050 seconds
+2024-08-07 09:41:44:statuscollector:INFO:Status: Started.
+2024-08-07 09:41:44:statuscollector:INFO:{'self': <__main__.Sorter object at 0x0000028A8D8B8DC0>, 'patchesPath': 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\patches.txt', 'basePath': '', 'vectorizer': 'glove', 'comparer': 'triangle', 'filePatcherMode': 'partial', 'fileLogLevel': 10, 'streamLogLevel': 10}
+2024-08-07 09:41:44:statuscollector:INFO:Status changed from Started to OriginalExtracted.
+2024-08-07 09:41:44:statuscollector:DEBUG:patchOriginal called with 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\prioritizer_patch_0.diff'
+2024-08-07 09:41:44:statuscollector:INFO:Status changed from OriginalExtracted to FilesPatched.
+2024-08-07 09:41:44:statuscollector:INFO:Status changed from FilesPatched to Vectorized.
+2024-08-07 09:41:44:statuscollector:INFO:Status changed from Vectorized to Compared.
+2024-08-07 09:41:44:statuscollector:INFO:Execution time: 0.0064 seconds
+2024-08-07 09:45:23:statuscollector:INFO:Status: Started.
+2024-08-07 09:45:23:statuscollector:INFO:{'self': <__main__.Sorter object at 0x0000025B52907DC0>, 'patchesPath': 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\patches.txt', 'basePath': '', 'vectorizer': 'glove', 'comparer': 'triangle', 'filePatcherMode': 'partial', 'fileLogLevel': 10, 'streamLogLevel': 10}
+2024-08-07 09:45:23:statuscollector:INFO:Status changed from Started to OriginalExtracted.
+2024-08-07 09:45:23:statuscollector:DEBUG:patchOriginal called with 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\prioritizer_patch_0.diff'
+2024-08-07 09:45:23:statuscollector:INFO:Status changed from OriginalExtracted to FilesPatched.
+2024-08-07 09:45:23:statuscollector:INFO:Status changed from FilesPatched to Vectorized.
+2024-08-07 09:45:23:statuscollector:INFO:Status changed from Vectorized to Compared.
+2024-08-07 09:45:23:statuscollector:INFO:Execution time: 0.0052 seconds
+2024-08-07 09:45:40:statuscollector:INFO:Status: Started.
+2024-08-07 09:45:40:statuscollector:INFO:{'self': <__main__.Sorter object at 0x000001FAF8C98DC0>, 'patchesPath': 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\patches.txt', 'basePath': '', 'vectorizer': 'glove', 'comparer': 'triangle', 'filePatcherMode': 'partial', 'fileLogLevel': 10, 'streamLogLevel': 10}
+2024-08-07 09:45:40:statuscollector:INFO:Status changed from Started to OriginalExtracted.
+2024-08-07 09:45:40:statuscollector:DEBUG:patchOriginal called with 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\prioritizer_patch_0.diff'
+2024-08-07 09:45:40:statuscollector:INFO:Status changed from OriginalExtracted to FilesPatched.
+2024-08-07 09:45:40:statuscollector:INFO:Status changed from FilesPatched to Vectorized.
+2024-08-07 09:45:40:statuscollector:INFO:Status changed from Vectorized to Compared.
+2024-08-07 09:45:40:statuscollector:INFO:Execution time: 0.0049 seconds
+2024-08-07 09:47:55:statuscollector:INFO:Status: Started.
+2024-08-07 09:47:55:statuscollector:INFO:{'self': <__main__.Sorter object at 0x000002A1B8E37DC0>, 'patchesPath': 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\patches.txt', 'basePath': '', 'vectorizer': 'glove', 'comparer': 'triangle', 'filePatcherMode': 'partial', 'fileLogLevel': 10, 'streamLogLevel': 10}
+2024-08-07 09:47:55:statuscollector:INFO:Status changed from Started to OriginalExtracted.
+2024-08-07 09:47:55:statuscollector:DEBUG:patchOriginal called with 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\prioritizer_patch_0.diff'
+2024-08-07 09:47:55:statuscollector:INFO:Status changed from OriginalExtracted to FilesPatched.
+2024-08-07 09:47:55:statuscollector:INFO:Status changed from FilesPatched to Vectorized.
+2024-08-07 09:47:55:statuscollector:INFO:Status changed from Vectorized to Compared.
+2024-08-07 09:47:55:statuscollector:INFO:Execution time: 0.0036 seconds
+2024-08-07 09:48:12:statuscollector:INFO:Status: Started.
+2024-08-07 09:48:12:statuscollector:INFO:{'self': <__main__.Sorter object at 0x0000024A451E8DC0>, 'patchesPath': 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\patches.txt', 'basePath': '', 'vectorizer': 'glove', 'comparer': 'triangle', 'filePatcherMode': 'partial', 'fileLogLevel': 10, 'streamLogLevel': 10}
+2024-08-07 09:48:12:statuscollector:INFO:Status changed from Started to OriginalExtracted.
+2024-08-07 09:48:12:statuscollector:DEBUG:patchOriginal called with 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\prioritizer_patch_0.diff'
+2024-08-07 09:48:12:statuscollector:INFO:Status changed from OriginalExtracted to FilesPatched.
+2024-08-07 09:48:12:statuscollector:INFO:Status changed from FilesPatched to Vectorized.
+2024-08-07 09:48:12:statuscollector:INFO:Status changed from Vectorized to Compared.
+2024-08-07 09:48:12:statuscollector:INFO:Execution time: 0.0050 seconds
+2024-08-07 09:49:13:statuscollector:INFO:Status: Started.
+2024-08-07 09:49:13:statuscollector:INFO:{'self': <__main__.Sorter object at 0x0000021525217DC0>, 'patchesPath': 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\patches.txt', 'basePath': '', 'vectorizer': 'glove', 'comparer': 'triangle', 'filePatcherMode': 'partial', 'fileLogLevel': 10, 'streamLogLevel': 10}
+2024-08-07 09:49:13:statuscollector:INFO:Status changed from Started to OriginalExtracted.
+2024-08-07 09:49:13:statuscollector:DEBUG:patchOriginal called with 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\prioritizer_patch_0.diff'
+2024-08-07 09:49:13:statuscollector:INFO:Status changed from OriginalExtracted to FilesPatched.
+2024-08-07 09:49:13:statuscollector:INFO:Status changed from FilesPatched to Vectorized.
+2024-08-07 09:49:13:statuscollector:INFO:Status changed from Vectorized to Compared.
+2024-08-07 09:49:13:statuscollector:INFO:Execution time: 0.0075 seconds
+2024-08-07 09:49:32:statuscollector:INFO:Status: Started.
+2024-08-07 09:49:32:statuscollector:INFO:{'self': <__main__.Sorter object at 0x0000020E77A38DC0>, 'patchesPath': 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\patches.txt', 'basePath': '', 'vectorizer': 'glove', 'comparer': 'triangle', 'filePatcherMode': 'partial', 'fileLogLevel': 10, 'streamLogLevel': 10}
+2024-08-07 09:49:32:statuscollector:INFO:Status changed from Started to OriginalExtracted.
+2024-08-07 09:49:32:statuscollector:DEBUG:patchOriginal called with 'C:\\Users\\HP\\slab\\ai4fix\\demo-project\\patches\\sorter\\prioritizer_patch_0.diff'
+2024-08-07 09:49:32:statuscollector:INFO:Status changed from OriginalExtracted to FilesPatched.
+2024-08-07 09:49:32:statuscollector:INFO:Status changed from FilesPatched to Vectorized.
+2024-08-07 09:49:32:statuscollector:INFO:Status changed from Vectorized to Compared.
+2024-08-07 09:49:32:statuscollector:INFO:Execution time: 0.0062 seconds

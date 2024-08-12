@@ -1,10 +1,12 @@
 import configparser
+import os
 
 class ConfigManager:
     _config = None
 
     @classmethod
-    def load_config(cls, config_file="config.properties"):
+    def load_config(cls, config_file):
+    # def load_config(cls, config_file="C:\\Users\\HP\\slab\\ai4fix\\ai4framework\\config\\config.properties"):
         if cls._config is None:
             cls._config = configparser.ConfigParser()
             cls._config.read(config_file)
@@ -17,5 +19,8 @@ class ConfigManager:
         return cls._config
 
 # Load the configuration at the start
-ConfigManager.load_config()
-config = ConfigManager.get_config()
+if os.name == 'nt':
+    config_file = 'C:\\Users\\HP\\slab\\ai4fix\\ai4framework\\config\\config.properties'
+else:
+    config_file = '/mnt/c/Users/HP/slab/ai4fix/ai4framework/config/config_mnt.properties'
+ConfigManager.load_config(config_file)

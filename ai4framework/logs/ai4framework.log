@@ -1,0 +1,18 @@
+2024-08-12 13:39:49,350 - ai4framework - INFO - Starting workflow execution
+2024-08-12 13:39:49,350 - ai4framework - INFO - Analyzing project: user_auth
+2024-08-12 13:39:49,530 - ai4framework - INFO - Analyzer for Java 10.2.0 (Build:73c98fc769) - (C) 2001-2022 FrontEndART Ltd.
+2024-08-12 13:39:49,531 - ai4framework - INFO - Integrated 3rd party tool(s): SonarQube
+2024-08-12 13:39:49,826 - ai4framework - INFO - Java version: 11.0.24
+2024-08-12 13:39:49,904 - ai4framework - INFO - Executing tasks. (Multithread:4)
+2024-08-12 13:39:49,911 - ai4framework - INFO - Starting task:          DirectoryBasedAnalysisTask
+2024-08-12 13:39:54,149 - ai4framework - INFO - Task ended (+00:00:05): DirectoryBasedAnalysisTask     Result:OK
+2024-08-12 13:39:54,163 - ai4framework - INFO - Starting task:          JANFilterTask
+2024-08-12 13:39:54,459 - ai4framework - INFO - Task ended (+00:00:00): JANFilterTask                  Result:OK
+2024-08-12 13:39:54,467 - ai4framework - INFO - Starting task:          JAN2limTask
+2024-08-12 13:39:55,170 - ai4framework - INFO - Task ended (+00:00:01): JAN2limTask                    Result:OK
+2024-08-12 13:39:55,177 - ai4framework - INFO - Starting task:          ProfileTask
+2024-08-12 13:39:55,464 - ai4framework - INFO - Task ended (+00:00:00): ProfileTask                    Result:OK
+2024-08-12 13:39:55,474 - ai4framework - INFO - Starting task:          RTEHunterTask
+2024-08-12 13:41:31,507 - ai4framework - INFO - Task ended (+00:01:36): RTEHunterTask                  Result:critical error
+2024-08-12 13:41:31,528 - ai4framework - INFO - EXCEPTION:Task.cpp:165:ERROR: Execution failure! Exit:9
+2024-08-12 13:41:31,529 - ai4framework - INFO - Failed!
