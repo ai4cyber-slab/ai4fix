@@ -17,8 +17,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.zip.DataFormatException;
 
-import static eu.assuremoss.utils.Configuration.PROJECT_PATH_KEY;
-import static eu.assuremoss.utils.Configuration.PROJECT_SOURCE_PATH_KEY;
+import static eu.assuremoss.utils.Configuration.*;
 import static eu.assuremoss.utils.Utils.*;
 
 public class SpotBugsParser {

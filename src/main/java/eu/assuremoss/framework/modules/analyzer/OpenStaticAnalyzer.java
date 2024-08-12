@@ -27,8 +27,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.DataFormatException;
 
-import static eu.assuremoss.utils.Configuration.PROJECT_BUILD_TOOL_KEY;
-import static eu.assuremoss.utils.Configuration.PROJECT_SOURCE_PATH_KEY;
+import static eu.assuremoss.utils.Configuration.*;
 
 @AllArgsConstructor
 public class OpenStaticAnalyzer implements CodeAnalyzer, VulnerabilityDetector, PatchValidator {

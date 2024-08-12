@@ -75,15 +75,15 @@ public class Statistics {
             e.printStackTrace();
         }
     }
-
+    // removed 'VulnType' and 'Description' since they don't exist as attributes within the report.
     private String vulnEntryCSVHeader() {
-        return "ID,Type,VulnType,Variable,StartLine,EndLine,StartCol,EndCol,Path,Description\n";
+        return "ID,Type,Variable,StartLine,EndLine,StartCol,EndCol,Path\n";
     }
 
+    // removed 'VulnType' and 'Description' since they don't exist as attributes within the report.
     private String vulnEntryCSVFormat(int id, VulnerabilityEntry vulnEntry) {
-        return String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n", id, vulnEntry.getType(),
-                vulnEntry.getVulnType(), vulnEntry.getVariable(), vulnEntry.getStartLine(), vulnEntry.getEndLine(),
-                vulnEntry.getStartCol(), vulnEntry.getEndCol(), escapeComma(vulnEntry.getPath()), escapeComma(vulnEntry.getDescription()));
+        return String.format("%s,%s,%s,%s,%s,%s,%s,%s\n", id, vulnEntry.getType(), vulnEntry.getVariable(), vulnEntry.getStartLine(), vulnEntry.getEndLine(),
+                vulnEntry.getStartCol(), vulnEntry.getEndCol(), escapeComma(vulnEntry.getPath()));
     }
 
     /**
