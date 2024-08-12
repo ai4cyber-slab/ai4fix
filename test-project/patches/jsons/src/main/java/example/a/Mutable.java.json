@@ -1,0 +1,36 @@
+{
+  "MS_MUTABLE_COLLECTION": [
+    {
+      "patches": [
+        {
+          "path": "patch_11_MS_MUTABLE_COLLECTION_7_7_37_42.diff",
+          "score": 9.994472124360872,
+          "explanation": "Field is a mutable collection"
+        }
+      ],
+      "textRange": {
+        "endLine": 7,
+        "endColumn": 41,
+        "startColumn": 36,
+        "startLine": 7
+      }
+    }
+  ],
+  "MS_PKGPROTECT": [
+    {
+      "patches": [
+        {
+          "path": "patch_12_MS_PKGPROTECT_10_10_32_38.diff",
+          "score": 9.996737052063354,
+          "explanation": "Field should be package protected"
+        }
+      ],
+      "textRange": {
+        "endLine": 10,
+        "endColumn": 37,
+        "startColumn": 31,
+        "startLine": 10
+      }
+    }
+  ]
+}

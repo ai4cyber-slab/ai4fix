@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<linked-hash-map>
+  <entry>
+    <string>coderepair.algs.problemType</string>
+    <string>MS_MUTABLE_COLLECTION</string>
+  </entry>
+  <entry>
+    <string>coderepair.algs.problemLocations</string>
+    <list>
+      <coderepair.communication.base.ProblemToRepair>
+        <positions>
+          <coderepair.communication.base.ProblemPosition>
+            <path>example/a/MutableInit.java</path>
+            <startLine>8</startLine>
+            <startCol>37</startCol>
+            <endLine>8</endLine>
+            <endCol>43</endCol>
+          </coderepair.communication.base.ProblemPosition>
+        </positions>
+      </coderepair.communication.base.ProblemToRepair>
+    </list>
+  </entry>
+  <entry>
+    <string>coderepair.base.sourceCodeLocation</string>
+    <string>C:/Users/HP/slab/ai4fix/test-project/src/main/java/</string>
+  </entry>
+  <entry>
+    <string>coderepair.base.schemaLocation</string>
+    <string>C:/Users/HP/slab/ai4fix/test-project/patches/asg/example/a/MutableInit.jsi</string>
+  </entry>
+</linked-hash-map>

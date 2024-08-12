@@ -1,4 +1,5 @@
 package example;
+import java.util.Arrays;
 
 /**
  * EI_EXPOSE_REP issue for array usage
@@ -21,7 +22,7 @@ public class ArrayDemo {
 
 
     public ArrayDemo withPermissionsToGive(String[] permissionsToGive) {
-        this.permissionsToGive = permissionsToGive;
+        this.permissionsToGive = Arrays.copyOf(permissionsToGive, permissionsToGive.length);
         return this;
     }
 
@@ -37,7 +38,7 @@ public class ArrayDemo {
 
 
     public ArrayDemo withActions(String[] actions) {
-        this.actions = actions;
+        this.actions = actions.clone();
         return this;
     }
 

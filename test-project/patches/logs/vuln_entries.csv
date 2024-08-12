@@ -1,0 +1,10 @@
+ID,Type,Variable,StartLine,EndLine,StartCol,EndCol,Path
+1,EI_EXPOSE_REP2,permissionsToNeeded,30,30,36,55,C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\ArrayDemo.java
+2,EI_EXPOSE_REP2,permissionsToNotNeeded,35,35,39,61,C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\ArrayDemo.java
+3,MS_SHOULD_BE_FINAL,MY_CONSTANT,5,5,26,37,C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\Main.java
+4,EI_EXPOSE_REP,date,12,12,16,20,C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\MyDate.java
+5,EI_EXPOSE_REP2,date,16,16,21,25,C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\MyDate.java
+6,NP_NULL_ON_SOME_PATH,null,7,7,20,23,C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\NullPath.java
+7,MS_MUTABLE_COLLECTION,mySet,7,7,37,42,C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\a\Mutable.java
+8,MS_PKGPROTECT,array2,10,10,32,38,C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\a\Mutable.java
+9,MS_MUTABLE_COLLECTION,mySet2,8,8,37,43,C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\a\MutableInit.java

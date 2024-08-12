@@ -1,0 +1,56 @@
+
+[2024/08/06 17:40:53] Generating patches for vulnerability 9/9
+
+[2024/08/06 17:40:53] Start generating patches for vulnerability 9/9
+INFO  coderepair.communication.base.RepairAlgorithmRunner - RepairToolSwitcher tool started with these parameters:
+INFO  coderepair.communication.base.RepairAlgorithmRunner - [C:\Users\HP\slab\ai4fix\test-project\patches\osa_xml\description.xml, C:\Users\HP\slab\ai4fix\test-project\patches\patches\repair_patch15.diff, C:\Users\HP\slab\ai4fix\test-project\patches\error.txt]
+INFO  coderepair.communication.base.RepairAlgorithmRunner - RepairToolSwitcher tool finished.
+
+[2024/08/06 17:40:53] Finished generating patches for vulnerability 9/9
+
+[2024/08/06 17:40:53] Time taken to generate patches for vulnerability 9/9: 26 ms
+[2024/08/06 17:40:53] Verifying patches for vulnerability 9/9
+[2024/08/06 17:40:56] [INFO] Scanning for projects...
+[2024/08/06 17:40:56] [INFO] 
+[2024/08/06 17:40:56] [INFO] --------------------------< org.example:mvn >---------------------------
+[2024/08/06 17:40:56] [INFO] Building mvn 1.0-SNAPSHOT
+[2024/08/06 17:40:56] [INFO]   from pom.xml
+[2024/08/06 17:40:56] [INFO] --------------------------------[ jar ]---------------------------------
+[2024/08/06 17:40:56] [INFO] 
+[2024/08/06 17:40:56] [INFO] --- clean:3.2.0:clean (default-clean) @ mvn ---
+[2024/08/06 17:40:57] [INFO] Deleting C:\Users\HP\slab\ai4fix\test-project\target
+[2024/08/06 17:40:57] [INFO] 
+[2024/08/06 17:40:57] [INFO] --- resources:3.3.1:resources (default-resources) @ mvn ---
+[2024/08/06 17:40:57] [INFO] skip non existing resourceDirectory C:\Users\HP\slab\ai4fix\test-project\src\main\resources
+[2024/08/06 17:40:57] [INFO] 
+[2024/08/06 17:40:57] [INFO] --- compiler:3.11.0:compile (default-compile) @ mvn ---
+[2024/08/06 17:40:57] [INFO] Changes detected - recompiling the module! :source
+[2024/08/06 17:40:57] [INFO] Compiling 7 source files with javac [debug target 11] to target\classes
+[2024/08/06 17:40:58] [INFO] 
+[2024/08/06 17:40:58] [INFO] --- resources:3.3.1:testResources (default-testResources) @ mvn ---
+[2024/08/06 17:40:58] [INFO] skip non existing resourceDirectory C:\Users\HP\slab\ai4fix\test-project\src\test\resources
+[2024/08/06 17:40:58] [INFO] 
+[2024/08/06 17:40:58] [INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ mvn ---
+[2024/08/06 17:40:58] [INFO] No sources to compile
+[2024/08/06 17:40:58] [INFO] 
+[2024/08/06 17:40:58] [INFO] --- surefire:3.0.0-M5:test (default-test) @ mvn ---
+[2024/08/06 17:40:59] [INFO] Tests are skipped.
+[2024/08/06 17:40:59] [INFO] 
+[2024/08/06 17:40:59] [INFO] --- jar:3.2.0:jar (default-jar) @ mvn ---
+[2024/08/06 17:41:00] [INFO] Building jar: C:\Users\HP\slab\ai4fix\test-project\target\mvn-1.0-SNAPSHOT.jar
+[2024/08/06 17:41:00] [INFO] ------------------------------------------------------------------------
+[2024/08/06 17:41:00] [INFO] BUILD SUCCESS
+[2024/08/06 17:41:00] [INFO] ------------------------------------------------------------------------
+[2024/08/06 17:41:00] [INFO] Total time:  4.228 s
+[2024/08/06 17:41:00] [INFO] Finished at: 2024-08-06T17:41:00+02:00
+[2024/08/06 17:41:00] [INFO] ------------------------------------------------------------------------
+[2024/08/06 17:41:06] Prioritizing patches for vulnerability 9/9
+[2024/08/06 17:41:08] 2024-08-06 17:41:08:statuscollector:INFO:Status: Started.
+[2024/08/06 17:41:08] 2024-08-06 17:41:08:statuscollector:INFO:{'self': <__main__.Sorter object at 0x0000022F229A7DC0>, 'patchesPath': 'C:\\Users\\HP\\slab\\ai4fix\\test-project\\patches\\sorter\\patches.txt', 'basePath': '', 'vectorizer': 'glove', 'comparer': 'triangle', 'filePatcherMode': 'partial', 'fileLogLevel': 10, 'streamLogLevel': 10}
+[2024/08/06 17:41:08] 2024-08-06 17:41:08:statuscollector:INFO:Status changed from Started to OriginalExtracted.
+[2024/08/06 17:41:08] 2024-08-06 17:41:08:statuscollector:DEBUG:patchOriginal called with 'C:\\Users\\HP\\slab\\ai4fix\\test-project\\patches\\sorter\\prioritizer_patch_0.diff'
+[2024/08/06 17:41:08] 2024-08-06 17:41:08:statuscollector:INFO:Status changed from OriginalExtracted to FilesPatched.
+[2024/08/06 17:41:08] 2024-08-06 17:41:08:statuscollector:INFO:Status changed from FilesPatched to Vectorized.
+[2024/08/06 17:41:08] 2024-08-06 17:41:08:statuscollector:INFO:Status changed from Vectorized to Compared.
+[2024/08/06 17:41:08] 2024-08-06 17:41:08:statuscollector:INFO:Execution time: 0.0029 seconds
+[2024/08/06 17:41:08] Writing out 1 candidate patches for vulnerability 9/9

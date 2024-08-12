@@ -1,0 +1,19 @@
+{
+  "NP_NULL_ON_SOME_PATH": [
+    {
+      "patches": [
+        {
+          "path": "patch_10_NP_NULL_ON_SOME_PATH_7_7_20_23.diff",
+          "score": 9.90383122856195,
+          "explanation": "Repair with null-check in ternary"
+        }
+      ],
+      "textRange": {
+        "endLine": 7,
+        "endColumn": 22,
+        "startColumn": 19,
+        "startLine": 7
+      }
+    }
+  ]
+}

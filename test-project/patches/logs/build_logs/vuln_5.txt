@@ -1,0 +1,143 @@
+
+[2024/08/06 17:39:30] Generating patches for vulnerability 5/9
+
+[2024/08/06 17:39:30] Start generating patches for vulnerability 5/9
+INFO  coderepair.communication.base.RepairAlgorithmRunner - RepairToolSwitcher tool started with these parameters:
+INFO  coderepair.communication.base.RepairAlgorithmRunner - [C:\Users\HP\slab\ai4fix\test-project\patches\osa_xml\description.xml, C:\Users\HP\slab\ai4fix\test-project\patches\patches\repair_patch9.diff, C:\Users\HP\slab\ai4fix\test-project\patches\error.txt]
+INFO  coderepair.communication.base.RepairAlgorithmRunner - RepairToolSwitcher tool finished.
+INFO  coderepair.communication.base.RepairAlgorithmRunner - RepairToolSwitcher tool started with these parameters:
+INFO  coderepair.communication.base.RepairAlgorithmRunner - [C:\Users\HP\slab\ai4fix\test-project\patches\osa_xml\description.xml, C:\Users\HP\slab\ai4fix\test-project\patches\patches\repair_patch10.diff, C:\Users\HP\slab\ai4fix\test-project\patches\error.txt]
+INFO  coderepair.communication.base.RepairAlgorithmRunner - RepairToolSwitcher tool finished.
+INFO  coderepair.communication.base.RepairAlgorithmRunner - RepairToolSwitcher tool started with these parameters:
+INFO  coderepair.communication.base.RepairAlgorithmRunner - [C:\Users\HP\slab\ai4fix\test-project\patches\osa_xml\description.xml, C:\Users\HP\slab\ai4fix\test-project\patches\patches\repair_patch11.diff, C:\Users\HP\slab\ai4fix\test-project\patches\error.txt]
+INFO  coderepair.communication.base.RepairAlgorithmRunner - RepairToolSwitcher tool finished.
+
+[2024/08/06 17:39:30] Finished generating patches for vulnerability 5/9
+
+[2024/08/06 17:39:30] Time taken to generate patches for vulnerability 5/9: 48 ms
+[2024/08/06 17:39:30] Verifying patches for vulnerability 5/9
+[2024/08/06 17:39:33] [INFO] Scanning for projects...
+[2024/08/06 17:39:33] [INFO] 
+[2024/08/06 17:39:33] [INFO] --------------------------< org.example:mvn >---------------------------
+[2024/08/06 17:39:33] [INFO] Building mvn 1.0-SNAPSHOT
+[2024/08/06 17:39:33] [INFO]   from pom.xml
+[2024/08/06 17:39:33] [INFO] --------------------------------[ jar ]---------------------------------
+[2024/08/06 17:39:34] [INFO] 
+[2024/08/06 17:39:34] [INFO] --- clean:3.2.0:clean (default-clean) @ mvn ---
+[2024/08/06 17:39:34] [INFO] Deleting C:\Users\HP\slab\ai4fix\test-project\target
+[2024/08/06 17:39:34] [INFO] 
+[2024/08/06 17:39:34] [INFO] --- resources:3.3.1:resources (default-resources) @ mvn ---
+[2024/08/06 17:39:34] [INFO] skip non existing resourceDirectory C:\Users\HP\slab\ai4fix\test-project\src\main\resources
+[2024/08/06 17:39:34] [INFO] 
+[2024/08/06 17:39:34] [INFO] --- compiler:3.11.0:compile (default-compile) @ mvn ---
+[2024/08/06 17:39:35] [INFO] Changes detected - recompiling the module! :source
+[2024/08/06 17:39:35] [INFO] Compiling 7 source files with javac [debug target 11] to target\classes
+[2024/08/06 17:39:36] [INFO] 
+[2024/08/06 17:39:36] [INFO] --- resources:3.3.1:testResources (default-testResources) @ mvn ---
+[2024/08/06 17:39:36] [INFO] skip non existing resourceDirectory C:\Users\HP\slab\ai4fix\test-project\src\test\resources
+[2024/08/06 17:39:36] [INFO] 
+[2024/08/06 17:39:36] [INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ mvn ---
+[2024/08/06 17:39:36] [INFO] No sources to compile
+[2024/08/06 17:39:36] [INFO] 
+[2024/08/06 17:39:36] [INFO] --- surefire:3.0.0-M5:test (default-test) @ mvn ---
+[2024/08/06 17:39:37] [INFO] Tests are skipped.
+[2024/08/06 17:39:37] [INFO] 
+[2024/08/06 17:39:37] [INFO] --- jar:3.2.0:jar (default-jar) @ mvn ---
+[2024/08/06 17:39:37] [INFO] Building jar: C:\Users\HP\slab\ai4fix\test-project\target\mvn-1.0-SNAPSHOT.jar
+[2024/08/06 17:39:37] [INFO] ------------------------------------------------------------------------
+[2024/08/06 17:39:37] [INFO] BUILD SUCCESS
+[2024/08/06 17:39:37] [INFO] ------------------------------------------------------------------------
+[2024/08/06 17:39:37] [INFO] Total time:  4.405 s
+[2024/08/06 17:39:37] [INFO] Finished at: 2024-08-06T17:39:37+02:00
+[2024/08/06 17:39:37] [INFO] ------------------------------------------------------------------------
+[2024/08/06 17:39:46] [INFO] Scanning for projects...
+[2024/08/06 17:39:46] [INFO] 
+[2024/08/06 17:39:46] [INFO] --------------------------< org.example:mvn >---------------------------
+[2024/08/06 17:39:46] [INFO] Building mvn 1.0-SNAPSHOT
+[2024/08/06 17:39:46] [INFO]   from pom.xml
+[2024/08/06 17:39:46] [INFO] --------------------------------[ jar ]---------------------------------
+[2024/08/06 17:39:46] [INFO] 
+[2024/08/06 17:39:46] [INFO] --- clean:3.2.0:clean (default-clean) @ mvn ---
+[2024/08/06 17:39:47] [INFO] Deleting C:\Users\HP\slab\ai4fix\test-project\target
+[2024/08/06 17:39:47] [INFO] 
+[2024/08/06 17:39:47] [INFO] --- resources:3.3.1:resources (default-resources) @ mvn ---
+[2024/08/06 17:39:47] [INFO] skip non existing resourceDirectory C:\Users\HP\slab\ai4fix\test-project\src\main\resources
+[2024/08/06 17:39:47] [INFO] 
+[2024/08/06 17:39:47] [INFO] --- compiler:3.11.0:compile (default-compile) @ mvn ---
+[2024/08/06 17:39:47] [INFO] Changes detected - recompiling the module! :source
+[2024/08/06 17:39:47] [INFO] Compiling 7 source files with javac [debug target 11] to target\classes
+[2024/08/06 17:39:48] [INFO] 
+[2024/08/06 17:39:48] [INFO] --- resources:3.3.1:testResources (default-testResources) @ mvn ---
+[2024/08/06 17:39:48] [INFO] skip non existing resourceDirectory C:\Users\HP\slab\ai4fix\test-project\src\test\resources
+[2024/08/06 17:39:48] [INFO] 
+[2024/08/06 17:39:48] [INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ mvn ---
+[2024/08/06 17:39:48] [INFO] No sources to compile
+[2024/08/06 17:39:48] [INFO] 
+[2024/08/06 17:39:48] [INFO] --- surefire:3.0.0-M5:test (default-test) @ mvn ---
+[2024/08/06 17:39:48] [INFO] Tests are skipped.
+[2024/08/06 17:39:48] [INFO] 
+[2024/08/06 17:39:48] [INFO] --- jar:3.2.0:jar (default-jar) @ mvn ---
+[2024/08/06 17:39:49] [INFO] Building jar: C:\Users\HP\slab\ai4fix\test-project\target\mvn-1.0-SNAPSHOT.jar
+[2024/08/06 17:39:50] [INFO] ------------------------------------------------------------------------
+[2024/08/06 17:39:50] [INFO] BUILD SUCCESS
+[2024/08/06 17:39:50] [INFO] ------------------------------------------------------------------------
+[2024/08/06 17:39:50] [INFO] Total time:  3.647 s
+[2024/08/06 17:39:50] [INFO] Finished at: 2024-08-06T17:39:50+02:00
+[2024/08/06 17:39:50] [INFO] ------------------------------------------------------------------------
+[2024/08/06 17:39:58] [INFO] Scanning for projects...
+[2024/08/06 17:39:58] [INFO] 
+[2024/08/06 17:39:58] [INFO] --------------------------< org.example:mvn >---------------------------
+[2024/08/06 17:39:58] [INFO] Building mvn 1.0-SNAPSHOT
+[2024/08/06 17:39:58] [INFO]   from pom.xml
+[2024/08/06 17:39:58] [INFO] --------------------------------[ jar ]---------------------------------
+[2024/08/06 17:39:58] [INFO] 
+[2024/08/06 17:39:58] [INFO] --- clean:3.2.0:clean (default-clean) @ mvn ---
+[2024/08/06 17:39:59] [INFO] Deleting C:\Users\HP\slab\ai4fix\test-project\target
+[2024/08/06 17:39:59] [INFO] 
+[2024/08/06 17:39:59] [INFO] --- resources:3.3.1:resources (default-resources) @ mvn ---
+[2024/08/06 17:39:59] [INFO] skip non existing resourceDirectory C:\Users\HP\slab\ai4fix\test-project\src\main\resources
+[2024/08/06 17:39:59] [INFO] 
+[2024/08/06 17:39:59] [INFO] --- compiler:3.11.0:compile (default-compile) @ mvn ---
+[2024/08/06 17:39:59] [INFO] Changes detected - recompiling the module! :source
+[2024/08/06 17:39:59] [INFO] Compiling 7 source files with javac [debug target 11] to target\classes
+[2024/08/06 17:40:00] [INFO] -------------------------------------------------------------
+[2024/08/06 17:40:00] [ERROR] COMPILATION ERROR : 
+[2024/08/06 17:40:00] [INFO] -------------------------------------------------------------
+[2024/08/06 17:40:00] [ERROR] /C:/Users/HP/slab/ai4fix/test-project/src/main/java/example/MyDate.java:[17,45] cannot find symbol
+[2024/08/06 17:40:00]   symbol:   variable length
+[2024/08/06 17:40:00]   location: variable date of type java.util.Date
+[2024/08/06 17:40:00] [INFO] 1 error
+[2024/08/06 17:40:00] [INFO] -------------------------------------------------------------
+[2024/08/06 17:40:00] [INFO] ------------------------------------------------------------------------
+[2024/08/06 17:40:00] [INFO] BUILD FAILURE
+[2024/08/06 17:40:00] [INFO] ------------------------------------------------------------------------
+[2024/08/06 17:40:00] [INFO] Total time:  2.273 s
+[2024/08/06 17:40:00] [INFO] Finished at: 2024-08-06T17:40:00+02:00
+[2024/08/06 17:40:00] [INFO] ------------------------------------------------------------------------
+[2024/08/06 17:40:00] [ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.11.0:compile (default-compile) on project mvn: Compilation failure
+[2024/08/06 17:40:00] [ERROR] /C:/Users/HP/slab/ai4fix/test-project/src/main/java/example/MyDate.java:[17,45] cannot find symbol
+[2024/08/06 17:40:00] [ERROR]   symbol:   variable length
+[2024/08/06 17:40:00] [ERROR]   location: variable date of type java.util.Date
+[2024/08/06 17:40:00] [ERROR] 
+[2024/08/06 17:40:00] [ERROR] -> [Help 1]
+[2024/08/06 17:40:00] [ERROR] 
+[2024/08/06 17:40:00] [ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[2024/08/06 17:40:00] [ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[2024/08/06 17:40:00] [ERROR] 
+[2024/08/06 17:40:00] [ERROR] For more information about the errors and possible solutions, please read the following articles:
+[2024/08/06 17:40:00] [ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[2024/08/06 17:40:00] Prioritizing patches for vulnerability 5/9
+[2024/08/06 17:40:02] 2024-08-06 17:40:02:statuscollector:INFO:Status: Started.
+[2024/08/06 17:40:02] 2024-08-06 17:40:02:statuscollector:INFO:{'self': <__main__.Sorter object at 0x000001FFD2EB8DC0>, 'patchesPath': 'C:\\Users\\HP\\slab\\ai4fix\\test-project\\patches\\sorter\\patches.txt', 'basePath': '', 'vectorizer': 'glove', 'comparer': 'triangle', 'filePatcherMode': 'partial', 'fileLogLevel': 10, 'streamLogLevel': 10}
+[2024/08/06 17:40:02] 2024-08-06 17:40:02:statuscollector:INFO:Status changed from Started to OriginalExtracted.
+[2024/08/06 17:40:02] 2024-08-06 17:40:02:statuscollector:DEBUG:patchOriginal called with 'C:\\Users\\HP\\slab\\ai4fix\\test-project\\patches\\sorter\\prioritizer_patch_0.diff'
+[2024/08/06 17:40:02] 2024-08-06 17:40:02:statuscollector:INFO:Status changed from OriginalExtracted to FilesPatched.
+[2024/08/06 17:40:02] 2024-08-06 17:40:02:statuscollector:INFO:Status changed from FilesPatched to Vectorized.
+[2024/08/06 17:40:02] 2024-08-06 17:40:02:statuscollector:INFO:Status changed from Vectorized to Compared.
+[2024/08/06 17:40:02] 2024-08-06 17:40:02:statuscollector:INFO:Status changed from Compared to OriginalExtracted.
+[2024/08/06 17:40:02] 2024-08-06 17:40:02:statuscollector:DEBUG:patchOriginal called with 'C:\\Users\\HP\\slab\\ai4fix\\test-project\\patches\\sorter\\prioritizer_patch_1.diff'
+[2024/08/06 17:40:02] 2024-08-06 17:40:02:statuscollector:INFO:Status changed from OriginalExtracted to FilesPatched.
+[2024/08/06 17:40:02] 2024-08-06 17:40:02:statuscollector:INFO:Status changed from FilesPatched to Vectorized.
+[2024/08/06 17:40:02] 2024-08-06 17:40:02:statuscollector:INFO:Status changed from Vectorized to Compared.
+[2024/08/06 17:40:02] 2024-08-06 17:40:02:statuscollector:INFO:Execution time: 0.0039 seconds
+[2024/08/06 17:40:02] Writing out 2 candidate patches for vulnerability 5/9

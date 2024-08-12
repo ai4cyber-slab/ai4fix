@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<BugCollection version="4.2.2" sequence="0" timestamp="1722958858872" analysisTimestamp="1722958863859" release="">
+  <Project projectName="">
+    <Jar>C:\Users\HP\slab\ai4fix\test-project\target\classes\example\a\MutableInit.class</Jar>
+  </Project>
+  <BugInstance type="URF_UNREAD_FIELD" priority="2" rank="18" abbrev="UrF" category="PERFORMANCE" instanceHash="31ecf2272a27be32d9d029524f5d6c9f" instanceOccurrenceNum="0" instanceOccurrenceMax="0">
+    <ShortMessage>Unread field</ShortMessage>
+    <LongMessage>Unread field: example.a.MutableInit.list2</LongMessage>
+    <Class classname="example.a.MutableInit" primary="true">
+      <SourceLine classname="example.a.MutableInit" start="8" end="14" sourcefile="MutableInit.java" sourcepath="example/a/MutableInit.java">
+        <Message>At MutableInit.java:[lines 8-14]</Message>
+      </SourceLine>
+      <Message>In class example.a.MutableInit</Message>
+    </Class>
+    <Field classname="example.a.MutableInit" name="list2" signature="Ljava/util/List;" isStatic="false" primary="true">
+      <SourceLine classname="example.a.MutableInit" sourcefile="MutableInit.java" sourcepath="example/a/MutableInit.java">
+        <Message>In MutableInit.java</Message>
+      </SourceLine>
+      <Message>Field example.a.MutableInit.list2</Message>
+    </Field>
+    <SourceLine classname="example.a.MutableInit" primary="true" start="10" end="10" startBytecode="14" endBytecode="14" sourcefile="MutableInit.java" sourcepath="example/a/MutableInit.java">
+      <Message>At MutableInit.java:[line 10]</Message>
+    </SourceLine>
+  </BugInstance>
+  <BugCategory category="PERFORMANCE">
+    <Description>Performance</Description>
+  </BugCategory>
+  <BugPattern type="URF_UNREAD_FIELD" abbrev="UrF" category="PERFORMANCE">
+    <ShortDescription>Unread field</ShortDescription>
+    <Details><![CDATA[
+
+  <p> This field is never read.&nbsp; Consider removing it from the class.</p>
+
+    ]]></Details>
+  </BugPattern>
+  <BugCode abbrev="UrF">
+    <Description>Unread field</Description>
+  </BugCode>
+  <Errors errors="0" missingClasses="0"></Errors>
+  <FindBugsSummary timestamp="Tue, 6 Aug 2024 17:40:58 +0200" total_classes="1" referenced_classes="18" total_bugs="1" total_size="10" num_packages="1" java_version="11.0.18" vm_version="11.0.18+10" cpu_seconds="7.14" clock_seconds="2.14" peak_mbytes="139.02" alloc_mbytes="768.00" gc_seconds="0.04" priority_2="1">
+    <FileStats path="example/a/MutableInit.java" bugCount="1" size="10" bugHash="cfbee36b7dbbc6129cd22de5968e3de5"/>
+    <PackageStats package="example.a" total_bugs="1" total_types="1" total_size="10" priority_2="1">
+      <ClassStats class="example.a.MutableInit" sourceFile="MutableInit.java" interface="false" size="10" bugs="1" priority_2="1"/>
+    </PackageStats>
+    <FindBugsProfile>
+      <ClassProfile name="edu.umd.cs.findbugs.classfile.engine.ClassInfoAnalysisEngine" totalMilliseconds="561" invocations="437" avgMicrosecondsPerInvocation="1284" maxMicrosecondsPerInvocation="28982" standardDeviationMicrosecondsPerInvocation="3228"/>
+      <ClassProfile name="edu.umd.cs.findbugs.detect.FieldItemSummary" totalMilliseconds="91" invocations="18" avgMicrosecondsPerInvocation="5062" maxMicrosecondsPerInvocation="36422" standardDeviationMicrosecondsPerInvocation="8709"/>
+      <ClassProfile name="edu.umd.cs.findbugs.OpcodeStack$JumpInfoFactory" totalMilliseconds="88" invocations="141" avgMicrosecondsPerInvocation="628" maxMicrosecondsPerInvocation="38784" standardDeviationMicrosecondsPerInvocation="3284"/>
+      <ClassProfile name="edu.umd.cs.findbugs.util.TopologicalSort" totalMilliseconds="65" invocations="403" avgMicrosecondsPerInvocation="162" maxMicrosecondsPerInvocation="4722" standardDeviationMicrosecondsPerInvocation="413"/>
+      <ClassProfile name="edu.umd.cs.findbugs.classfile.engine.bcel.JavaClassAnalysisEngine" totalMilliseconds="61" invocations="34" avgMicrosecondsPerInvocation="1802" maxMicrosecondsPerInvocation="31962" standardDeviationMicrosecondsPerInvocation="5550"/>
+      <ClassProfile name="edu.umd.cs.findbugs.classfile.engine.ClassDataAnalysisEngine" totalMilliseconds="60" invocations="439" avgMicrosecondsPerInvocation="137" maxMicrosecondsPerInvocation="10232" standardDeviationMicrosecondsPerInvocation="516"/>
+      <ClassProfile name="edu.umd.cs.findbugs.detect.FindNoSideEffectMethods" totalMilliseconds="58" invocations="18" avgMicrosecondsPerInvocation="3262" maxMicrosecondsPerInvocation="15150" standardDeviationMicrosecondsPerInvocation="4625"/>
+      <ClassProfile name="edu.umd.cs.findbugs.detect.NoteDirectlyRelevantTypeQualifiers" totalMilliseconds="51" invocations="18" avgMicrosecondsPerInvocation="2857" maxMicrosecondsPerInvocation="30682" standardDeviationMicrosecondsPerInvocation="6930"/>
+      <ClassProfile name="edu.umd.cs.findbugs.classfile.engine.bcel.MethodGenFactory" totalMilliseconds="49" invocations="3" avgMicrosecondsPerInvocation="16581" maxMicrosecondsPerInvocation="49220" standardDeviationMicrosecondsPerInvocation="23079"/>
+    </FindBugsProfile>
+  </FindBugsSummary>
+  <ClassFeatures></ClassFeatures>
+  <History></History>
+</BugCollection>

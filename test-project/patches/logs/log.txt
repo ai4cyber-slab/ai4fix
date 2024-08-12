@@ -1,0 +1,1116 @@
+[2024/08/06 17:37:13] Start!
+[2024/08/06 17:37:13] Project source acquiring started
+[2024/08/06 17:37:13] Project compilation started
+[2024/08/06 17:37:16] [INFO] Scanning for projects...
+[2024/08/06 17:37:16] [INFO] 
+[2024/08/06 17:37:16] [INFO] --------------------------< org.example:mvn >---------------------------
+[2024/08/06 17:37:16] [INFO] Building mvn 1.0-SNAPSHOT
+[2024/08/06 17:37:16] [INFO]   from pom.xml
+[2024/08/06 17:37:16] [INFO] --------------------------------[ jar ]---------------------------------
+[2024/08/06 17:37:16] [INFO] 
+[2024/08/06 17:37:16] [INFO] --- clean:3.2.0:clean (default-clean) @ mvn ---
+[2024/08/06 17:37:17] [INFO] Deleting C:\Users\HP\slab\ai4fix\test-project\target
+[2024/08/06 17:37:17] [INFO] 
+[2024/08/06 17:37:17] [INFO] --- resources:3.3.1:resources (default-resources) @ mvn ---
+[2024/08/06 17:37:17] [INFO] skip non existing resourceDirectory C:\Users\HP\slab\ai4fix\test-project\src\main\resources
+[2024/08/06 17:37:17] [INFO] 
+[2024/08/06 17:37:17] [INFO] --- compiler:3.11.0:compile (default-compile) @ mvn ---
+[2024/08/06 17:37:17] [INFO] Changes detected - recompiling the module! :source
+[2024/08/06 17:37:17] [INFO] Compiling 7 source files with javac [debug target 11] to target\classes
+[2024/08/06 17:37:18] [INFO] 
+[2024/08/06 17:37:18] [INFO] --- resources:3.3.1:testResources (default-testResources) @ mvn ---
+[2024/08/06 17:37:18] [INFO] skip non existing resourceDirectory C:\Users\HP\slab\ai4fix\test-project\src\test\resources
+[2024/08/06 17:37:18] [INFO] 
+[2024/08/06 17:37:18] [INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ mvn ---
+[2024/08/06 17:37:18] [INFO] No sources to compile
+[2024/08/06 17:37:19] [INFO] 
+[2024/08/06 17:37:19] [INFO] --- surefire:3.0.0-M5:test (default-test) @ mvn ---
+[2024/08/06 17:37:19] [INFO] Tests are skipped.
+[2024/08/06 17:37:19] [INFO] 
+[2024/08/06 17:37:19] [INFO] --- jar:3.2.0:jar (default-jar) @ mvn ---
+[2024/08/06 17:37:20] [INFO] Building jar: C:\Users\HP\slab\ai4fix\test-project\target\mvn-1.0-SNAPSHOT.jar
+[2024/08/06 17:37:21] [INFO] ------------------------------------------------------------------------
+[2024/08/06 17:37:21] [INFO] BUILD SUCCESS
+[2024/08/06 17:37:21] [INFO] ------------------------------------------------------------------------
+[2024/08/06 17:37:21] [INFO] Total time:  4.880 s
+[2024/08/06 17:37:21] [INFO] Finished at: 2024-08-06T17:37:21+02:00
+[2024/08/06 17:37:21] [INFO] ------------------------------------------------------------------------
+[2024/08/06 17:37:29] Spotbugs analysis started
+[2024/08/06 17:37:29] INFO  org.jan.Main - JAN (build #85480f99)
+[2024/08/06 17:37:29] INFO  org.jan.OptionParser - JAN options:
+[2024/08/06 17:37:29] INFO  org.jan.OptionParser -   columbusResultDir=.columbus_java
+[2024/08/06 17:37:29] INFO  org.jan.OptionParser -   hardFilter=
+[2024/08/06 17:37:29] INFO  org.jan.OptionParser -   messageLevel=3
+[2024/08/06 17:37:29] INFO  org.jan.OptionParser -   xmlToEveryClass=0
+[2024/08/06 17:37:29] INFO  org.jan.OptionParser -   needCheck=1
+[2024/08/06 17:37:29] INFO  org.jan.OptionParser -   keepComments=1
+[2024/08/06 17:37:29] INFO  org.jan.OptionParser -   buildAllExternal=0
+[2024/08/06 17:37:29] INFO  org.jan.OptionParser -   buildExtFromSource=1
+[2024/08/06 17:37:29] INFO  org.jan.OptionParser -   buildAllParentForOverrides=1
+[2024/08/06 17:37:29] INFO  org.jan.OptionParser - Switch the log level to 3.
+[2024/08/06 17:37:29] INFO  org.jan.JDKTreeMaker - Javac options:
+[2024/08/06 17:37:29] INFO  org.jan.JDKTreeMaker -   -cp
+[2024/08/06 17:37:29] INFO  org.jan.JDKTreeMaker -   .
+[2024/08/06 17:37:30] INFO  org.jan.Main - Rebuild trees.
+[2024/08/06 17:37:30] INFO  org.jan.TreeBuilder - Source file: C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\ArrayDemo.java
+[2024/08/06 17:37:30] INFO  org.jan.Main - Build comments.
+[2024/08/06 17:37:30] INFO  org.jan.Main - Create external classes.
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - First round in external class builder
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Arrays
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Arrays.ArrayItr
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Arrays.ArrayList
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Arrays.LegacyMergeSort
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Arrays.NaturalOrder
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.UUID
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.UUID.Holder
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.String
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.String.CaseInsensitiveComparator
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Object
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Iterator
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList.RandomAccessSubList
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList.SubList
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList.RandomAccessSpliterator
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList.ListItr
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList.Itr
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.RandomAccess
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Serializable
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Spliterator
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.Consumer
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.UnaryOperator
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Comparator
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Comparable
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.BinaryOperator
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.LongBinaryOperator
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.DoubleBinaryOperator
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.IntBinaryOperator
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: jdk.internal.HotSpotIntrinsicCandidate
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Class
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.List
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.SafeVarargs
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.StringBuilder
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Set
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.IntFunction
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.IntUnaryOperator
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.IntToLongFunction
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.IntToDoubleFunction
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Spliterator.OfInt
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Spliterator.OfLong
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Spliterator.OfDouble
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.Stream
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.IntStream
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.LongStream
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.DoubleStream
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.security.SecureRandom
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: jdk.internal.misc.JavaLangAccess
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.CharSequence
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: jdk.internal.vm.annotation.Stable
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectStreamField
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Void
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Deprecated
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.UnsupportedEncodingException
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.nio.charset.Charset
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.StringBuffer
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.AbstractStringBuilder
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Iterable
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Locale
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.CloneNotSupportedException
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.InterruptedException
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Throwable
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractCollection
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.ListIterator
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collection
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.FunctionalInterface
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.Function
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.ToIntFunction
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.ToLongFunction
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.ToDoubleFunction
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.BiFunction
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Annotation
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Target
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.ElementType
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Retention
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.RetentionPolicy
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.GenericDeclaration
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.Type
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.AnnotatedElement
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Documented
+[2024/08/06 17:37:30] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Integer
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.IntConsumer
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Spliterator.OfPrimitive
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Long
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.LongConsumer
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Double
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.DoubleConsumer
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.BaseStream
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Random
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.IOException
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Appendable
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Cloneable
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Exception
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.Predicate
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Enum
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Number
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.AutoCloseable
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.ClassNotFoundException
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectInputStream
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectStreamException
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.ReflectiveOperationException
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.InputStream
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectInput
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectStreamConstants
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Closeable
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.DataInput
+[2024/08/06 17:37:31] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:31] INFO  org.jan.Main - Set crossedges.
+[2024/08/06 17:37:31] INFO  org.jan.Main - Build types.
+[2024/08/06 17:37:31] INFO  org.jan.Main - Check ASG.
+[2024/08/06 17:37:31] INFO  org.jan.Main - Filter.
+[2024/08/06 17:37:31] INFO  org.jan.Main - Save jsi.
+[2024/08/06 17:37:31] INFO  org.jan.ClassSaver - Saved file timestamp: 1722958651146
+[2024/08/06 17:37:31] INFO  org.jan.Main - Save jml.
+[2024/08/06 17:37:31] INFO  org.jan.Main - CPU times (s):
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Total time: 1.515
+[2024/08/06 17:37:31] INFO  org.jan.Main -   JDK compile time: 0.671
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Tree rebuilding time: 0.078
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Comment building time: 0.0
+[2024/08/06 17:37:31] INFO  org.jan.Main -   External class building time: 0.218
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Crossedge setting time: 0.015
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Type building time: 0.046
+[2024/08/06 17:37:31] INFO  org.jan.Main -   ASG checking time: 0.031
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Filter generating time: 0.015
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Common jsi saving time: 0.046
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Common jml saving time: 0.218
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Small jsi saving time: 0.0
+[2024/08/06 17:37:31] INFO  org.jan.Main - User times (s):
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Total time: 1.359
+[2024/08/06 17:37:31] INFO  org.jan.Main -   JDK compile time: 0.578
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Tree rebuilding time: 0.078
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Comment building time: 0.0
+[2024/08/06 17:37:31] INFO  org.jan.Main -   External class building time: 0.218
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Crossedge setting time: 0.015
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Type building time: 0.046
+[2024/08/06 17:37:31] INFO  org.jan.Main -   ASG checking time: 0.031
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Filter generating time: 0.015
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Common jsi saving time: 0.046
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Common jml saving time: 0.171
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Small jsi saving time: 0.0
+[2024/08/06 17:37:31] INFO  org.jan.Main - Memory statistics:
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Max total memory: 128 MB
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Max used memory: 44 MB
+[2024/08/06 17:37:31] INFO  org.jan.Main - Other statistics:
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Analyzed files: 1
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Warnings: 0
+[2024/08/06 17:37:31] INFO  org.jan.Main -   Errors: 0
+[2024/08/06 17:37:31] JAN2ChangePath 5.1.0 (Build:85480f99) - Copyright (c) 2004-2022 Department of Software Engineering - University of Szeged 
+[2024/08/06 17:37:31] Changing path from 'c:\users\hp\slab\ai4fix\test-project\src\main\java\' to ''
+[2024/08/06 17:37:31] Loading file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\ArrayDemo.jsi"
+[2024/08/06 17:37:31] Replacing the paths
+[2024/08/06 17:37:31] Saving file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\ArrayDemo.jsi"
+[2024/08/06 17:37:31] Touching the filter file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\ArrayDemo.fjsi"
+[2024/08/06 17:37:31] Analyzed asg: C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\ArrayDemo.jsi
+[2024/08/06 17:37:32] INFO  org.jan.Main - JAN (build #85480f99)
+[2024/08/06 17:37:32] INFO  org.jan.OptionParser - JAN options:
+[2024/08/06 17:37:32] INFO  org.jan.OptionParser -   columbusResultDir=.columbus_java
+[2024/08/06 17:37:32] INFO  org.jan.OptionParser -   hardFilter=
+[2024/08/06 17:37:32] INFO  org.jan.OptionParser -   messageLevel=3
+[2024/08/06 17:37:32] INFO  org.jan.OptionParser -   xmlToEveryClass=0
+[2024/08/06 17:37:32] INFO  org.jan.OptionParser -   needCheck=1
+[2024/08/06 17:37:32] INFO  org.jan.OptionParser -   keepComments=1
+[2024/08/06 17:37:32] INFO  org.jan.OptionParser -   buildAllExternal=0
+[2024/08/06 17:37:32] INFO  org.jan.OptionParser -   buildExtFromSource=1
+[2024/08/06 17:37:32] INFO  org.jan.OptionParser -   buildAllParentForOverrides=1
+[2024/08/06 17:37:32] INFO  org.jan.OptionParser - Switch the log level to 3.
+[2024/08/06 17:37:32] INFO  org.jan.JDKTreeMaker - Javac options:
+[2024/08/06 17:37:32] INFO  org.jan.JDKTreeMaker -   -cp
+[2024/08/06 17:37:32] INFO  org.jan.JDKTreeMaker -   .
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger - C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\Main.java:11: error: cannot find symbol
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger -         MyDate date = new MyDate();
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger -         ^
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger -   symbol:   class MyDate
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger -   location: class Main
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger - C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\Main.java:11: error: cannot find symbol
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger -         MyDate date = new MyDate();
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger -                           ^
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger -   symbol:   class MyDate
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger -   location: class Main
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger - C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\Main.java:14: error: cannot find symbol
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger -         ArrayDemo ad = new ArrayDemo ("OSA Tool");
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger -         ^
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger -   symbol:   class ArrayDemo
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger -   location: class Main
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger - C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\Main.java:14: error: cannot find symbol
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger -         ArrayDemo ad = new ArrayDemo ("OSA Tool");
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger -                            ^
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger -   symbol:   class ArrayDemo
+[2024/08/06 17:37:33] INFO  org.jan.CompilerLogger -   location: class Main
+[2024/08/06 17:37:33] INFO  org.jan.Main - Rebuild trees.
+[2024/08/06 17:37:33] INFO  org.jan.TreeBuilder - Source file: C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\Main.java
+[2024/08/06 17:37:33] INFO  org.jan.Main - Build comments.
+[2024/08/06 17:37:33] INFO  org.jan.Main - Create external classes.
+[2024/08/06 17:37:33] INFO  org.jan.ExternalClassBuilder - First round in external class builder
+[2024/08/06 17:37:33] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.String
+[2024/08/06 17:37:33] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.String.CaseInsensitiveComparator
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.System
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.System.LoggerFinder
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.System.Logger
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.System.Logger.Level
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Object
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.PrintStream
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Serializable
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Comparable
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.CharSequence
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Comparator
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: jdk.internal.vm.annotation.Stable
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectStreamField
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: jdk.internal.HotSpotIntrinsicCandidate
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Void
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Deprecated
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.UnsupportedEncodingException
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.nio.charset.Charset
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.StringBuffer
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.StringBuilder
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.AbstractStringBuilder
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Iterable
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Locale
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.Stream
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.IntStream
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.RuntimePermission
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Module
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.ResourceBundle
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Enum
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.Supplier
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Throwable
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.InputStream
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.SecurityManager
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Console
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Properties
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.ModuleLayer
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.IOException
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.nio.channels.Channel
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Map
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: jdk.internal.reflect.CallerSensitive
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.FileOutputStream
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Class
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.CloneNotSupportedException
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.InterruptedException
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.FilterOutputStream
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Appendable
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Closeable
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Formatter
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.BufferedWriter
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.OutputStreamWriter
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.OutputStream
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.FileNotFoundException
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.File
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.Function
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.ToIntFunction
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.ToLongFunction
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.ToDoubleFunction
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.FunctionalInterface
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Annotation
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Target
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.ElementType
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Retention
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.RetentionPolicy
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Documented
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Cloneable
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.BaseStream
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Integer
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.security.BasicPermission
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.AnnotatedElement
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.ClassNotFoundException
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectInputStream
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectStreamException
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Flushable
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Hashtable
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Exception
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.GenericDeclaration
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.Type
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.AutoCloseable
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Writer
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Number
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.security.Permission
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.ReflectiveOperationException
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectInput
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectStreamConstants
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Dictionary
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.security.Guard
+[2024/08/06 17:37:34] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.DataInput
+[2024/08/06 17:37:34] INFO  org.jan.Main - Set crossedges.
+[2024/08/06 17:37:34] INFO  org.jan.Main - Build types.
+[2024/08/06 17:37:34] INFO  org.jan.Main - Check ASG.
+[2024/08/06 17:37:34] WARN  org.jan.Checker - id134 kind: ndkNewClass: C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\Main.java: 11: 23:  don't have a constructor.
+[2024/08/06 17:37:34] WARN  org.jan.Checker - id143 kind: ndkFieldAccess: C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\Main.java: 12: 19:  don't have a type.
+[2024/08/06 17:37:34] WARN  org.jan.Checker - id139 kind: ndkMethodInvocation: C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\Main.java: 12: 40:  don't have invokes edge.
+[2024/08/06 17:37:34] WARN  org.jan.Checker - id149 kind: ndkNewClass: C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\Main.java: 14: 24:  don't have a constructor.
+[2024/08/06 17:37:34] WARN  org.jan.Checker - id154 kind: ndkMethodInvocation: C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\Main.java: 15: 23:  don't have invokes edge.
+[2024/08/06 17:37:34] INFO  org.jan.Main - Filter.
+[2024/08/06 17:37:34] INFO  org.jan.Main - Save jsi.
+[2024/08/06 17:37:34] INFO  org.jan.ClassSaver - Saved file timestamp: 1722958654288
+[2024/08/06 17:37:34] INFO  org.jan.Main - Save jml.
+[2024/08/06 17:37:34] INFO  org.jan.Main - CPU times (s):
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Total time: 1.484
+[2024/08/06 17:37:34] INFO  org.jan.Main -   JDK compile time: 0.671
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Tree rebuilding time: 0.062
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Comment building time: 0.0
+[2024/08/06 17:37:34] INFO  org.jan.Main -   External class building time: 0.203
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Crossedge setting time: 0.031
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Type building time: 0.015
+[2024/08/06 17:37:34] INFO  org.jan.Main -   ASG checking time: 0.046
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Filter generating time: 0.0
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Common jsi saving time: 0.046
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Common jml saving time: 0.218
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Small jsi saving time: 0.0
+[2024/08/06 17:37:34] INFO  org.jan.Main - User times (s):
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Total time: 1.359
+[2024/08/06 17:37:34] INFO  org.jan.Main -   JDK compile time: 0.625
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Tree rebuilding time: 0.062
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Comment building time: 0.0
+[2024/08/06 17:37:34] INFO  org.jan.Main -   External class building time: 0.156
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Crossedge setting time: 0.031
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Type building time: 0.015
+[2024/08/06 17:37:34] INFO  org.jan.Main -   ASG checking time: 0.046
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Filter generating time: 0.0
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Common jsi saving time: 0.046
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Common jml saving time: 0.218
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Small jsi saving time: 0.0
+[2024/08/06 17:37:34] INFO  org.jan.Main - Memory statistics:
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Max total memory: 128 MB
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Max used memory: 56 MB
+[2024/08/06 17:37:34] INFO  org.jan.Main - Other statistics:
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Analyzed files: 1
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Warnings: 5
+[2024/08/06 17:37:34] INFO  org.jan.Main -   Errors: 0
+[2024/08/06 17:37:34] JAN2ChangePath 5.1.0 (Build:85480f99) - Copyright (c) 2004-2022 Department of Software Engineering - University of Szeged 
+[2024/08/06 17:37:34] Changing path from 'c:\users\hp\slab\ai4fix\test-project\src\main\java\' to ''
+[2024/08/06 17:37:34] Loading file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\Main.jsi"
+[2024/08/06 17:37:34] Replacing the paths
+[2024/08/06 17:37:34] Saving file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\Main.jsi"
+[2024/08/06 17:37:34] Touching the filter file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\Main.fjsi"
+[2024/08/06 17:37:34] Analyzed asg: C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\Main.jsi
+[2024/08/06 17:37:35] INFO  org.jan.Main - JAN (build #85480f99)
+[2024/08/06 17:37:35] INFO  org.jan.OptionParser - JAN options:
+[2024/08/06 17:37:35] INFO  org.jan.OptionParser -   columbusResultDir=.columbus_java
+[2024/08/06 17:37:35] INFO  org.jan.OptionParser -   hardFilter=
+[2024/08/06 17:37:35] INFO  org.jan.OptionParser -   messageLevel=3
+[2024/08/06 17:37:35] INFO  org.jan.OptionParser -   xmlToEveryClass=0
+[2024/08/06 17:37:35] INFO  org.jan.OptionParser -   needCheck=1
+[2024/08/06 17:37:35] INFO  org.jan.OptionParser -   keepComments=1
+[2024/08/06 17:37:35] INFO  org.jan.OptionParser -   buildAllExternal=0
+[2024/08/06 17:37:35] INFO  org.jan.OptionParser -   buildExtFromSource=1
+[2024/08/06 17:37:35] INFO  org.jan.OptionParser -   buildAllParentForOverrides=1
+[2024/08/06 17:37:35] INFO  org.jan.OptionParser - Switch the log level to 3.
+[2024/08/06 17:37:35] INFO  org.jan.JDKTreeMaker - Javac options:
+[2024/08/06 17:37:35] INFO  org.jan.JDKTreeMaker -   -cp
+[2024/08/06 17:37:35] INFO  org.jan.JDKTreeMaker -   .
+[2024/08/06 17:37:36] INFO  org.jan.Main - Rebuild trees.
+[2024/08/06 17:37:36] INFO  org.jan.TreeBuilder - Source file: C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\MyDate.java
+[2024/08/06 17:37:36] INFO  org.jan.Main - Build comments.
+[2024/08/06 17:37:36] INFO  org.jan.Main - Create external classes.
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - First round in external class builder
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Date
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Object
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Serializable
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Cloneable
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Comparable
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: sun.util.calendar.BaseCalendar
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: sun.util.calendar.BaseCalendar.Date
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.String
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Deprecated
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.StringBuilder
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.IOException
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectOutputStream
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.ClassNotFoundException
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectInputStream
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.time.Instant
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: jdk.internal.HotSpotIntrinsicCandidate
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Class
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.CloneNotSupportedException
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.InterruptedException
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Throwable
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: sun.util.calendar.AbstractCalendar
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: sun.util.calendar.CalendarDate
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.CharSequence
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Annotation
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Documented
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Retention
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.RetentionPolicy
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Target
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.ElementType
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.AbstractStringBuilder
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Exception
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.OutputStream
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectOutput
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectStreamConstants
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.ReflectiveOperationException
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.InputStream
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectInput
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.time.temporal.Temporal
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.time.temporal.TemporalAdjuster
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.GenericDeclaration
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.Type
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.AnnotatedElement
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: sun.util.calendar.CalendarSystem
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Enum
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Appendable
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Closeable
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Flushable
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.DataOutput
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.AutoCloseable
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.DataInput
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.time.temporal.TemporalAccessor
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.FunctionalInterface
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:36] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectStreamException
+[2024/08/06 17:37:36] INFO  org.jan.Main - Set crossedges.
+[2024/08/06 17:37:36] INFO  org.jan.Main - Build types.
+[2024/08/06 17:37:36] INFO  org.jan.Main - Check ASG.
+[2024/08/06 17:37:36] INFO  org.jan.Main - Filter.
+[2024/08/06 17:37:36] INFO  org.jan.Main - Save jsi.
+[2024/08/06 17:37:36] INFO  org.jan.ClassSaver - Saved file timestamp: 1722958656795
+[2024/08/06 17:37:36] INFO  org.jan.Main - Save jml.
+[2024/08/06 17:37:36] INFO  org.jan.Main - CPU times (s):
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Total time: 1.281
+[2024/08/06 17:37:36] INFO  org.jan.Main -   JDK compile time: 0.718
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Tree rebuilding time: 0.078
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Comment building time: 0.0
+[2024/08/06 17:37:36] INFO  org.jan.Main -   External class building time: 0.093
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Crossedge setting time: 0.015
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Type building time: 0.015
+[2024/08/06 17:37:36] INFO  org.jan.Main -   ASG checking time: 0.015
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Filter generating time: 0.0
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Common jsi saving time: 0.031
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Common jml saving time: 0.109
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Small jsi saving time: 0.0
+[2024/08/06 17:37:36] INFO  org.jan.Main - User times (s):
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Total time: 1.156
+[2024/08/06 17:37:36] INFO  org.jan.Main -   JDK compile time: 0.656
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Tree rebuilding time: 0.062
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Comment building time: 0.0
+[2024/08/06 17:37:36] INFO  org.jan.Main -   External class building time: 0.062
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Crossedge setting time: 0.015
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Type building time: 0.0
+[2024/08/06 17:37:36] INFO  org.jan.Main -   ASG checking time: 0.015
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Filter generating time: 0.0
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Common jsi saving time: 0.031
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Common jml saving time: 0.109
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Small jsi saving time: 0.0
+[2024/08/06 17:37:36] INFO  org.jan.Main - Memory statistics:
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Max total memory: 128 MB
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Max used memory: 41 MB
+[2024/08/06 17:37:36] INFO  org.jan.Main - Other statistics:
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Analyzed files: 1
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Warnings: 0
+[2024/08/06 17:37:36] INFO  org.jan.Main -   Errors: 0
+[2024/08/06 17:37:37] JAN2ChangePath 5.1.0 (Build:85480f99) - Copyright (c) 2004-2022 Department of Software Engineering - University of Szeged 
+[2024/08/06 17:37:37] Changing path from 'c:\users\hp\slab\ai4fix\test-project\src\main\java\' to ''
+[2024/08/06 17:37:37] Loading file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\MyDate.jsi"
+[2024/08/06 17:37:37] Replacing the paths
+[2024/08/06 17:37:37] Saving file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\MyDate.jsi"
+[2024/08/06 17:37:37] Touching the filter file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\MyDate.fjsi"
+[2024/08/06 17:37:37] Analyzed asg: C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\MyDate.jsi
+[2024/08/06 17:37:38] INFO  org.jan.Main - JAN (build #85480f99)
+[2024/08/06 17:37:38] INFO  org.jan.OptionParser - JAN options:
+[2024/08/06 17:37:38] INFO  org.jan.OptionParser -   columbusResultDir=.columbus_java
+[2024/08/06 17:37:38] INFO  org.jan.OptionParser -   hardFilter=
+[2024/08/06 17:37:38] INFO  org.jan.OptionParser -   messageLevel=3
+[2024/08/06 17:37:38] INFO  org.jan.OptionParser -   xmlToEveryClass=0
+[2024/08/06 17:37:38] INFO  org.jan.OptionParser -   needCheck=1
+[2024/08/06 17:37:38] INFO  org.jan.OptionParser -   keepComments=1
+[2024/08/06 17:37:38] INFO  org.jan.OptionParser -   buildAllExternal=0
+[2024/08/06 17:37:38] INFO  org.jan.OptionParser -   buildExtFromSource=1
+[2024/08/06 17:37:38] INFO  org.jan.OptionParser -   buildAllParentForOverrides=1
+[2024/08/06 17:37:38] INFO  org.jan.OptionParser - Switch the log level to 3.
+[2024/08/06 17:37:38] INFO  org.jan.JDKTreeMaker - Javac options:
+[2024/08/06 17:37:38] INFO  org.jan.JDKTreeMaker -   -cp
+[2024/08/06 17:37:38] INFO  org.jan.JDKTreeMaker -   .
+[2024/08/06 17:37:39] INFO  org.jan.Main - Rebuild trees.
+[2024/08/06 17:37:39] INFO  org.jan.TreeBuilder - Source file: C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\NullPath.java
+[2024/08/06 17:37:39] INFO  org.jan.Main - Build comments.
+[2024/08/06 17:37:39] INFO  org.jan.Main - Create external classes.
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - First round in external class builder
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.String
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.String.CaseInsensitiveComparator
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.System
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.System.LoggerFinder
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.System.Logger
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.System.Logger.Level
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Object
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.PrintStream
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Serializable
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Comparable
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.CharSequence
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Comparator
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: jdk.internal.vm.annotation.Stable
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectStreamField
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: jdk.internal.HotSpotIntrinsicCandidate
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Void
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Deprecated
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.UnsupportedEncodingException
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.nio.charset.Charset
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.StringBuffer
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.StringBuilder
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.AbstractStringBuilder
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Iterable
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Locale
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.Stream
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.IntStream
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.RuntimePermission
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Module
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.ResourceBundle
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Enum
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.Supplier
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Throwable
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.InputStream
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.SecurityManager
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Console
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Properties
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.ModuleLayer
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.IOException
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.nio.channels.Channel
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Map
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: jdk.internal.reflect.CallerSensitive
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.FileOutputStream
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Class
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.CloneNotSupportedException
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.InterruptedException
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.FilterOutputStream
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Appendable
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Closeable
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Formatter
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.BufferedWriter
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.OutputStreamWriter
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.OutputStream
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.FileNotFoundException
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.File
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.Function
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.ToIntFunction
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.ToLongFunction
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.ToDoubleFunction
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.FunctionalInterface
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Annotation
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Target
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.ElementType
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Retention
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.RetentionPolicy
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Documented
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Cloneable
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.BaseStream
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Integer
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.security.BasicPermission
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.AnnotatedElement
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.ClassNotFoundException
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectInputStream
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectStreamException
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Flushable
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Hashtable
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Exception
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.GenericDeclaration
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.Type
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.AutoCloseable
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Writer
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Number
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.security.Permission
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.ReflectiveOperationException
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectInput
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectStreamConstants
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Dictionary
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.security.Guard
+[2024/08/06 17:37:39] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.DataInput
+[2024/08/06 17:37:39] INFO  org.jan.Main - Set crossedges.
+[2024/08/06 17:37:39] INFO  org.jan.Main - Build types.
+[2024/08/06 17:37:39] INFO  org.jan.Main - Check ASG.
+[2024/08/06 17:37:39] INFO  org.jan.Main - Filter.
+[2024/08/06 17:37:39] INFO  org.jan.Main - Save jsi.
+[2024/08/06 17:37:39] INFO  org.jan.ClassSaver - Saved file timestamp: 1722958659572
+[2024/08/06 17:37:39] INFO  org.jan.Main - Save jml.
+[2024/08/06 17:37:39] INFO  org.jan.Main - CPU times (s):
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Total time: 1.484
+[2024/08/06 17:37:39] INFO  org.jan.Main -   JDK compile time: 0.718
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Tree rebuilding time: 0.078
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Comment building time: 0.0
+[2024/08/06 17:37:39] INFO  org.jan.Main -   External class building time: 0.203
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Crossedge setting time: 0.015
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Type building time: 0.031
+[2024/08/06 17:37:39] INFO  org.jan.Main -   ASG checking time: 0.015
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Filter generating time: 0.0
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Common jsi saving time: 0.046
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Common jml saving time: 0.171
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Small jsi saving time: 0.0
+[2024/08/06 17:37:39] INFO  org.jan.Main - User times (s):
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Total time: 1.328
+[2024/08/06 17:37:39] INFO  org.jan.Main -   JDK compile time: 0.625
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Tree rebuilding time: 0.062
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Comment building time: 0.0
+[2024/08/06 17:37:39] INFO  org.jan.Main -   External class building time: 0.187
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Crossedge setting time: 0.015
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Type building time: 0.031
+[2024/08/06 17:37:39] INFO  org.jan.Main -   ASG checking time: 0.015
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Filter generating time: 0.0
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Common jsi saving time: 0.046
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Common jml saving time: 0.156
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Small jsi saving time: 0.0
+[2024/08/06 17:37:39] INFO  org.jan.Main - Memory statistics:
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Max total memory: 128 MB
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Max used memory: 56 MB
+[2024/08/06 17:37:39] INFO  org.jan.Main - Other statistics:
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Analyzed files: 1
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Warnings: 0
+[2024/08/06 17:37:39] INFO  org.jan.Main -   Errors: 0
+[2024/08/06 17:37:39] JAN2ChangePath 5.1.0 (Build:85480f99) - Copyright (c) 2004-2022 Department of Software Engineering - University of Szeged 
+[2024/08/06 17:37:39] Changing path from 'c:\users\hp\slab\ai4fix\test-project\src\main\java\' to ''
+[2024/08/06 17:37:39] Loading file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\NullPath.jsi"
+[2024/08/06 17:37:39] Replacing the paths
+[2024/08/06 17:37:39] Saving file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\NullPath.jsi"
+[2024/08/06 17:37:39] Touching the filter file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\NullPath.fjsi"
+[2024/08/06 17:37:39] Analyzed asg: C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\NullPath.jsi
+[2024/08/06 17:37:40] INFO  org.jan.Main - JAN (build #85480f99)
+[2024/08/06 17:37:40] INFO  org.jan.OptionParser - JAN options:
+[2024/08/06 17:37:40] INFO  org.jan.OptionParser -   columbusResultDir=.columbus_java
+[2024/08/06 17:37:40] INFO  org.jan.OptionParser -   hardFilter=
+[2024/08/06 17:37:40] INFO  org.jan.OptionParser -   messageLevel=3
+[2024/08/06 17:37:40] INFO  org.jan.OptionParser -   xmlToEveryClass=0
+[2024/08/06 17:37:40] INFO  org.jan.OptionParser -   needCheck=1
+[2024/08/06 17:37:40] INFO  org.jan.OptionParser -   keepComments=1
+[2024/08/06 17:37:40] INFO  org.jan.OptionParser -   buildAllExternal=0
+[2024/08/06 17:37:40] INFO  org.jan.OptionParser -   buildExtFromSource=1
+[2024/08/06 17:37:40] INFO  org.jan.OptionParser -   buildAllParentForOverrides=1
+[2024/08/06 17:37:40] INFO  org.jan.OptionParser - Switch the log level to 3.
+[2024/08/06 17:37:40] INFO  org.jan.JDKTreeMaker - Javac options:
+[2024/08/06 17:37:40] INFO  org.jan.JDKTreeMaker -   -cp
+[2024/08/06 17:37:40] INFO  org.jan.JDKTreeMaker -   .
+[2024/08/06 17:37:41] INFO  org.jan.Main - Rebuild trees.
+[2024/08/06 17:37:41] INFO  org.jan.TreeBuilder - Source file: C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\a\Mutable.java
+[2024/08/06 17:37:41] INFO  org.jan.Main - Build comments.
+[2024/08/06 17:37:41] INFO  org.jan.Main - Create external classes.
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - First round in external class builder
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Set
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.TreeSet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.AsLIFOQueue
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.SetFromMap
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.ReverseComparator2
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.ReverseComparator
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.CopiesList
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.SingletonMap
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.SingletonList
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.SingletonSet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.EmptyMap
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.EmptyList
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.EmptySet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.EmptyEnumeration
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.EmptyListIterator
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.EmptyIterator
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.CheckedNavigableMap
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.CheckedSortedMap
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.CheckedMap
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.CheckedMap.CheckedEntrySet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.CheckedMap.CheckedEntrySet.CheckedEntry
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.CheckedRandomAccessList
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.CheckedList
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.CheckedNavigableSet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.CheckedSortedSet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.CheckedSet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.CheckedQueue
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.CheckedCollection
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.SynchronizedNavigableMap
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.SynchronizedSortedMap
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.SynchronizedMap
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.SynchronizedRandomAccessList
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.SynchronizedList
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.SynchronizedNavigableSet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.SynchronizedSortedSet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.SynchronizedSet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.SynchronizedCollection
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.UnmodifiableNavigableMap
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.UnmodifiableNavigableMap.EmptyNavigableMap
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.UnmodifiableSortedMap
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.UnmodifiableMap
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.UnmodifiableMap.UnmodifiableEntrySet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.UnmodifiableMap.UnmodifiableEntrySet.UnmodifiableEntry
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.UnmodifiableMap.UnmodifiableEntrySet.UnmodifiableEntrySetSpliterator
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.UnmodifiableRandomAccessList
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.UnmodifiableList
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.UnmodifiableNavigableSet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.UnmodifiableNavigableSet.EmptyNavigableSet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.UnmodifiableSortedSet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.UnmodifiableSet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collections.UnmodifiableCollection
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.String
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.String.CaseInsensitiveComparator
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Object
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collection
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Iterator
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Spliterator
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Spliterator.OfDouble
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Spliterator.OfLong
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Spliterator.OfInt
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Spliterator.OfPrimitive
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.SafeVarargs
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractSet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.NavigableSet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Cloneable
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Serializable
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.NavigableMap
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Comparator
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.SortedSet
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.IOException
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectOutputStream
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.ClassNotFoundException
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectInputStream
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractQueue
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Queue
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Deque
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.IntFunction
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.Consumer
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.Predicate
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.Stream
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Boolean
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Map
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Map.Entry
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Comparable
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList.RandomAccessSubList
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList.SubList
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList.RandomAccessSpliterator
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList.ListItr
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList.Itr
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.RandomAccess
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.List
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractMap
+[2024/08/06 17:37:41] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractMap.SimpleImmutableEntry
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractMap.SimpleEntry
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.BiConsumer
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.BiFunction
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.Function
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.UnaryOperator
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.ListIterator
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Enumeration
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Class
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.SortedMap
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Random
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.ArrayList
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.CharSequence
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: jdk.internal.vm.annotation.Stable
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectStreamField
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: jdk.internal.HotSpotIntrinsicCandidate
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Void
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Deprecated
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.UnsupportedEncodingException
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.nio.charset.Charset
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.StringBuffer
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.StringBuilder
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.AbstractStringBuilder
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Iterable
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Locale
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.IntStream
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.CloneNotSupportedException
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.InterruptedException
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Throwable
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Double
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.DoubleConsumer
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Long
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.LongConsumer
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Integer
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.IntConsumer
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Annotation
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Documented
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Retention
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.RetentionPolicy
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Target
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.ElementType
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractCollection
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.ToIntFunction
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.ToLongFunction
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.ToDoubleFunction
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.FunctionalInterface
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Exception
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.OutputStream
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectOutput
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectStreamConstants
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.ReflectiveOperationException
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.InputStream
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectInput
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.BaseStream
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.GenericDeclaration
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.Type
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.AnnotatedElement
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Appendable
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Number
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Enum
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Closeable
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Flushable
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.DataOutput
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.AutoCloseable
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.DataInput
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:42] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectStreamException
+[2024/08/06 17:37:42] INFO  org.jan.Main - Set crossedges.
+[2024/08/06 17:37:42] INFO  org.jan.Main - Build types.
+[2024/08/06 17:37:42] INFO  org.jan.Main - Check ASG.
+[2024/08/06 17:37:42] INFO  org.jan.Main - Filter.
+[2024/08/06 17:37:42] INFO  org.jan.Main - Save jsi.
+[2024/08/06 17:37:42] INFO  org.jan.ClassSaver - Saved file timestamp: 1722958662277
+[2024/08/06 17:37:42] INFO  org.jan.Main - Save jml.
+[2024/08/06 17:37:42] INFO  org.jan.Main - CPU times (s):
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Total time: 1.875
+[2024/08/06 17:37:42] INFO  org.jan.Main -   JDK compile time: 0.75
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Tree rebuilding time: 0.093
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Comment building time: 0.0
+[2024/08/06 17:37:42] INFO  org.jan.Main -   External class building time: 0.218
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Crossedge setting time: 0.109
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Type building time: 0.062
+[2024/08/06 17:37:42] INFO  org.jan.Main -   ASG checking time: 0.046
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Filter generating time: 0.0
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Common jsi saving time: 0.093
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Common jml saving time: 0.312
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Small jsi saving time: 0.0
+[2024/08/06 17:37:42] INFO  org.jan.Main - User times (s):
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Total time: 1.64
+[2024/08/06 17:37:42] INFO  org.jan.Main -   JDK compile time: 0.656
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Tree rebuilding time: 0.078
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Comment building time: 0.0
+[2024/08/06 17:37:42] INFO  org.jan.Main -   External class building time: 0.171
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Crossedge setting time: 0.109
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Type building time: 0.062
+[2024/08/06 17:37:42] INFO  org.jan.Main -   ASG checking time: 0.046
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Filter generating time: 0.0
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Common jsi saving time: 0.078
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Common jml saving time: 0.281
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Small jsi saving time: 0.0
+[2024/08/06 17:37:42] INFO  org.jan.Main - Memory statistics:
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Max total memory: 154 MB
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Max used memory: 38 MB
+[2024/08/06 17:37:42] INFO  org.jan.Main - Other statistics:
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Analyzed files: 1
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Warnings: 0
+[2024/08/06 17:37:42] INFO  org.jan.Main -   Errors: 0
+[2024/08/06 17:37:43] JAN2ChangePath 5.1.0 (Build:85480f99) - Copyright (c) 2004-2022 Department of Software Engineering - University of Szeged 
+[2024/08/06 17:37:43] Changing path from 'c:\users\hp\slab\ai4fix\test-project\src\main\java\' to ''
+[2024/08/06 17:37:43] Loading file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\a\Mutable.jsi"
+[2024/08/06 17:37:43] Replacing the paths
+[2024/08/06 17:37:43] Saving file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\a\Mutable.jsi"
+[2024/08/06 17:37:43] Touching the filter file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\a\Mutable.fjsi"
+[2024/08/06 17:37:43] Analyzed asg: C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\a\Mutable.jsi
+[2024/08/06 17:37:44] INFO  org.jan.Main - JAN (build #85480f99)
+[2024/08/06 17:37:44] INFO  org.jan.OptionParser - JAN options:
+[2024/08/06 17:37:44] INFO  org.jan.OptionParser -   columbusResultDir=.columbus_java
+[2024/08/06 17:37:44] INFO  org.jan.OptionParser -   hardFilter=
+[2024/08/06 17:37:44] INFO  org.jan.OptionParser -   messageLevel=3
+[2024/08/06 17:37:44] INFO  org.jan.OptionParser -   xmlToEveryClass=0
+[2024/08/06 17:37:44] INFO  org.jan.OptionParser -   needCheck=1
+[2024/08/06 17:37:44] INFO  org.jan.OptionParser -   keepComments=1
+[2024/08/06 17:37:44] INFO  org.jan.OptionParser -   buildAllExternal=0
+[2024/08/06 17:37:44] INFO  org.jan.OptionParser -   buildExtFromSource=1
+[2024/08/06 17:37:44] INFO  org.jan.OptionParser -   buildAllParentForOverrides=1
+[2024/08/06 17:37:44] INFO  org.jan.OptionParser - Switch the log level to 3.
+[2024/08/06 17:37:44] INFO  org.jan.JDKTreeMaker - Javac options:
+[2024/08/06 17:37:44] INFO  org.jan.JDKTreeMaker -   -cp
+[2024/08/06 17:37:44] INFO  org.jan.JDKTreeMaker -   .
+[2024/08/06 17:37:45] INFO  org.jan.Main - Rebuild trees.
+[2024/08/06 17:37:45] INFO  org.jan.TreeBuilder - Source file: C:\Users\HP\slab\ai4fix\test-project\src\main\java\example\a\MutableInit.java
+[2024/08/06 17:37:45] INFO  org.jan.Main - Build comments.
+[2024/08/06 17:37:45] INFO  org.jan.Main - Create external classes.
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - First round in external class builder
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Set
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.List
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.TreeSet
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Arrays
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Arrays.ArrayItr
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Arrays.ArrayList
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Arrays.LegacyMergeSort
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Arrays.NaturalOrder
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.String
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.String.CaseInsensitiveComparator
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Object
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Collection
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Iterator
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Spliterator
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.SafeVarargs
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.UnaryOperator
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Comparator
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.ListIterator
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractSet
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.NavigableSet
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Cloneable
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Serializable
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.NavigableMap
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.SortedSet
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.IOException
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectOutputStream
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.ClassNotFoundException
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectInputStream
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList.RandomAccessSubList
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList.SubList
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList.RandomAccessSpliterator
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList.ListItr
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractList.Itr
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.RandomAccess
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.Consumer
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Comparable
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.BinaryOperator
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.LongBinaryOperator
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.DoubleBinaryOperator
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.IntBinaryOperator
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: jdk.internal.HotSpotIntrinsicCandidate
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Class
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.StringBuilder
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.IntFunction
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.IntUnaryOperator
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.IntToLongFunction
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.IntToDoubleFunction
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Spliterator.OfInt
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Spliterator.OfLong
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Spliterator.OfDouble
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.Stream
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.IntStream
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.LongStream
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.DoubleStream
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.CharSequence
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: jdk.internal.vm.annotation.Stable
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectStreamField
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Void
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Deprecated
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.UnsupportedEncodingException
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.nio.charset.Charset
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.StringBuffer
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.AbstractStringBuilder
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Iterable
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Locale
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.CloneNotSupportedException
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.InterruptedException
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Throwable
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.Predicate
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Annotation
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Documented
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Retention
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.RetentionPolicy
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.Target
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.annotation.ElementType
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.Function
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.FunctionalInterface
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.ToIntFunction
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.ToLongFunction
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.ToDoubleFunction
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.AbstractCollection
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.SortedMap
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Exception
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.OutputStream
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectOutput
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectStreamConstants
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.ReflectiveOperationException
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.InputStream
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectInput
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.BiFunction
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.GenericDeclaration
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.Type
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.reflect.AnnotatedElement
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Integer
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.IntConsumer
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Spliterator.OfPrimitive
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Long
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.LongConsumer
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Double
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.function.DoubleConsumer
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.stream.BaseStream
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Appendable
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Enum
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.util.Map
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Closeable
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.Flushable
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.DataOutput
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.AutoCloseable
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.DataInput
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.lang.Number
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Next round in external class builder
+[2024/08/06 17:37:45] INFO  org.jan.ExternalClassBuilder - Building external type declaration: java.io.ObjectStreamException
+[2024/08/06 17:37:45] INFO  org.jan.Main - Set crossedges.
+[2024/08/06 17:37:46] INFO  org.jan.Main - Build types.
+[2024/08/06 17:37:46] INFO  org.jan.Main - Check ASG.
+[2024/08/06 17:37:46] INFO  org.jan.Main - Filter.
+[2024/08/06 17:37:46] INFO  org.jan.Main - Save jsi.
+[2024/08/06 17:37:46] INFO  org.jan.ClassSaver - Saved file timestamp: 1722958666111
+[2024/08/06 17:37:46] INFO  org.jan.Main - Save jml.
+[2024/08/06 17:37:46] INFO  org.jan.Main - CPU times (s):
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Total time: 1.687
+[2024/08/06 17:37:46] INFO  org.jan.Main -   JDK compile time: 0.687
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Tree rebuilding time: 0.078
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Comment building time: 0.015
+[2024/08/06 17:37:46] INFO  org.jan.Main -   External class building time: 0.156
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Crossedge setting time: 0.062
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Type building time: 0.031
+[2024/08/06 17:37:46] INFO  org.jan.Main -   ASG checking time: 0.031
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Filter generating time: 0.015
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Common jsi saving time: 0.062
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Common jml saving time: 0.359
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Small jsi saving time: 0.0
+[2024/08/06 17:37:46] INFO  org.jan.Main - User times (s):
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Total time: 1.484
+[2024/08/06 17:37:46] INFO  org.jan.Main -   JDK compile time: 0.578
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Tree rebuilding time: 0.046
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Comment building time: 0.015
+[2024/08/06 17:37:46] INFO  org.jan.Main -   External class building time: 0.125
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Crossedge setting time: 0.062
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Type building time: 0.031
+[2024/08/06 17:37:46] INFO  org.jan.Main -   ASG checking time: 0.031
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Filter generating time: 0.015
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Common jsi saving time: 0.062
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Common jml saving time: 0.359
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Small jsi saving time: 0.0
+[2024/08/06 17:37:46] INFO  org.jan.Main - Memory statistics:
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Max total memory: 128 MB
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Max used memory: 43 MB
+[2024/08/06 17:37:46] INFO  org.jan.Main - Other statistics:
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Analyzed files: 1
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Warnings: 0
+[2024/08/06 17:37:46] INFO  org.jan.Main -   Errors: 0
+[2024/08/06 17:37:46] JAN2ChangePath 5.1.0 (Build:85480f99) - Copyright (c) 2004-2022 Department of Software Engineering - University of Szeged 
+[2024/08/06 17:37:46] Changing path from 'c:\users\hp\slab\ai4fix\test-project\src\main\java\' to ''
+[2024/08/06 17:37:46] Loading file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\a\MutableInit.jsi"
+[2024/08/06 17:37:46] Replacing the paths
+[2024/08/06 17:37:46] Saving file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\a\MutableInit.jsi"
+[2024/08/06 17:37:46] Touching the filter file: "C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\a\MutableInit.fjsi"
+[2024/08/06 17:37:46] Analyzed asg: C:\Users\HP\slab\ai4fix\test-project\patches\asg\example\a\MutableInit.jsi
+[2024/08/06 17:41:08] Deleting repair_patch1.diff
+[2024/08/06 17:41:08] Deleting repair_patch10.diff
+[2024/08/06 17:41:08] Deleting repair_patch11.diff
+[2024/08/06 17:41:08] Deleting repair_patch12.diff
+[2024/08/06 17:41:08] Deleting repair_patch13.diff
+[2024/08/06 17:41:08] Deleting repair_patch14.diff
+[2024/08/06 17:41:08] Deleting repair_patch15.diff
+[2024/08/06 17:41:08] Deleting repair_patch2.diff
+[2024/08/06 17:41:08] Deleting repair_patch3.diff
+[2024/08/06 17:41:08] Deleting repair_patch4.diff
+[2024/08/06 17:41:08] Deleting repair_patch5.diff
+[2024/08/06 17:41:08] Deleting repair_patch6.diff
+[2024/08/06 17:41:08] Deleting repair_patch7.diff
+[2024/08/06 17:41:08] Deleting repair_patch8.diff
+[2024/08/06 17:41:08] Deleting repair_patch9.diff
+
+[2024/08/06 17:41:08] Total elapsed time: 00:03:55.108
+[2024/08/06 17:41:08] Framework repair finished!

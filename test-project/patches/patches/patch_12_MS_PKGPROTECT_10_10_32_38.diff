@@ -1,0 +1,21 @@
+--- src\main\java\example\a\Mutable.java
++++ src\main\java\example\a\Mutable.java
+@@ -5,11 +5,11 @@
+ 
+ public class Mutable {
+-    public static final Set<String> mySet = new TreeSet<>();
+-    public static final Set<String> mySet2 = new TreeSet<>();
+-    public static final String array[] = {"Alma", "Korte"};
+-    public static final String array2[] = {"Alma", "Korte"};
+-    
+-    public static Set<String> get() {
+-       Set<String> mySet2 = mySet;    
++    public static final Set<String> mySet = new TreeSet<>();
++    public static final Set<String> mySet2 = new TreeSet<>();
++    public static final String array[] = {"Alma", "Korte"};
++    static final String[] array2 = {"Alma", "Korte"};
++    
++    public static Set<String> get() {
++       Set<String> mySet2 = mySet;    
+        return mySet2;
+     } 

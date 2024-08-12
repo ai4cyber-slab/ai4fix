@@ -1,0 +1,19 @@
+{
+  "MS_SHOULD_BE_FINAL": [
+    {
+      "patches": [
+        {
+          "path": "patch_5_MS_SHOULD_BE_FINAL_5_5_26_37.diff",
+          "score": 9.99076432937352,
+          "explanation": "Repair with adding final"
+        }
+      ],
+      "textRange": {
+        "endLine": 5,
+        "endColumn": 36,
+        "startColumn": 25,
+        "startLine": 5
+      }
+    }
+  ]
+}

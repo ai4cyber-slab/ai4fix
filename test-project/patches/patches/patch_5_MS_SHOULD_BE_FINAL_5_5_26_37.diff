@@ -1,0 +1,22 @@
+--- src\main\java\example\Main.java
++++ src\main\java\example\Main.java
+@@ -1,10 +1,12 @@
+ package example;
+-public class Main {
+-    
+-    //example for MS_SHOULD_BE_FINAL
+-    public static String MY_CONSTANT = "This variable should be final!";  //example for MS_SHOULD_BE_FINAL
+-
+-    public static void main(String args[]) {
+-        System.out.println("Demo program");
++public class Main {
++    
++    //example for MS_SHOULD_BE_FINAL
++    
++    //example for MS_SHOULD_BE_FINAL
++    public static final String MY_CONSTANT = "This variable should be final!";  //example for MS_SHOULD_BE_FINAL
++
++    public static void main(String args[]) {
++        System.out.println("Demo program");
+         System.out.println(MY_CONSTANT);
+ 

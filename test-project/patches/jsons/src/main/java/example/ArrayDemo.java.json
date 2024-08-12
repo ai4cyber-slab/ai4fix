@@ -1,0 +1,44 @@
+{
+  "EI_EXPOSE_REP2": [
+    {
+      "patches": [
+        {
+          "path": "patch_1_EI_EXPOSE_REP2_30_30_36_55.diff",
+          "score": 9.992459359496612,
+          "explanation": "Repair with clone"
+        },
+        {
+          "path": "patch_2_EI_EXPOSE_REP2_30_30_36_55.diff",
+          "score": 9.969483722660105,
+          "explanation": "Repair with Arrays.copyOf"
+        }
+      ],
+      "textRange": {
+        "endLine": 30,
+        "endColumn": 54,
+        "startColumn": 35,
+        "startLine": 30
+      }
+    },
+    {
+      "patches": [
+        {
+          "path": "patch_3_EI_EXPOSE_REP2_35_35_39_61.diff",
+          "score": 9.977943218381933,
+          "explanation": "Repair with clone"
+        },
+        {
+          "path": "patch_4_EI_EXPOSE_REP2_35_35_39_61.diff",
+          "score": 9.90347564114651,
+          "explanation": "Repair with Arrays.copyOf"
+        }
+      ],
+      "textRange": {
+        "endLine": 35,
+        "endColumn": 60,
+        "startColumn": 38,
+        "startLine": 35
+      }
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "EI_EXPOSE_REP2": [
+    {
+      "patches": [
+        {
+          "path": "patch_8_EI_EXPOSE_REP2_16_16_21_25.diff",
+          "score": 9.973943102899291,
+          "explanation": "Repair with clone"
+        },
+        {
+          "path": "patch_9_EI_EXPOSE_REP2_16_16_21_25.diff",
+          "score": 9.955870673939145,
+          "explanation": "Repair with creating new Date"
+        }
+      ],
+      "textRange": {
+        "endLine": 16,
+        "endColumn": 24,
+        "startColumn": 20,
+        "startLine": 16
+      }
+    }
+  ],
+  "EI_EXPOSE_REP": [
+    {
+      "patches": [
+        {
+          "path": "patch_6_EI_EXPOSE_REP_12_12_16_20.diff",
+          "score": 9.949042568444597,
+          "explanation": "Repair with clone"
+        },
+        {
+          "path": "patch_7_EI_EXPOSE_REP_12_12_16_20.diff",
+          "score": 9.924790755250417,
+          "explanation": "Repair with creating new Date"
+        }
+      ],
+      "textRange": {
+        "endLine": 12,
+        "endColumn": 19,
+        "startColumn": 15,
+        "startLine": 12
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+--- src\main\java\example\a\Mutable.java
++++ src\main\java\example\a\Mutable.java
+@@ -2,11 +2,11 @@
+ import java.util.Set;
+ import java.util.TreeSet;
+-import java.util.Collections;
+-
+-public class Mutable {
+-    public static final Set<String> mySet = new TreeSet<>();
+-    public static final Set<String> mySet2 = new TreeSet<>();
+-    public static final String array[] = {"Alma", "Korte"};
+-    public static final String array2[] = {"Alma", "Korte"};
++import java.util.Collections;
++
++public class Mutable {
++    public static final Set<String> mySet = Collections.unmodifiableSet(new TreeSet<>());
++    public static final Set<String> mySet2 = new TreeSet<>();
++    public static final String array[] = {"Alma", "Korte"};
++    public static final String array2[] = {"Alma", "Korte"};
+     
+     public static Set<String> get() {

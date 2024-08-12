@@ -1,0 +1,19 @@
+{
+  "MS_MUTABLE_COLLECTION": [
+    {
+      "patches": [
+        {
+          "path": "patch_13_MS_MUTABLE_COLLECTION_8_8_37_43.diff",
+          "score": 9.990805777731104,
+          "explanation": "Field is a mutable collection"
+        }
+      ],
+      "textRange": {
+        "endLine": 8,
+        "endColumn": 42,
+        "startColumn": 36,
+        "startLine": 8
+      }
+    }
+  ]
+}
