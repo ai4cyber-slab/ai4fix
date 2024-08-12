@@ -1,0 +1,17 @@
+{
+    "repository_path": "/mnt/c/Users/HP/slab/ai4fix/semo-project",
+    "commit_sha": "272400afdaa8fa6ec617b0249028b4d7781abeec",
+    "gpt_model": "gpt-4o",
+    "temperature": "0",
+    "security_relevant_files": [
+        {
+            "file_path": "src/main/java/ExceptionDemo22.java",
+            "security_relevant_lines": [
+                {
+                    "start_position": 1,
+                    "end_position": 148
+                }
+            ]
+        }
+    ]
+}

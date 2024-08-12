@@ -1,0 +1,17 @@
+{
+    "repository_path": "/mnt/c/Users/HP/slab/ai4fix/semo-project",
+    "commit_sha": "31644c1ad941f311b9664603cd531cdb3eda0fcd",
+    "gpt_model": "gpt-4o",
+    "temperature": "0",
+    "security_relevant_files": [
+        {
+            "file_path": "src/main/java/UserAuth.java",
+            "security_relevant_lines": [
+                {
+                    "start_position": 1,
+                    "end_position": 39
+                }
+            ]
+        }
+    ]
+}

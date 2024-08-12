@@ -1,0 +1,62 @@
+Label,Category
+not,interface
+security,instanceof SessionAware/RequestAware
+not,deprecated
+not,test function
+not,interface
+security,instanceof ServletRequestAware/ServletResponseAware
+not,deprecated
+not,test function
+not,interface
+security,instanceof ServletResponseAware/ParameterAware
+not,deprecated
+not,test function
+not,interface
+not,deprecated
+security,instanceof ApplicationAware/SessionAware
+not,test function
+not,interface
+not,deprecated
+security,instanceof PrincipalAware/ServletContextAware
+not,test function
+security,instanceof PrincipalAware/PortletContextAware
+security,method name change
+not,interface
+not,deprecated
+security,instanceof BundleContextAware
+not,test function
+not,interface
+security,adding support for another interface
+not,deprecated
+not,test function
+not,interface
+security,instanceof PortletContextAware/PortletPreferencesAware
+not,deprecated
+not,interface
+security,instanceof PortletPreferencesAware
+not,deprecated
+not,interface
+security,instanceof PortletRequestAware/PortletResponseAware
+not,deprecated
+not,test function
+not,interface
+security,instanceof PortletResponseAware/PrincipalAware
+not,deprecated
+not,test function
+not,interface
+not,deprecated
+not,deprecated
+not,deprecated
+security,Init ParamteresAware with context.getParameters
+not,test function
+not,interface
+not,refactor
+not,deprecated
+not,Simple class implementation storing a services parameter
+not,test function
+not,refactor (change method name)
+not,refactor (change method name)
+not,interface
+security,instanceof ServletContextAware
+not,deprecated
+not,test function

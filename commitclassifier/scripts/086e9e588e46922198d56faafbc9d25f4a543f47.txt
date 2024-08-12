@@ -1,0 +1,59 @@
+Repository path: /Users/eszti/University/Szakmai_gyakorlat/commitclassifier/original_cloned_repos/storm
+Commmit hash: 086e9e588e46922198d56faafbc9d25f4a543f47
+Model: gpt-4o
+Temperature: 0
+
+Successfully retrieved the commit files.
+Successfully retrieved the parent commit.
+
+Successfully created the diff file of storm-core/src/jvm/backtype/storm/Config.java.
+storm-core/src/jvm/backtype/storm/Config.java was labeled as security relevant.
+
+Successfully created the diff file of storm-core/src/jvm/backtype/storm/ConfigValidation.java.
+storm-core/src/jvm/backtype/storm/ConfigValidation.java was labeled as not security relevant.
+
+Successfully created the diff file of storm-core/src/jvm/backtype/storm/StormSubmitter.java.
+storm-core/src/jvm/backtype/storm/StormSubmitter.java was labeled as security relevant.
+
+Successfully created the diff file of storm-core/src/jvm/backtype/storm/security/auth/ITransportPlugin.java.
+The diff of storm-core/src/jvm/backtype/storm/security/auth/ITransportPlugin.java is unnecessary, it has been removed.
+
+Successfully created the diff file of storm-core/src/jvm/backtype/storm/security/auth/ReqContext.java.
+storm-core/src/jvm/backtype/storm/security/auth/ReqContext.java was labeled as security relevant.
+
+Successfully created the diff file of storm-core/src/jvm/backtype/storm/security/auth/SaslTransportPlugin.java.
+storm-core/src/jvm/backtype/storm/security/auth/SaslTransportPlugin.java was labeled as not security relevant.
+
+Successfully created the diff file of storm-core/src/jvm/backtype/storm/security/auth/SimpleTransportPlugin.java.
+storm-core/src/jvm/backtype/storm/security/auth/SimpleTransportPlugin.java was labeled as not security relevant.
+
+Successfully created the diff file of storm-core/src/jvm/backtype/storm/security/auth/TBackoffConnect.java.
+storm-core/src/jvm/backtype/storm/security/auth/TBackoffConnect.java was labeled as security relevant.
+
+Successfully created the diff file of storm-core/src/jvm/backtype/storm/security/auth/ThriftClient.java.
+storm-core/src/jvm/backtype/storm/security/auth/ThriftClient.java was labeled as security relevant.
+
+Successfully created the diff file of storm-core/src/jvm/backtype/storm/security/auth/authorizer/ImpersonationAuthorizer.java.
+storm-core/src/jvm/backtype/storm/security/auth/authorizer/ImpersonationAuthorizer.java was labeled as security relevant.
+
+Successfully created the diff file of storm-core/src/jvm/backtype/storm/security/auth/authorizer/SimpleACLAuthorizer.java.
+storm-core/src/jvm/backtype/storm/security/auth/authorizer/SimpleACLAuthorizer.java was labeled as security relevant.
+
+Successfully created the diff file of storm-core/src/jvm/backtype/storm/security/auth/digest/DigestSaslTransportPlugin.java.
+storm-core/src/jvm/backtype/storm/security/auth/digest/DigestSaslTransportPlugin.java was labeled as security relevant.
+
+Successfully created the diff file of storm-core/src/jvm/backtype/storm/security/auth/digest/ServerCallbackHandler.java.
+storm-core/src/jvm/backtype/storm/security/auth/digest/ServerCallbackHandler.java was labeled as security relevant.
+
+Successfully created the diff file of storm-core/src/jvm/backtype/storm/security/auth/kerberos/KerberosSaslTransportPlugin.java.
+storm-core/src/jvm/backtype/storm/security/auth/kerberos/KerberosSaslTransportPlugin.java was labeled as security relevant.
+
+Successfully created the diff file of storm-core/src/jvm/backtype/storm/security/auth/kerberos/ServerCallbackHandler.java.
+storm-core/src/jvm/backtype/storm/security/auth/kerberos/ServerCallbackHandler.java was labeled as security relevant.
+
+Successfully created the diff file of storm-core/src/jvm/backtype/storm/utils/DRPCClient.java.
+storm-core/src/jvm/backtype/storm/utils/DRPCClient.java was labeled as not security relevant.
+
+Successfully created the diff file of storm-core/src/jvm/backtype/storm/utils/NimbusClient.java.
+storm-core/src/jvm/backtype/storm/utils/NimbusClient.java was labeled as security relevant.
+

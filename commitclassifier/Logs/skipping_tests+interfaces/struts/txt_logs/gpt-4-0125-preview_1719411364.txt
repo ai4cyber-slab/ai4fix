@@ -1,0 +1,2359 @@
+File: struts, pull request #252
+Model: gpt-4-0125-preview
+
+Diff number: 2
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java b/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
+index 813a87d91..bd017d07b 100644
+--- a/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
++++ b/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
+@@ -149,6 +149,10 @@ public class ServletConfigInterceptor extends AbstractInterceptor implements Str
+             ((SessionAware) action).setSession(context.getSession());
+         }
+         
++        if (action instanceof org.apache.struts2.action.SessionAware) {
++            ((org.apache.struts2.action.SessionAware) action).withSession(context.getSession());
++        }
++
+         if (action instanceof RequestAware) {
+             ((RequestAware) action).setRequest((Map) context.get("request"));
+         }
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The provided diff file shows a code change within the ServletConfigInterceptor class of the Apache Struts2 framework. The modification adds a new condition that checks if the action being processed implements the org.apache.struts2.action.SessionAware interface. If it does, the action is provided with the current session via a new method 'withSession'. This change appears to be aimed at enhancing the framework's flexibility in handling session data by introducing an alternative way to inject session information into actions. There is no direct modification to authentication mechanisms, encryption algorithms, access control procedures, or logging levels related to security events. Therefore, while the change affects how session information is passed to actions, it does not inherently alter the security posture of the system. The security implications would depend more on how the session data is used within the 'withSession' method implementations, which is not part of the diff provided.",
+  "confidence": 8
+}
+```
+
+Diff number: 6
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java b/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
+index bd017d07b..e5b9aa432 100644
+--- a/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
++++ b/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
+@@ -128,6 +128,11 @@ public class ServletConfigInterceptor extends AbstractInterceptor implements Str
+             ((ServletRequestAware) action).setServletRequest(request);
+         }
+ 
++        if (action instanceof org.apache.struts2.action.ServletRequestAware) {
++            HttpServletRequest request = (HttpServletRequest) context.get(HTTP_REQUEST);
++            ((org.apache.struts2.action.ServletRequestAware) action).withServletRequest(request);
++        }
++
+         if (action instanceof ServletResponseAware) {
+             HttpServletResponse response = (HttpServletResponse) context.get(HTTP_RESPONSE);
+             ((ServletResponseAware) action).setServletResponse(response);
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The provided diff file shows a code change within the ServletConfigInterceptor class of the Apache Struts2 framework. The modification introduces an additional condition to check if an action implements the org.apache.struts2.action.ServletRequestAware interface. If so, it proceeds to set the HttpServletRequest object for the action. This change is primarily focused on enhancing the framework's capability to inject the HttpServletRequest into actions that are aware of the servlet request, thereby improving the framework's flexibility and usability. There is no direct modification to authentication mechanisms, encryption algorithms, access control procedures, or logging levels related to security events. Therefore, while the change affects how HTTP requests are handled within the framework, it does not directly impact the security functionalities such as authentication, authorization, data protection, or logging of security-relevant events. The change is more about the internal plumbing of HTTP request objects to actions rather than altering the security posture of the system.",
+  "confidence": 8
+}
+```
+
+Diff number: 10
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java b/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
+index e5b9aa432..e6b8a11cc 100644
+--- a/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
++++ b/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
+@@ -138,6 +138,11 @@ public class ServletConfigInterceptor extends AbstractInterceptor implements Str
+             ((ServletResponseAware) action).setServletResponse(response);
+         }
+ 
++        if (action instanceof org.apache.struts2.action.ServletResponseAware) {
++            HttpServletResponse response = (HttpServletResponse) context.get(HTTP_RESPONSE);
++            ((org.apache.struts2.action.ServletResponseAware) action).withServletResponse(response);
++        }
++
+         if (action instanceof ParameterAware) {
+             context.getParameters().applyParameters((ParameterAware) action);
+         }
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The provided diff file shows a code change within the ServletConfigInterceptor class of the Apache Struts2 framework. The modification adds support for a new interface, org.apache.struts2.action.ServletResponseAware, allowing actions to be aware of the servlet response object directly. This change is primarily focused on enhancing the framework's ability to interact with servlet responses by providing them to actions that declare they can handle such objects. There is no direct modification to authentication mechanisms, encryption algorithms, access control procedures, or logging levels related to security events. The change does not alter the security posture of the system in terms of introducing new vulnerabilities or modifying existing security controls. It is a functional enhancement aimed at improving the framework's flexibility in handling HTTP responses.",
+  "confidence": 9
+}
+```
+
+Diff number: 15
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java b/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
+index e6b8a11cc..24a3d81b6 100644
+--- a/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
++++ b/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
+@@ -155,6 +155,10 @@ public class ServletConfigInterceptor extends AbstractInterceptor implements Str
+             ((ApplicationAware) action).setApplication(context.getApplication());
+         }
+         
++        if (action instanceof org.apache.struts2.action.ApplicationAware) {
++            ((org.apache.struts2.action.ApplicationAware) action).withApplication(context.getApplication());
++        }
++
+         if (action instanceof SessionAware) {
+             ((SessionAware) action).setSession(context.getSession());
+         }
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The provided diff shows a modification within the ServletConfigInterceptor class of the Apache Struts2 framework. The change introduces an additional condition to check if an action implements the org.apache.struts2.action.ApplicationAware interface and, if so, calls a new method 'withApplication' passing the application context. This modification does not directly impact critical security components such as authentication mechanisms, encryption algorithms, access control procedures, or logging levels related to security events. Instead, it appears to extend the functionality related to how application context is shared with actions, which is more aligned with application configuration and setup rather than security. Without further context indicating that the 'withApplication' method manipulates security-sensitive information or alters the security posture of the application, this change is assessed as not directly relevant to security.",
+  "confidence": 8
+}
+```
+
+Diff number: 19
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java b/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
+index 24a3d81b6..302fcba66 100644
+--- a/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
++++ b/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
+@@ -178,6 +178,15 @@ public class ServletConfigInterceptor extends AbstractInterceptor implements Str
+                 ((PrincipalAware) action).setPrincipalProxy(new ServletPrincipalProxy(request));
+             }
+         }
++
++        if (action instanceof org.apache.struts2.action.PrincipalAware) {
++            HttpServletRequest request = (HttpServletRequest) context.get(HTTP_REQUEST);
++            if(request != null) {
++                // We are in servlet environment, so principal information resides in HttpServletRequest
++                ((org.apache.struts2.action.PrincipalAware) action).withPrincipalProxy(new ServletPrincipalProxy(request));
++            }
++        }
++
+         if (action instanceof ServletContextAware) {
+             ServletContext servletContext = (ServletContext) context.get(SERVLET_CONTEXT);
+             ((ServletContextAware) action).setServletContext(servletContext);
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "security_relevant",
+  "reason": "The code changes in the diff file are directly related to the handling of principal information within the application, which is a critical component of authentication mechanisms. Specifically, the addition of code to set a 'PrincipalProxy' based on the HTTP request suggests that the application is enhancing or modifying how it manages user identity and authentication state. This is particularly relevant in the context of web applications where the correct handling of user identity and authentication information is crucial for maintaining secure access control. The introduction of a new way to handle principal information could potentially impact the security of the application by altering how user identities are verified and managed. If not implemented correctly, it could introduce vulnerabilities such as improper authentication or elevation of privilege. Therefore, these changes are directly related to security functionalities, specifically within the realm of authentication mechanisms.",
+  "confidence": 8
+}
+```
+
+Diff number: 21
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java b/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java
+index 63ac9c913..53b2e95fe 100644
+--- a/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java
++++ b/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java
+@@ -61,6 +61,12 @@ public class PortletAwareInterceptor extends AbstractInterceptor implements Stru
+             PortletRequest request = (PortletRequest) context.get(PortletConstants.REQUEST);
+             ((PrincipalAware) action).setPrincipalProxy(new PortletPrincipalProxy(request));
+         }
++
++        if (action instanceof org.apache.struts2.action.PrincipalAware) {
++            PortletRequest request = (PortletRequest) context.get(PortletConstants.REQUEST);
++            ((org.apache.struts2.action.PrincipalAware) action).withPrincipalProxy(new PortletPrincipalProxy(request));
++        }
++
+         if (action instanceof PortletContextAware) {
+             PortletContext portletContext = (PortletContext) context.get(StrutsStatics.STRUTS_PORTLET_CONTEXT);
+             ((PortletContextAware) action).setPortletContext(portletContext);
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "security_relevant",
+  "reason": "The code changes involve modifications to the way an action class handles principal (user identity) information by setting a principal proxy based on the PortletRequest. This is directly related to authentication mechanisms, as it affects how user identity is managed and propagated within the application. The addition of a new block to handle instances of org.apache.struts2.action.PrincipalAware and set a principal proxy indicates an expansion in the types of actions that can now securely handle user identity information. This change could potentially enhance the security by ensuring that more parts of the application are properly aware of the user's identity, which is crucial for access control decisions, auditing, and preventing identity spoofing. However, without a thorough review of how the new principal proxy is implemented and used, there's a risk that improper handling or misconfiguration could lead to security vulnerabilities, such as elevation of privilege or information disclosure.",
+  "confidence": 8
+}
+```
+
+Diff number: 22
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/bundles/demo/src/main/java/actions/osgi/BundlesAction.java b/bundles/demo/src/main/java/actions/osgi/BundlesAction.java
+index eff79ccce..9c5464fcb 100644
+--- a/bundles/demo/src/main/java/actions/osgi/BundlesAction.java
++++ b/bundles/demo/src/main/java/actions/osgi/BundlesAction.java
+@@ -22,7 +22,7 @@ package actions.osgi;
+ 
+ import com.opensymphony.xwork2.ActionSupport;
+ import org.apache.struts2.convention.annotation.ResultPath;
+-import org.apache.struts2.osgi.interceptor.BundleContextAware;
++import org.apache.struts2.osgi.action.BundleContextAware;
+ import org.osgi.framework.Bundle;
+ import org.osgi.framework.BundleContext;
+ 
+@@ -33,7 +33,7 @@ import org.osgi.framework.BundleContext;
+ public class BundlesAction extends ActionSupport implements BundleContextAware {
+     private BundleContext bundleContext;
+ 
+-    public void setBundleContext(BundleContext bundleContext) {
++    public void withBundleContext(BundleContext bundleContext) {
+         this.bundleContext = bundleContext;
+     }
+ 
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The changes in the diff file are related to the import statement and a method name change within the BundlesAction class. The first change replaces one import path with another for the BundleContextAware interface, likely due to a package restructuring or update in the library being used. The second change modifies the name of a method from 'setBundleContext' to 'withBundleContext'. Neither of these modifications directly impacts critical security components such as authentication mechanisms, encryption algorithms, access control procedures, or logging levels related to security events. The changes appear to be more about code maintenance or adherence to naming conventions rather than altering the system's security posture. Without further context indicating that the BundleContextAware interface or the method in question are directly involved in security-related processes, these changes are assessed as not directly relevant to system security.",
+  "confidence": 9
+}
+```
+
+Diff number: 25
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/plugins/osgi/src/main/java/org/apache/struts2/osgi/interceptor/OsgiInterceptor.java b/plugins/osgi/src/main/java/org/apache/struts2/osgi/interceptor/OsgiInterceptor.java
+index 09b976927..11dd1f9a0 100644
+--- a/plugins/osgi/src/main/java/org/apache/struts2/osgi/interceptor/OsgiInterceptor.java
++++ b/plugins/osgi/src/main/java/org/apache/struts2/osgi/interceptor/OsgiInterceptor.java
+@@ -51,6 +51,10 @@ public class OsgiInterceptor extends AbstractInterceptor {
+             if (action instanceof BundleContextAware)
+                 ((BundleContextAware)action).setBundleContext(bundleContext);
+ 
++            if (action instanceof org.apache.struts2.osgi.action.BundleContextAware) {
++                ((org.apache.struts2.osgi.action.BundleContextAware) action).withBundleContext(bundleContext);
++            }
++
+             //inject service implementations
+             if (action instanceof ServiceAware) {
+                 Type[] types = action.getClass().getGenericInterfaces();
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The provided diff file shows a modification in the OsgiInterceptor class, specifically adding a new condition to check if an action implements the org.apache.struts2.osgi.action.BundleContextAware interface and, if so, calling the withBundleContext method on that action. This change appears to be focused on extending the functionality to support a new way of setting the bundle context in actions that are aware of the OSGi bundle context. There is no direct modification to authentication mechanisms, encryption algorithms, access control procedures, or logging levels related to security events. The change is more about enhancing integration with OSGi features rather than altering the security posture of the system. Therefore, it does not directly impact critical security components or functionalities.",
+  "confidence": 9
+}
+```
+
+Diff number: 28
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/core/src/main/java/org/apache/struts2/interceptor/CookieInterceptor.java b/core/src/main/java/org/apache/struts2/interceptor/CookieInterceptor.java
+index 86578e77b..eb40c3a53 100644
+--- a/core/src/main/java/org/apache/struts2/interceptor/CookieInterceptor.java
++++ b/core/src/main/java/org/apache/struts2/interceptor/CookieInterceptor.java
+@@ -348,8 +348,8 @@ public class CookieInterceptor extends AbstractInterceptor {
+     }
+ 
+     /**
+-     * Hook that set the <code>cookiesMap</code> into action that implements
+-     * {@link CookiesAware}.
++     * Hook that set the <code>cookiesMap</code> into action that implements {@link CookiesAware}
++     * or {@link org.apache.struts2.action.CookiesAware}.
+      *
+      * @param action action object
+      * @param cookiesMap map of cookies
+@@ -359,5 +359,9 @@ public class CookieInterceptor extends AbstractInterceptor {
+             LOG.debug("Action [{}] implements CookiesAware, injecting cookies map [{}]", action, cookiesMap);
+             ((CookiesAware)action).setCookiesMap(cookiesMap);
+         }
++        if (action instanceof org.apache.struts2.action.CookiesAware) {
++            LOG.debug("Action [{}] implements CookiesAware, injecting cookies map [{}]", action, cookiesMap);
++            ((org.apache.struts2.action.CookiesAware)action).withCookies(cookiesMap);
++        }
+     }
+ }
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The changes in the diff file are related to the implementation of cookie handling within the Apache Struts2 framework, specifically within the CookieInterceptor class. The modifications include an update to the documentation comments and the addition of a conditional block to check if an action implements a new interface (`org.apache.struts2.action.CookiesAware`) and, if so, to inject the cookies map into the action. This change is primarily aimed at extending functionality to support a new interface for cookie handling, rather than altering existing authentication mechanisms, encryption algorithms, access control procedures, or the logging of security events. While cookies can be related to security, especially in terms of how they are handled, stored, and transmitted, the diff provided does not directly modify these aspects but rather focuses on the mechanism of injecting cookies into actions that are aware of them. Therefore, the immediate impact on system security appears to be minimal, as the change does not directly affect the security posture but rather extends the framework's capabilities in handling cookies in a more flexible manner.",
+  "confidence": 8
+}
+```
+
+Diff number: 32
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java b/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java
+index 53b2e95fe..8fedf5d51 100644
+--- a/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java
++++ b/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java
+@@ -71,6 +71,12 @@ public class PortletAwareInterceptor extends AbstractInterceptor implements Stru
+             PortletContext portletContext = (PortletContext) context.get(StrutsStatics.STRUTS_PORTLET_CONTEXT);
+             ((PortletContextAware) action).setPortletContext(portletContext);
+         }
++
++        if (action instanceof org.apache.struts2.portlet.action.PortletContextAware) {
++            PortletContext portletContext = (PortletContext) context.get(StrutsStatics.STRUTS_PORTLET_CONTEXT);
++            ((org.apache.struts2.portlet.action.PortletContextAware) action).withPortletContext(portletContext);
++        }
++
+         if (action instanceof PortletPreferencesAware) {
+         	PortletRequest request = (PortletRequest) context.get(PortletConstants.REQUEST);
+             
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The provided diff file shows a modification in the PortletAwareInterceptor class, specifically adding a new condition to check if an action implements the org.apache.struts2.portlet.action.PortletContextAware interface and, if so, calls a method to pass the PortletContext to the action. This change is focused on enhancing the framework's ability to inject PortletContext into actions that are aware of it, thereby improving the framework's integration capabilities with portlet contexts. There is no direct modification or impact on authentication mechanisms, encryption algorithms, access control procedures, or logging levels related to security events. The change is aimed at improving the support for portlet context awareness in actions, which is a feature related to the framework's interoperability with portlet environments rather than its security posture. Therefore, this modification does not directly affect the system's security functionalities.",
+  "confidence": 9
+}
+```
+
+Diff number: 35
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java b/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java
+index 8fedf5d51..a2be6a7c5 100644
+--- a/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java
++++ b/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java
+@@ -21,8 +21,8 @@ package org.apache.struts2.portlet.interceptor;
+ import com.opensymphony.xwork2.ActionContext;
+ import com.opensymphony.xwork2.ActionInvocation;
+ import com.opensymphony.xwork2.interceptor.AbstractInterceptor;
+-import org.apache.logging.log4j.Logger;
+ import org.apache.logging.log4j.LogManager;
++import org.apache.logging.log4j.Logger;
+ import org.apache.struts2.StrutsStatics;
+ import org.apache.struts2.interceptor.PrincipalAware;
+ import org.apache.struts2.portlet.PortletConstants;
+@@ -33,11 +33,11 @@ import javax.portlet.PortletResponse;
+ 
+ public class PortletAwareInterceptor extends AbstractInterceptor implements StrutsStatics {
+ 
+-	private static final long serialVersionUID = 2476509721059587700L;
+-	
+-	private static final Logger LOG = LogManager.getLogger(PortletAwareInterceptor.class);
++    private static final long serialVersionUID = 2476509721059587700L;
+ 
+-	/**
++    private static final Logger LOG = LogManager.getLogger(PortletAwareInterceptor.class);
++
++    /**
+      * Sets action properties based on the interfaces an action implements. Things like application properties,
+      * parameters, session attributes, etc are set based on the implementing interface.
+      *
+@@ -78,16 +78,29 @@ public class PortletAwareInterceptor extends AbstractInterceptor implements Stru
+         }
+ 
+         if (action instanceof PortletPreferencesAware) {
+-        	PortletRequest request = (PortletRequest) context.get(PortletConstants.REQUEST);
+-            
++            PortletRequest request = (PortletRequest) context.get(PortletConstants.REQUEST);
++
+             // Check if running in a servlet environment
+             if (request == null) {
+                 LOG.warn("This portlet preferences implementation should only be used during development");
+-                ((PortletPreferencesAware)action).setPortletPreferences(new ServletPortletPreferences(ActionContext.getContext().getSession()));
++                ((PortletPreferencesAware) action).setPortletPreferences(new ServletPortletPreferences(ActionContext.getContext().getSession()));
+             } else {
+-            	((PortletPreferencesAware)action).setPortletPreferences(request.getPreferences());
++                ((PortletPreferencesAware) action).setPortletPreferences(request.getPreferences());
+             }
+         }
++
++        if (action instanceof org.apache.struts2.portlet.action.PortletPreferencesAware) {
++            PortletRequest request = (PortletRequest) context.get(PortletConstants.REQUEST);
++
++            // Check if running in a servlet environment
++            if (request == null) {
++                LOG.warn("This portlet preferences implementation should only be used during development");
++                ((org.apache.struts2.portlet.action.PortletPreferencesAware) action).withPortletPreferences(new ServletPortletPreferences(ActionContext.getContext().getSession()));
++            } else {
++                ((org.apache.struts2.portlet.action.PortletPreferencesAware) action).withPortletPreferences(request.getPreferences());
++            }
++        }
++
+         return invocation.invoke();
+     }
+ }
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The changes in the diff file primarily involve code formatting adjustments, such as changes in indentation and the reordering of import statements, which do not impact the functionality or security of the system. Additionally, the modifications include an update to the PortletAwareInterceptor class to support a new interface (org.apache.struts2.portlet.action.PortletPreferencesAware) for handling portlet preferences in a similar manner as the existing PortletPreferencesAware interface. This change is focused on extending functionality to support a new way of handling portlet preferences and does not directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, or logging levels related to security events. The logging statement warning about the use of portlet preferences in a servlet environment remains unchanged, indicating no direct impact on the system's security posture.",
+  "confidence": 9
+}
+```
+
+Diff number: 38
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java b/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java
+index a2be6a7c5..8c7f5857a 100644
+--- a/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java
++++ b/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java
+@@ -53,6 +53,11 @@ public class PortletAwareInterceptor extends AbstractInterceptor implements Stru
+             ((PortletRequestAware) action).setPortletRequest(request);
+         }
+ 
++        if (action instanceof org.apache.struts2.portlet.action.PortletRequestAware) {
++            PortletRequest request = (PortletRequest) context.get(PortletConstants.REQUEST);
++            ((org.apache.struts2.portlet.action.PortletRequestAware) action).withPortletRequest(request);
++        }
++
+         if (action instanceof PortletResponseAware) {
+             PortletResponse response = (PortletResponse) context.get(PortletConstants.RESPONSE);
+             ((PortletResponseAware) action).setPortletResponse(response);
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The provided diff file shows a modification in the PortletAwareInterceptor class, specifically adding a new block of code that allows an action to be aware of the PortletRequest. This change is focused on enhancing the functionality of the application by allowing another type of action (org.apache.struts2.portlet.action.PortletRequestAware) to access the PortletRequest object directly. There is no direct modification or impact on critical security components such as authentication mechanisms, encryption algorithms, access control procedures, or logging levels related to security events. The change appears to be purely functional, aimed at extending the capabilities of actions within the application to interact with portlet requests, without altering or affecting the security posture of the system.",
+  "confidence": 9
+}
+```
+
+Diff number: 42
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java b/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java
+index 8c7f5857a..420042e1d 100644
+--- a/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java
++++ b/plugins/portlet/src/main/java/org/apache/struts2/portlet/interceptor/PortletAwareInterceptor.java
+@@ -62,6 +62,12 @@ public class PortletAwareInterceptor extends AbstractInterceptor implements Stru
+             PortletResponse response = (PortletResponse) context.get(PortletConstants.RESPONSE);
+             ((PortletResponseAware) action).setPortletResponse(response);
+         }
++
++        if (action instanceof org.apache.struts2.portlet.action.PortletResponseAware) {
++            PortletResponse response = (PortletResponse) context.get(PortletConstants.RESPONSE);
++            ((org.apache.struts2.portlet.action.PortletResponseAware) action).withPortletResponse(response);
++        }
++
+         if (action instanceof PrincipalAware) {
+             PortletRequest request = (PortletRequest) context.get(PortletConstants.REQUEST);
+             ((PrincipalAware) action).setPrincipalProxy(new PortletPrincipalProxy(request));
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The provided diff file shows a modification in the PortletAwareInterceptor class, specifically adding support for actions that implement the org.apache.struts2.portlet.action.PortletResponseAware interface. This change allows these actions to receive a PortletResponse object through a new method. This modification does not directly impact critical security components such as authentication mechanisms, encryption algorithms, access control procedures, or logging levels related to security events. Instead, it appears to extend functionality related to how actions within a portlet environment can interact with the PortletResponse object. Without further context indicating that the PortletResponse object or its handling could influence security-sensitive operations, this change is assessed as not directly relevant to system security.",
+  "confidence": 8
+}
+```
+
+Diff number: 47
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/core/src/main/java/org/apache/struts2/interceptor/ParameterAware.java b/core/src/main/java/org/apache/struts2/interceptor/ParameterAware.java
+index 28eb7491f..9689e36b9 100644
+--- a/core/src/main/java/org/apache/struts2/interceptor/ParameterAware.java
++++ b/core/src/main/java/org/apache/struts2/interceptor/ParameterAware.java
+@@ -36,7 +36,7 @@ import java.util.Map;
+  * the map is <tt>java.lang.String[]</tt>.
+  * </p>
+  *
+- * @deprecated please use {@link HttpParametersAware} instead
++ * @deprecated please use {@link org.apache.struts2.action.ParametersAware} instead
+  */
+ @Deprecated
+ public interface ParameterAware {
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The change in the diff file is related to a deprecation notice update, specifically updating the reference to a preferred interface for handling parameters. This modification does not directly impact any critical security components such as authentication mechanisms, encryption algorithms, access control procedures, or logging levels related to security events. Instead, it merely updates documentation to guide developers towards using a different interface, which in itself does not alter the security posture of the system. Without further context on how the new recommended interface (`org.apache.struts2.action.ParametersAware`) implements parameter handling compared to the old one (`HttpParametersAware`), and without changes to the actual implementation or behavior of the system, it's difficult to argue that this change has a direct impact on system security.",
+  "confidence": 9
+}
+```
+
+Diff number: 49
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java b/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
+index 302fcba66..0312da9ff 100644
+--- a/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
++++ b/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
+@@ -25,6 +25,7 @@ import javax.servlet.http.HttpServletRequest;
+ import javax.servlet.http.HttpServletResponse;
+ 
+ import org.apache.struts2.StrutsStatics;
++import org.apache.struts2.action.ParametersAware;
+ import org.apache.struts2.interceptor.servlet.ServletPrincipalProxy;
+ import org.apache.struts2.util.ServletContextAware;
+ 
+@@ -103,7 +104,7 @@ import com.opensymphony.xwork2.interceptor.AbstractInterceptor;
+  * @see ServletRequestAware
+  * @see ServletResponseAware
+  * @see ParameterAware
+- * @see HttpParametersAware
++ * @see ParametersAware
+  * @see SessionAware
+  * @see ApplicationAware
+  * @see PrincipalAware
+@@ -151,6 +152,10 @@ public class ServletConfigInterceptor extends AbstractInterceptor implements Str
+             ((HttpParametersAware) action).setParameters(context.getParameters());
+         }
+ 
++        if (action instanceof ParametersAware) {
++            ((ParametersAware) action).withParameters(context.getParameters());
++        }
++
+         if (action instanceof ApplicationAware) {
+             ((ApplicationAware) action).setApplication(context.getApplication());
+         }
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The changes in the diff file are primarily related to the implementation details of how parameters are passed to actions within the Apache Struts2 framework. The addition of the 'ParametersAware' interface and its implementation does not directly impact critical security components such as authentication mechanisms, encryption algorithms, access control procedures, or logging levels related to security events. Instead, it appears to offer an alternative way for actions to receive parameters, which could be part of the framework's efforts to provide flexibility in handling requests. Without further context indicating that the handling or validation of parameters has been weakened or bypassed, these changes are not directly related to security functionalities.",
+  "confidence": 8
+}
+```
+
+Diff number: 52
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/plugins/osgi/src/main/java/org/apache/struts2/osgi/interceptor/OsgiInterceptor.java b/plugins/osgi/src/main/java/org/apache/struts2/osgi/interceptor/OsgiInterceptor.java
+index 11dd1f9a0..62c676ce0 100644
+--- a/plugins/osgi/src/main/java/org/apache/struts2/osgi/interceptor/OsgiInterceptor.java
++++ b/plugins/osgi/src/main/java/org/apache/struts2/osgi/interceptor/OsgiInterceptor.java
+@@ -21,10 +21,11 @@ package org.apache.struts2.osgi.interceptor;
+ import com.opensymphony.xwork2.ActionInvocation;
+ import com.opensymphony.xwork2.inject.Inject;
+ import com.opensymphony.xwork2.interceptor.AbstractInterceptor;
+-import org.apache.logging.log4j.Logger;
+ import org.apache.logging.log4j.LogManager;
++import org.apache.logging.log4j.Logger;
+ import org.apache.struts2.osgi.host.OsgiHost;
+ import org.osgi.framework.BundleContext;
++import org.osgi.framework.InvalidSyntaxException;
+ import org.osgi.framework.ServiceReference;
+ 
+ import javax.servlet.ServletContext;
+@@ -46,51 +47,93 @@ public class OsgiInterceptor extends AbstractInterceptor {
+     public String intercept(ActionInvocation invocation) throws Exception {
+         if (bundleContext != null) {
+             Object action = invocation.getAction();
++            injectBundleContext(action);
++            injectServicesUsingDeprecatedInterface(action);
++            injectServices(action);
++        } else if (LOG.isWarnEnabled()) {
++            LOG.warn("The OSGi interceptor was not able to find the BundleContext in the ServletContext");
++        }
+ 
+-            //inject BundleContext
+-            if (action instanceof BundleContextAware)
+-                ((BundleContextAware)action).setBundleContext(bundleContext);
++        return invocation.invoke();
++    }
+ 
+-            if (action instanceof org.apache.struts2.osgi.action.BundleContextAware) {
+-                ((org.apache.struts2.osgi.action.BundleContextAware) action).withBundleContext(bundleContext);
+-            }
++    private void injectBundleContext(Object action) {
++        if (action instanceof BundleContextAware)
++            ((BundleContextAware) action).setBundleContext(bundleContext);
+ 
+-            //inject service implementations
+-            if (action instanceof ServiceAware) {
+-                Type[] types = action.getClass().getGenericInterfaces();
+-                if (types != null) {
+-                    for (Type type : types) {
+-                        if (type instanceof ParameterizedType) {
+-                            ParameterizedType parameterizedType = (ParameterizedType) type;
+-                            if (parameterizedType.getRawType() instanceof Class) {
+-                                Class clazz = (Class) parameterizedType.getRawType();
+-                                if (ServiceAware.class.equals(clazz)) {
+-                                    Class serviceClass = (Class) parameterizedType.getActualTypeArguments()[0];
+-                                    ServiceReference[] refs = bundleContext.getAllServiceReferences(serviceClass.getName(), null);
+-                                    //get the services
+-                                    if (refs != null) {
+-                                        List services = new ArrayList(refs.length);
+-                                        for (ServiceReference ref : refs) {
+-                                            Object service = bundleContext.getService(ref);
+-                                            //wow, that's a lot of nested ifs
+-                                            if (service != null)
+-                                                services.add(service);
+-                                        }
++        if (action instanceof org.apache.struts2.osgi.action.BundleContextAware) {
++            ((org.apache.struts2.osgi.action.BundleContextAware) action).withBundleContext(bundleContext);
++        }
++    }
+ 
+-                                        if (!services.isEmpty())
+-                                            ((ServiceAware)action).setServices(services);
++    @Deprecated
++    private void injectServicesUsingDeprecatedInterface(Object action) throws InvalidSyntaxException {
++        //inject service implementations
++        if (action instanceof ServiceAware) {
++            Type[] types = action.getClass().getGenericInterfaces();
++            if (types != null) {
++                for (Type type : types) {
++                    if (type instanceof ParameterizedType) {
++                        ParameterizedType parameterizedType = (ParameterizedType) type;
++                        if (parameterizedType.getRawType() instanceof Class) {
++                            Class clazz = (Class) parameterizedType.getRawType();
++                            if (ServiceAware.class.equals(clazz)) {
++                                Class serviceClass = (Class) parameterizedType.getActualTypeArguments()[0];
++                                ServiceReference[] refs = bundleContext.getAllServiceReferences(serviceClass.getName(), null);
++                                //get the services
++                                if (refs != null) {
++                                    List services = new ArrayList(refs.length);
++                                    for (ServiceReference ref : refs) {
++                                        Object service = bundleContext.getService(ref);
++                                        //wow, that's a lot of nested ifs
++                                        if (service != null)
++                                            services.add(service);
+                                     }
++
++                                    if (!services.isEmpty())
++                                        ((ServiceAware) action).setServices(services);
+                                 }
+                             }
+                         }
+                     }
+                 }
+             }
+-        } else if (LOG.isWarnEnabled()){
+-            LOG.warn("The OSGi interceptor was not able to find the BundleContext in the ServletContext");          
+         }
++    }
+ 
+-        return invocation.invoke();
++    private void injectServices(Object action) throws InvalidSyntaxException {
++        //inject service implementations
++        if (action instanceof org.apache.struts2.osgi.action.ServiceAware) {
++            Type[] types = action.getClass().getGenericInterfaces();
++            if (types != null) {
++                for (Type type : types) {
++                    if (type instanceof ParameterizedType) {
++                        ParameterizedType parameterizedType = (ParameterizedType) type;
++                        if (parameterizedType.getRawType() instanceof Class) {
++                            Class clazz = (Class) parameterizedType.getRawType();
++                            if (org.apache.struts2.osgi.action.ServiceAware.class.equals(clazz)) {
++                                Class serviceClass = (Class) parameterizedType.getActualTypeArguments()[0];
++                                ServiceReference[] refs = bundleContext.getAllServiceReferences(serviceClass.getName(), null);
++                                //get the services
++                                if (refs != null) {
++                                    List<Object> services = new ArrayList<>(refs.length);
++                                    for (ServiceReference ref : refs) {
++                                        Object service = bundleContext.getService(ref);
++                                        //wow, that's a lot of nested ifs
++                                        if (service != null)
++                                            services.add(service);
++                                    }
++
++                                    if (!services.isEmpty()) {
++                                        ((org.apache.struts2.osgi.action.ServiceAware) action).withServices(services);
++                                    }
++                                }
++                            }
++                        }
++                    }
++                }
++            }
++        }
+     }
+ 
+     @Inject
+
+```
+Context:
+```
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package org.apache.struts2.osgi.interceptor;
+
+import org.apache.struts2.osgi.action.ServiceAction;
+import org.easymock.EasyMock;
+import org.apache.struts2.osgi.host.OsgiHost;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
+
+import javax.servlet.ServletContext;
+
+import com.opensymphony.xwork2.ActionInvocation;
+import junit.framework.TestCase;
+
+import java.util.List;
+
+public class OsgiInterceptorTest extends TestCase {
+    public void testBundleContextAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        BundleContextAware bundleContextAware = EasyMock.createStrictMock(BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(bundleContextAware);
+        bundleContextAware.setBundleContext(bundleContext);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+    public void testActionBundleContextAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        org.apache.struts2.osgi.action.BundleContextAware bundleContextAware = EasyMock.createStrictMock(org.apache.struts2.osgi.action.BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(bundleContextAware);
+        bundleContextAware.withBundleContext(bundleContext);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+     public void testBundleContextAwareNegative() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        BundleContextAware bundleContextAware = EasyMock.createStrictMock(BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(null);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+     public void testActionBundleContextAwareNegative() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+         org.apache.struts2.osgi.action.BundleContextAware bundleContextAware = EasyMock.createStrictMock(org.apache.struts2.osgi.action.BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(null);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+    public void testServiceAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        SomeAction someAction = new SomeAction();
+
+        //service refs
+        ServiceReference objectRef = EasyMock.createNiceMock(ServiceReference.class);
+        Object someObject = new Object();
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(someAction);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+        EasyMock.expect(bundleContext.getAllServiceReferences(Object.class.getName(), null)).andReturn(new ServiceReference[] {objectRef});
+        EasyMock.expect(bundleContext.getService(objectRef)).andReturn(someObject);
+
+        EasyMock.replay(bundleContext);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        List<Object> objects = someAction.getServices();
+        assertNotNull(objects);
+        assertSame(someObject, objects.get(0));
+    }
+
+    public void testActionServiceAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        ServiceAction serviceAction = new ServiceAction();
+
+        //service refs
+        ServiceReference objectRef = EasyMock.createNiceMock(ServiceReference.class);
+        Object someObject = new Object();
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(serviceAction);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+        EasyMock.expect(bundleContext.getAllServiceReferences(Object.class.getName(), null)).andReturn(new ServiceReference[] {objectRef});
+        EasyMock.expect(bundleContext.getService(objectRef)).andReturn(someObject);
+
+        EasyMock.replay(bundleContext);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        List<Object> objects = serviceAction.getServices();
+        assertNotNull(objects);
+        assertSame(someObject, objects.get(0));
+    }
+}
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package org.apache.struts2.osgi.interceptor;
+
+import org.apache.struts2.osgi.action.ServiceAction;
+import org.easymock.EasyMock;
+import org.apache.struts2.osgi.host.OsgiHost;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
+
+import javax.servlet.ServletContext;
+
+import com.opensymphony.xwork2.ActionInvocation;
+import junit.framework.TestCase;
+
+import java.util.List;
+
+public class OsgiInterceptorTest extends TestCase {
+    public void testBundleContextAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        BundleContextAware bundleContextAware = EasyMock.createStrictMock(BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(bundleContextAware);
+        bundleContextAware.setBundleContext(bundleContext);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+    public void testActionBundleContextAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        org.apache.struts2.osgi.action.BundleContextAware bundleContextAware = EasyMock.createStrictMock(org.apache.struts2.osgi.action.BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(bundleContextAware);
+        bundleContextAware.withBundleContext(bundleContext);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+     public void testBundleContextAwareNegative() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        BundleContextAware bundleContextAware = EasyMock.createStrictMock(BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(null);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+     public void testActionBundleContextAwareNegative() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+         org.apache.struts2.osgi.action.BundleContextAware bundleContextAware = EasyMock.createStrictMock(org.apache.struts2.osgi.action.BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(null);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+    public void testServiceAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        SomeAction someAction = new SomeAction();
+
+        //service refs
+        ServiceReference objectRef = EasyMock.createNiceMock(ServiceReference.class);
+        Object someObject = new Object();
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(someAction);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+        EasyMock.expect(bundleContext.getAllServiceReferences(Object.class.getName(), null)).andReturn(new ServiceReference[] {objectRef});
+        EasyMock.expect(bundleContext.getService(objectRef)).andReturn(someObject);
+
+        EasyMock.replay(bundleContext);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        List<Object> objects = someAction.getServices();
+        assertNotNull(objects);
+        assertSame(someObject, objects.get(0));
+    }
+
+    public void testActionServiceAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        ServiceAction serviceAction = new ServiceAction();
+
+        //service refs
+        ServiceReference objectRef = EasyMock.createNiceMock(ServiceReference.class);
+        Object someObject = new Object();
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(serviceAction);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+        EasyMock.expect(bundleContext.getAllServiceReferences(Object.class.getName(), null)).andReturn(new ServiceReference[] {objectRef});
+        EasyMock.expect(bundleContext.getService(objectRef)).andReturn(someObject);
+
+        EasyMock.replay(bundleContext);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        List<Object> objects = serviceAction.getServices();
+        assertNotNull(objects);
+        assertSame(someObject, objects.get(0));
+    }
+}
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package org.apache.struts2.osgi.interceptor;
+
+import org.apache.struts2.osgi.action.ServiceAction;
+import org.easymock.EasyMock;
+import org.apache.struts2.osgi.host.OsgiHost;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
+
+import javax.servlet.ServletContext;
+
+import com.opensymphony.xwork2.ActionInvocation;
+import junit.framework.TestCase;
+
+import java.util.List;
+
+public class OsgiInterceptorTest extends TestCase {
+    public void testBundleContextAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        BundleContextAware bundleContextAware = EasyMock.createStrictMock(BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(bundleContextAware);
+        bundleContextAware.setBundleContext(bundleContext);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+    public void testActionBundleContextAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        org.apache.struts2.osgi.action.BundleContextAware bundleContextAware = EasyMock.createStrictMock(org.apache.struts2.osgi.action.BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(bundleContextAware);
+        bundleContextAware.withBundleContext(bundleContext);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+     public void testBundleContextAwareNegative() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        BundleContextAware bundleContextAware = EasyMock.createStrictMock(BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(null);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+     public void testActionBundleContextAwareNegative() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+         org.apache.struts2.osgi.action.BundleContextAware bundleContextAware = EasyMock.createStrictMock(org.apache.struts2.osgi.action.BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(null);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+    public void testServiceAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        SomeAction someAction = new SomeAction();
+
+        //service refs
+        ServiceReference objectRef = EasyMock.createNiceMock(ServiceReference.class);
+        Object someObject = new Object();
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(someAction);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+        EasyMock.expect(bundleContext.getAllServiceReferences(Object.class.getName(), null)).andReturn(new ServiceReference[] {objectRef});
+        EasyMock.expect(bundleContext.getService(objectRef)).andReturn(someObject);
+
+        EasyMock.replay(bundleContext);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        List<Object> objects = someAction.getServices();
+        assertNotNull(objects);
+        assertSame(someObject, objects.get(0));
+    }
+
+    public void testActionServiceAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        ServiceAction serviceAction = new ServiceAction();
+
+        //service refs
+        ServiceReference objectRef = EasyMock.createNiceMock(ServiceReference.class);
+        Object someObject = new Object();
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(serviceAction);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+        EasyMock.expect(bundleContext.getAllServiceReferences(Object.class.getName(), null)).andReturn(new ServiceReference[] {objectRef});
+        EasyMock.expect(bundleContext.getService(objectRef)).andReturn(someObject);
+
+        EasyMock.replay(bundleContext);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        List<Object> objects = serviceAction.getServices();
+        assertNotNull(objects);
+        assertSame(someObject, objects.get(0));
+    }
+}
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package org.apache.struts2.osgi.interceptor;
+
+import org.apache.struts2.osgi.action.ServiceAction;
+import org.easymock.EasyMock;
+import org.apache.struts2.osgi.host.OsgiHost;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
+
+import javax.servlet.ServletContext;
+
+import com.opensymphony.xwork2.ActionInvocation;
+import junit.framework.TestCase;
+
+import java.util.List;
+
+public class OsgiInterceptorTest extends TestCase {
+    public void testBundleContextAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        BundleContextAware bundleContextAware = EasyMock.createStrictMock(BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(bundleContextAware);
+        bundleContextAware.setBundleContext(bundleContext);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+    public void testActionBundleContextAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        org.apache.struts2.osgi.action.BundleContextAware bundleContextAware = EasyMock.createStrictMock(org.apache.struts2.osgi.action.BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(bundleContextAware);
+        bundleContextAware.withBundleContext(bundleContext);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+     public void testBundleContextAwareNegative() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        BundleContextAware bundleContextAware = EasyMock.createStrictMock(BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(null);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+     public void testActionBundleContextAwareNegative() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+         org.apache.struts2.osgi.action.BundleContextAware bundleContextAware = EasyMock.createStrictMock(org.apache.struts2.osgi.action.BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(null);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+    public void testServiceAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        SomeAction someAction = new SomeAction();
+
+        //service refs
+        ServiceReference objectRef = EasyMock.createNiceMock(ServiceReference.class);
+        Object someObject = new Object();
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(someAction);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+        EasyMock.expect(bundleContext.getAllServiceReferences(Object.class.getName(), null)).andReturn(new ServiceReference[] {objectRef});
+        EasyMock.expect(bundleContext.getService(objectRef)).andReturn(someObject);
+
+        EasyMock.replay(bundleContext);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        List<Object> objects = someAction.getServices();
+        assertNotNull(objects);
+        assertSame(someObject, objects.get(0));
+    }
+
+    public void testActionServiceAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        ServiceAction serviceAction = new ServiceAction();
+
+        //service refs
+        ServiceReference objectRef = EasyMock.createNiceMock(ServiceReference.class);
+        Object someObject = new Object();
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(serviceAction);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+        EasyMock.expect(bundleContext.getAllServiceReferences(Object.class.getName(), null)).andReturn(new ServiceReference[] {objectRef});
+        EasyMock.expect(bundleContext.getService(objectRef)).andReturn(someObject);
+
+        EasyMock.replay(bundleContext);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        List<Object> objects = serviceAction.getServices();
+        assertNotNull(objects);
+        assertSame(someObject, objects.get(0));
+    }
+}
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package org.apache.struts2.osgi.interceptor;
+
+import org.apache.struts2.osgi.action.ServiceAction;
+import org.easymock.EasyMock;
+import org.apache.struts2.osgi.host.OsgiHost;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
+
+import javax.servlet.ServletContext;
+
+import com.opensymphony.xwork2.ActionInvocation;
+import junit.framework.TestCase;
+
+import java.util.List;
+
+public class OsgiInterceptorTest extends TestCase {
+    public void testBundleContextAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        BundleContextAware bundleContextAware = EasyMock.createStrictMock(BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(bundleContextAware);
+        bundleContextAware.setBundleContext(bundleContext);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+    public void testActionBundleContextAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        org.apache.struts2.osgi.action.BundleContextAware bundleContextAware = EasyMock.createStrictMock(org.apache.struts2.osgi.action.BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(bundleContextAware);
+        bundleContextAware.withBundleContext(bundleContext);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+     public void testBundleContextAwareNegative() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        BundleContextAware bundleContextAware = EasyMock.createStrictMock(BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(null);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+     public void testActionBundleContextAwareNegative() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+         org.apache.struts2.osgi.action.BundleContextAware bundleContextAware = EasyMock.createStrictMock(org.apache.struts2.osgi.action.BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(null);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+    public void testServiceAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        SomeAction someAction = new SomeAction();
+
+        //service refs
+        ServiceReference objectRef = EasyMock.createNiceMock(ServiceReference.class);
+        Object someObject = new Object();
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(someAction);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+        EasyMock.expect(bundleContext.getAllServiceReferences(Object.class.getName(), null)).andReturn(new ServiceReference[] {objectRef});
+        EasyMock.expect(bundleContext.getService(objectRef)).andReturn(someObject);
+
+        EasyMock.replay(bundleContext);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        List<Object> objects = someAction.getServices();
+        assertNotNull(objects);
+        assertSame(someObject, objects.get(0));
+    }
+
+    public void testActionServiceAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        ServiceAction serviceAction = new ServiceAction();
+
+        //service refs
+        ServiceReference objectRef = EasyMock.createNiceMock(ServiceReference.class);
+        Object someObject = new Object();
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(serviceAction);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+        EasyMock.expect(bundleContext.getAllServiceReferences(Object.class.getName(), null)).andReturn(new ServiceReference[] {objectRef});
+        EasyMock.expect(bundleContext.getService(objectRef)).andReturn(someObject);
+
+        EasyMock.replay(bundleContext);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        List<Object> objects = serviceAction.getServices();
+        assertNotNull(objects);
+        assertSame(someObject, objects.get(0));
+    }
+}
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+package org.apache.struts2.osgi.interceptor;
+
+import org.apache.struts2.osgi.action.ServiceAction;
+import org.easymock.EasyMock;
+import org.apache.struts2.osgi.host.OsgiHost;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
+
+import javax.servlet.ServletContext;
+
+import com.opensymphony.xwork2.ActionInvocation;
+import junit.framework.TestCase;
+
+import java.util.List;
+
+public class OsgiInterceptorTest extends TestCase {
+    public void testBundleContextAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        BundleContextAware bundleContextAware = EasyMock.createStrictMock(BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(bundleContextAware);
+        bundleContextAware.setBundleContext(bundleContext);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+    public void testActionBundleContextAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        org.apache.struts2.osgi.action.BundleContextAware bundleContextAware = EasyMock.createStrictMock(org.apache.struts2.osgi.action.BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(bundleContextAware);
+        bundleContextAware.withBundleContext(bundleContext);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+     public void testBundleContextAwareNegative() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        BundleContextAware bundleContextAware = EasyMock.createStrictMock(BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(null);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+     public void testActionBundleContextAwareNegative() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+         org.apache.struts2.osgi.action.BundleContextAware bundleContextAware = EasyMock.createStrictMock(org.apache.struts2.osgi.action.BundleContextAware.class);
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(null);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+
+        EasyMock.replay(bundleContextAware);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        EasyMock.verify(bundleContextAware);
+    }
+
+    public void testServiceAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        SomeAction someAction = new SomeAction();
+
+        //service refs
+        ServiceReference objectRef = EasyMock.createNiceMock(ServiceReference.class);
+        Object someObject = new Object();
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(someAction);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+        EasyMock.expect(bundleContext.getAllServiceReferences(Object.class.getName(), null)).andReturn(new ServiceReference[] {objectRef});
+        EasyMock.expect(bundleContext.getService(objectRef)).andReturn(someObject);
+
+        EasyMock.replay(bundleContext);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        List<Object> objects = someAction.getServices();
+        assertNotNull(objects);
+        assertSame(someObject, objects.get(0));
+    }
+
+    public void testActionServiceAware() throws Exception {
+        ServletContext servletContext = EasyMock.createStrictMock(ServletContext.class);
+        BundleContext bundleContext = EasyMock.createStrictMock(BundleContext.class);
+        ActionInvocation actionInvocation = EasyMock.createStrictMock(ActionInvocation.class);
+        ServiceAction serviceAction = new ServiceAction();
+
+        //service refs
+        ServiceReference objectRef = EasyMock.createNiceMock(ServiceReference.class);
+        Object someObject = new Object();
+
+        EasyMock.expect(servletContext.getAttribute(OsgiHost.OSGI_BUNDLE_CONTEXT)).andReturn(bundleContext);
+        EasyMock.expect(actionInvocation.getAction()).andReturn(serviceAction);
+        EasyMock.expect(actionInvocation.invoke()).andReturn("");
+        EasyMock.expect(bundleContext.getAllServiceReferences(Object.class.getName(), null)).andReturn(new ServiceReference[] {objectRef});
+        EasyMock.expect(bundleContext.getService(objectRef)).andReturn(someObject);
+
+        EasyMock.replay(bundleContext);
+        EasyMock.replay(servletContext);
+        EasyMock.replay(actionInvocation);
+
+        OsgiInterceptor osgiInterceptor = new OsgiInterceptor();
+        osgiInterceptor.setServletContext(servletContext);
+        osgiInterceptor.intercept(actionInvocation);
+
+        List<Object> objects = serviceAction.getServices();
+        assertNotNull(objects);
+        assertSame(someObject, objects.get(0));
+    }
+}
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The provided diff file primarily involves changes related to the OSGiInterceptor functionality within an Apache Struts2 application. The modifications include refactoring and enhancements to how services are injected into actions, specifically through the introduction of new methods for injecting the BundleContext and services into actions that are aware of them. The changes also include the handling of a potential new exception (InvalidSyntaxException) that could be thrown during the service injection process. These alterations do not directly impact critical security components such as authentication mechanisms, encryption algorithms, access control procedures, or the logging of security events. Instead, they focus on the internal mechanism of service injection within the OSGi framework context, which is more related to application functionality and modularity rather than its security posture. There is no evidence in the diff that suggests modifications to how sensitive information is handled, nor is there any indication of changes to how the application communicates securely or enforces access controls. Therefore, while these changes are significant from a functionality and possibly performance perspective, they do not have a direct impact on the system's security.",
+  "confidence": 9
+}
+```
+
+Diff number: 54
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/plugins/osgi/src/test/java/org/apache/struts2/osgi/action/ServiceAction.java b/plugins/osgi/src/test/java/org/apache/struts2/osgi/action/ServiceAction.java
+new file mode 100644
+index 000000000..df6c2588a
+--- /dev/null
++++ b/plugins/osgi/src/test/java/org/apache/struts2/osgi/action/ServiceAction.java
+@@ -0,0 +1,34 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *  http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing,
++ * software distributed under the License is distributed on an
++ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
++ * KIND, either express or implied.  See the License for the
++ * specific language governing permissions and limitations
++ * under the License.
++ */
++package org.apache.struts2.osgi.action;
++
++import java.util.List;
++
++public class ServiceAction implements ServiceAware<Object> {
++    private List<Object> services;
++
++
++    public List<Object> getServices() {
++        return services;
++    }
++
++    public void withServices(List<Object> services) {
++        this.services = services;
++    }
++}
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The provided diff file introduces a new Java class, ServiceAction, which implements a ServiceAware interface with methods to get and set a list of services. There are no direct modifications or references to authentication mechanisms, encryption algorithms, access control procedures, or logging levels related to security events. The class appears to be focused on managing a collection of services, without any explicit security functionalities or implications. Without additional context indicating how these services are used or managed within the broader application, it's not possible to determine any indirect security implications from this change alone.",
+  "confidence": 8
+}
+```
+
+Diff number: 56
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/apps/showcase/src/main/java/org/apache/struts2/showcase/source/ViewSourceAction.java b/apps/showcase/src/main/java/org/apache/struts2/showcase/source/ViewSourceAction.java
+index 3b71fa68e..56dbf9bfb 100644
+--- a/apps/showcase/src/main/java/org/apache/struts2/showcase/source/ViewSourceAction.java
++++ b/apps/showcase/src/main/java/org/apache/struts2/showcase/source/ViewSourceAction.java
+@@ -23,7 +23,7 @@ package org.apache.struts2.showcase.source;
+ import com.opensymphony.xwork2.ActionSupport;
+ import com.opensymphony.xwork2.util.ClassLoaderUtil;
+ import org.apache.struts2.ServletActionContext;
+-import org.apache.struts2.util.ServletContextAware;
++import org.apache.struts2.action.ServletContextAware;
+ 
+ import javax.servlet.ServletContext;
+ import java.io.BufferedReader;
+@@ -227,7 +227,7 @@ public class ViewSourceAction extends ActionSupport implements ServletContextAwa
+ 		return snippet;
+ 	}
+ 
+-	public void setServletContext(ServletContext arg0) {
++	public void withServletContext(ServletContext arg0) {
+ 		this.servletContext = arg0;
+ 	}
+ 
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The changes in the diff file primarily involve a modification in the import statement and a renaming of a method related to the ServletContext. The first change updates the import path for 'ServletContextAware' from 'org.apache.struts2.util.ServletContextAware' to 'org.apache.struts2.action.ServletContextAware'. This change appears to be a refactor or an update to adhere to a new package structure, rather than a modification of security functionality. The second change renames the method 'setServletContext' to 'withServletContext'. This method is used for setting the ServletContext in the action class but does not directly impact authentication, encryption, access control, or logging of security events. The method's purpose remains the same, and it's likely a refactor to follow a naming convention or improve code readability. Neither of these changes directly affects critical security components or alters the security posture of the system.",
+  "confidence": 9
+}
+```
+
+Diff number: 57
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/bundles/admin/src/main/java/org/apache/struts2/osgi/admin/actions/BundlesAction.java b/bundles/admin/src/main/java/org/apache/struts2/osgi/admin/actions/BundlesAction.java
+index 5d81de896..cf6edb07f 100644
+--- a/bundles/admin/src/main/java/org/apache/struts2/osgi/admin/actions/BundlesAction.java
++++ b/bundles/admin/src/main/java/org/apache/struts2/osgi/admin/actions/BundlesAction.java
+@@ -28,7 +28,7 @@ import com.opensymphony.xwork2.inject.Inject;
+ import org.apache.struts2.osgi.BundleAccessor;
+ import org.apache.struts2.osgi.host.OsgiHost;
+ import org.apache.struts2.osgi.StrutsOsgiListener;
+-import org.apache.struts2.util.ServletContextAware;
++import org.apache.struts2.action.ServletContextAware;
+ import org.osgi.framework.Bundle;
+ import org.osgi.framework.BundleException;
+ 
+@@ -197,7 +197,7 @@ public class BundlesAction extends ActionSupport implements ServletContextAware
+         this.bundleAccessor = bundleAccessor;
+     }
+ 
+-    public void setServletContext(ServletContext servletContext) {
++    public void withServletContext(ServletContext servletContext) {
+         osgiHost = (OsgiHost) servletContext.getAttribute(StrutsOsgiListener.OSGI_HOST);
+     }
+ }
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The changes observed in the diff file primarily involve a refactor of the class used for ServletContextAware from 'org.apache.struts2.util.ServletContextAware' to 'org.apache.struts2.action.ServletContextAware' and a method name change from 'setServletContext' to 'withServletContext'. These modifications do not directly impact critical security components such as authentication mechanisms, encryption algorithms, access control procedures, or logging levels related to security events. Instead, they appear to be part of a code organization or naming convention effort. The method involved is used for setting the ServletContext, which is a standard operation in web applications for accessing servlet configuration and environment but does not inherently alter the security posture of the application unless the context is being used in a security-critical manner, which is not indicated by the provided diff.",
+  "confidence": 9
+}
+```
+
+Diff number: 59
+Input: You are a security evaluator, tasked with analyzing code changes to identify their impact on system security.
+Your focus should be on detecting modifications that directly affect critical security components such as authentication mechanisms, encryption algorithms, access control procedures, and logging levels related to security events.
+Please review the provided diff file, concentrating solely on the lines that start with '+' or '-'.
+Your analysis should discern whether the changes in this diff file are directly related to security functionalities, could potentially impact the system's security, or are unrelated to security concerns.
+Your analysis must accurately categorize the security relevance of the diff file, offering a clear rationale for your classification and indicating your confidence level in your assessment.
+Consider the immediate implications of the changes on system security, especially for modifications to critical components.
+You will also receive context containing class(es) where the methods in the diff file were called. If no methods are present in the diff file, this context will be empty.
+Use this information for your evaluation.
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"properties": {"security_relevancy": {"description": "A string whose value is one of the following: ['security_relevant' (if the code directly impacts security functionalities), 'not_security_relevant' (if the changes do not involve any security functionalities)].", "title": "Security Relevancy", "type": "string"}, "reason": {"description": "Provide a detailed explanation for your classification. If the changes are not related to security, explain why.", "title": "Reason", "type": "string"}, "confidence": {"description": "Rate your confidence in your assessment from 0-10, with 0 being not confident and 10 being extremely confident.", "title": "Confidence", "type": "integer"}}, "required": ["security_relevancy", "reason", "confidence"]}
+```
+Diff file:
+```
+diff --git a/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java b/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
+index 0312da9ff..970789623 100644
+--- a/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
++++ b/core/src/main/java/org/apache/struts2/interceptor/ServletConfigInterceptor.java
+@@ -196,6 +196,12 @@ public class ServletConfigInterceptor extends AbstractInterceptor implements Str
+             ServletContext servletContext = (ServletContext) context.get(SERVLET_CONTEXT);
+             ((ServletContextAware) action).setServletContext(servletContext);
+         }
++
++        if (action instanceof org.apache.struts2.action.ServletContextAware) {
++            ServletContext servletContext = (ServletContext) context.get(SERVLET_CONTEXT);
++            ((org.apache.struts2.action.ServletContextAware) action).withServletContext(servletContext);
++        }
++
+         return invocation.invoke();
+     }
+ }
+
+```
+Context:
+```
+
+```
+Analyse the changes with a critical eye towards their impact on the security posture of the system, paying close attention to how they might alter authentication flows, data protection mechanisms, or the security of communications.
+Your goal is to provide a nuanced and thorough evaluation that helps in understanding the security implications of the code changes presented.
+
+Output: ```json
+{
+  "security_relevancy": "not_security_relevant",
+  "reason": "The provided diff file shows a modification in the ServletConfigInterceptor class of the Apache Struts2 framework. The change involves adding a new block of code that checks if the action object is an instance of the org.apache.struts2.action.ServletContextAware interface and, if so, sets the ServletContext using a new method 'withServletContext'. This modification does not directly impact critical security components such as authentication mechanisms, encryption algorithms, access control procedures, or logging levels related to security events. Instead, it appears to extend functionality related to how ServletContext is provided to actions, likely for configuration or context purposes within the framework's operation. There is no direct manipulation of security-sensitive data or alteration of the security posture of the system evident from this change alone.",
+  "confidence": 8
+}
+```
+
+Number of diff files: 61
+Number of processed files: 20
+Statistics: [{'not': 18, 'mean': 8}, {'security': 2, 'mean': 8}]
+Error number: 30
+Accuracy: 1.0
+Precision: 1.0
+Recall: 1.0
+F1 Score: 1.0
