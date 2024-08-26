@@ -7,6 +7,8 @@ from .spotbugs import SpotBugsRunner
 from .trivy import TrivyRunner
 from utils.logger import logger
 
+# project example use: struts github repo
+
 class SASTOrchestrator:
     def __init__(self, config):
         self.config = config
@@ -88,7 +90,7 @@ class SASTOrchestrator:
     def merge_reports(self):
         logger.info("Merging reports...")
         try:
-            # Run and extract issues from PMD
+
             pmd_report_path = self.config.get("REPORT", "config.pmd_report_path", fallback=None)
             spotbugs_report_path = self.config.get("REPORT", "config.spotbugs_report_path", fallback=None)
             trivy_report_path = self.config.get("REPORT", "config.trivy_report_path", fallback=None)
@@ -135,15 +137,15 @@ class SASTOrchestrator:
 
     def run_all(self):
         try:
-            self.checkout_commit()
+            # self.checkout_commit()
             self.run_pmd()
             # self.run_maven_compile()
             self.run_spotbugs()
             self.run_trivy()
             self.merge_reports()
         finally:
-            self.revert_checkout()
-
+            # self.revert_checkout()
+            pass
 
 
 
