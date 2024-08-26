@@ -6,7 +6,6 @@ class ConfigManager:
 
     @classmethod
     def load_config(cls, config_file):
-    # def load_config(cls, config_file="C:\\Users\\HP\\slab\\ai4fix\\ai4framework\\config\\config.properties"):
         if cls._config is None:
             cls._config = configparser.ConfigParser()
             cls._config.read(config_file)
@@ -18,9 +17,10 @@ class ConfigManager:
             raise Exception("Configuration not loaded. Call load_config() first.")
         return cls._config
 
-# Load the configuration at the start
+base_dir = os.path.dirname(os.path.abspath(__file__))
+
 if os.name == 'nt':
-    config_file = 'C:\\Users\\HP\\slab\\ai4fix\\ai4framework\\config\\config.properties'
+    config_file = os.path.join(base_dir, 'config.properties')
 else:
-    config_file = '/mnt/c/Users/HP/slab/ai4fix/ai4framework/config/config_mnt.properties'
+    config_file = os.path.join(base_dir, 'config_mnt.properties')
 ConfigManager.load_config(config_file)
