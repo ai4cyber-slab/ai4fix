@@ -16,7 +16,7 @@ class PMDRunner:
                 f"-d {','.join(java_files)} "
                 f"-R {self.config.get('DEFAULT', 'config.pmd_ruleset')} "
                 f"-f xml "
-                f"-r {self.config.get('DEFAULT', 'config.pmd_xml_file_path')} "
+                f"-r {self.config.get('REPORT', 'config.pmd_report_path')} "
                 "--no-fail-on-violation "
             )
 
@@ -28,7 +28,7 @@ class PMDRunner:
             sys.exit(result.returncode)
 
     def get_report(self):
-        report_path = self.config.get('DEFAULT', 'config.pmd_xml_file_path')
+        report_path = self.config.get('REPORT', 'config.pmd_report_path')
         if os.path.exists(report_path):
             with open(report_path, 'r') as file:
                 return file.read()

@@ -12,9 +12,9 @@ class TrivyRunner:
     def run(self):
         command = (
             f"{self.config.get('DEFAULT', 'config.trivy_bin')} fs "
+            f"{self.config.get('DEFAULT', 'config.project_path')} "
             f"--format json "
-            f"-o {self.config.get('DEFAULT', 'config.trivy_json_file_path')} "
-            f"{self.config.get('DEFAULT', 'config.project_path')}"
+            f"-o {self.config.get('REPORT', 'config.trivy_report_path')}"
         )     
 
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
@@ -24,7 +24,7 @@ class TrivyRunner:
             sys.exit(result.returncode)
 
     def get_report(self):
-        report_path = self.config.get('DEFAULT', 'config.trivy_json_file_path')
+        report_path = self.config.get('REPORT', 'config.trivy_report_path')
         if os.path.exists(report_path):
             with open(report_path, 'r') as file:
                 return file.read()

@@ -12,7 +12,7 @@ class SpotBugsRunner:
     def run(self, changed_files):
         command = (
             f"{self.config.get('DEFAULT', 'config.spotbugs_bin')} -textui "
-            f"-xml:withMessages={self.config.get('DEFAULT', 'config.spotbugs_xml_file_path')} "
+            f"-xml:withMessages={self.config.get('REPORT', 'config.spotbugs_report_path')} "
             f"{' '.join(changed_files)}"
         )
         result = subprocess.run(command, cwd=self.config.get('DEFAULT', 'config.project_path'), shell=True, capture_output=True, text=True)
@@ -22,7 +22,7 @@ class SpotBugsRunner:
             sys.exit(result.returncode)
 
     def get_report(self):
-        report_path = self.config.get('DEFAULT', 'config.spotbugs_xml_file_path')
+        report_path = self.config.get('REPORT', 'config.spotbugs_report_path')
         if os.path.exists(report_path):
             with open(report_path, 'r') as file:
                 return file.read()
