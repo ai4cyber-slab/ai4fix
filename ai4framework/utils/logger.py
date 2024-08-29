@@ -11,7 +11,7 @@ def setup_logger(name, log_file=DEFAULT_LOG_FILE_PATH, level=logging.DEBUG, file
     if not os.path.exists(os.path.dirname(log_file)):
         os.makedirs(os.path.dirname(log_file))
 
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(funcName)s - Line: %(lineno)d - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(module)s - %(funcName)s - Line: %(lineno)d - %(levelname)s - %(message)s')
     handler = logging.FileHandler(log_file, mode=filemode)
     handler.setFormatter(formatter)
 
@@ -28,7 +28,7 @@ def setup_logger(name, log_file=DEFAULT_LOG_FILE_PATH, level=logging.DEBUG, file
     return logger
 
 
-logger = setup_logger('ai4framework')
+logger = setup_logger(__name__)
 
 
 def get_logger():
