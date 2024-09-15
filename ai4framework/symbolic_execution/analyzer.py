@@ -1,6 +1,7 @@
 import subprocess
 import re
 import os
+import time
 from utils.logger import logger
 
 class Analyzer:
@@ -40,6 +41,7 @@ class Analyzer:
 
         command = f'{self.analyzer} -projectName={self.project_name} -projectBaseDir={self.project_path} -resultsDir={self.results_path} -currentDate=now -runFB=false'
         
+        start_time = time.time()
         try:
             process = subprocess.Popen(
                 command,
@@ -68,6 +70,10 @@ class Analyzer:
         except Exception as e:
             logger.error(f"An error occurred: {e}")
             raise
+        finally:
+            end_time = time.time()
+            execution_time = end_time - start_time
+            logger.info(f"Symbolic execution completed in {execution_time:.2f} seconds")
 
         json_file = os.path.join(self.results_path, self.project_name, 'java', 'now', f'{self.project_name}-RTEHunter.json')
         return json_file

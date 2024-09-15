@@ -3,6 +3,7 @@ import subprocess
 from dotenv import load_dotenv, find_dotenv
 import openai
 import os
+import time
 
 
 def find_script(starting_directory):
@@ -58,13 +59,19 @@ class SecurityClassifier:
         ]
         try:
             logger.info("Classification started ...")
+            start_time = time.time()
             result = subprocess.run(command, cwd=find_script(os.curdir), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            end_time = time.time()
+            elapsed_time = end_time - start_time
             if result.returncode == 0:
                 logger.info("Classifier script executed successfully.")
                 logger.info(result.stdout)
+                logger.info(f"Classification completed in {elapsed_time:.2f} seconds")
             else:
                 logger.error("Classifier script failed with return code {}".format(result.returncode))
                 logger.error("Error output:")
                 logger.error(result.stderr)
+                logger.error(f"Classification failed after {elapsed_time:.2f} seconds")
         except Exception as e:
             logger.error(f"An error occurred while running the classifier script: {e}")
+            logger.error(f"Classification process interrupted after {time.time() - start_time:.2f} seconds")

@@ -1,5 +1,6 @@
 import os
 import subprocess
+import time
 from utils.logger import logger
 from management.repo_manager import RepoManager
 from .tool_runner import ToolRunner
@@ -40,19 +41,44 @@ class SASTOrchestrator:
         - Running Trivy
         - Merging reports from all tools
         """
+        start_time = time.time()
         try:
             self.repo_manager.checkout_commit()
+            
+            pmd_start = time.time()
             self.tool_runner.run_pmd()
+            pmd_end = time.time()
+            logger.info(f"PMD execution time: {pmd_end - pmd_start:.2f} seconds")
+            
+            maven_start = time.time()
             self.run_maven_compile()
+            maven_end = time.time()
+            logger.info(f"Maven compile execution time: {maven_end - maven_start:.2f} seconds")
+            
+            spotbugs_start = time.time()
             self.tool_runner.run_spotbugs()
+            spotbugs_end = time.time()
+            logger.info(f"SpotBugs execution time: {spotbugs_end - spotbugs_start:.2f} seconds")
+            
+            trivy_start = time.time()
             self.tool_runner.run_trivy()
+            trivy_end = time.time()
+            logger.info(f"Trivy execution time: {trivy_end - trivy_start:.2f} seconds")
+            
+            merge_start = time.time()
             self.report_merger.merge_reports(
                 self.tool_runner.pmd_runner,
                 self.tool_runner.spotbugs_runner,
                 self.tool_runner.trivy_runner
             )
+            merge_end = time.time()
+            logger.info(f"Report merging time: {merge_end - merge_start:.2f} seconds")
         finally:
             self.repo_manager.revert_checkout()
+        
+        end_time = time.time()
+        total_time = end_time - start_time
+        logger.info(f"Total SAST orchestration time: {total_time:.2f} seconds")
 
     def run_maven_compile(self):
         """
@@ -63,15 +89,17 @@ class SASTOrchestrator:
         """
         try:
             logger.info("Maven compilation started...")
+            start_time = time.time()
             result = subprocess.run(
                 ["mvn", "compile", "-DskipTests"],
                 cwd=self.repo_manager.repo.working_dir,
                 text=True
             )
+            end_time = time.time()
             if result.returncode == 0:
-                logger.info("Maven compile successful")
+                logger.info(f"Maven compile successful. Execution time: {end_time - start_time:.2f} seconds")
             else:
-                logger.error("Maven compile failed")
+                logger.error(f"Maven compile failed. Execution time: {end_time - start_time:.2f} seconds")
         except Exception as e:
             logger.error(f"An error occurred during Maven compilation: {e}")
 
