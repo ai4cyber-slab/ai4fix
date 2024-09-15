@@ -2,11 +2,28 @@ import re
 
 
 def splitter(diff):
+    """
+    Extract the class name from a git diff header.
+
+    Args:
+        diff (str): The git diff content.
+
+    Returns:
+        str: The extracted class name without the .java extension.
+    """
     return diff.split('\n')[0].replace('diff --git a/', '').split(' ')[0].split('/')[-1].replace('.java', '')
 
 
-# Extract method names
 def parse_diff_file(diff_content):
+    """
+    Extract method names from a git diff content.
+
+    Args:
+        diff_content (str): The content of the git diff.
+
+    Returns:
+        set: A set of method names extracted from the diff.
+    """
     diff_methods = set()
     
     # Split diff content into lines
@@ -30,8 +47,16 @@ def parse_diff_file(diff_content):
     return diff_methods
 
 
-# Extract method name from a line of Java code
 def parse_method_names(line):
+    """
+    Extract method name from a line of Java code.
+
+    Args:
+        line (str): A line of Java code.
+
+    Returns:
+        str or None: The extracted method name if found, None otherwise.
+    """
     # Example: -public void methodName(Type arg1, Type arg2) {
     method_regex = r'\b(public|private|protected)\s+(static\s+)?\b\w+\s+(\w+)\s*\(.*?\)\s*(?:throws\s+\w+(?:\s*,\s*\w+)*\s+)?\{?'
     matches = re.findall(method_regex, line)
@@ -40,8 +65,17 @@ def parse_method_names(line):
     return None
 
 
-# Find the method containing the modified line
 def find_method_containing_modified_line(diff_lines, index):
+    """
+    Find the method containing the modified line in a diff.
+
+    Args:
+        diff_lines (list): A list of lines from the diff.
+        index (int): The index of the modified line.
+
+    Returns:
+        str or None: The method name containing the modified line if found, None otherwise.
+    """
     # Search backwards for method declaration
     while index >= 0:
         line = diff_lines[index]
@@ -53,6 +87,15 @@ def find_method_containing_modified_line(diff_lines, index):
 
 
 def diff_methods(diff_content):
+    """
+    Extract class name and method names from a git diff content.
+
+    Args:
+        diff_content (str): The content of the git diff.
+
+    Returns:
+        dict: A dictionary containing the class name and a list of method names.
+    """
     methods = {'class': '', 'methods': []}
 
     method_names = parse_diff_file(diff_content)

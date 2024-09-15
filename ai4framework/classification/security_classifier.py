@@ -6,13 +6,35 @@ import os
 
 
 def find_script(starting_directory):
+    """
+    Find the directory containing the 'classifier.py' script.
+
+    Args:
+        starting_directory (str): The directory to start searching from.
+
+    Returns:
+        str or None: The path to the directory containing 'classifier.py', or None if not found.
+    """
     for root, dirs, files in os.walk(starting_directory):
         if 'classifier.py' in files:
             return root
     return None
 
 class SecurityClassifier:
+    """
+    A class to handle security classification of code changes.
+
+    This class uses OpenAI's GPT model to analyze and classify code changes
+    for potential security impacts.
+    """
+
     def __init__(self, config):
+        """
+        Initialize the SecurityClassifier.
+
+        Args:
+            config (ConfigParser): Configuration object containing necessary settings.
+        """
         self.config = config
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
@@ -20,6 +42,12 @@ class SecurityClassifier:
         self.repo_path = self.config.get("DEFAULT", "config.project_path")
 
     def classify(self):
+        """
+        Run the classification process.
+
+        This method executes the external classifier script with the appropriate arguments
+        and handles the output and potential errors.
+        """
         command = [
             "python", "classifier.py",
             "-r", self.repo_path,
@@ -29,6 +57,7 @@ class SecurityClassifier:
             "-k", openai.api_key
         ]
         try:
+            logger.info("Classification started ...")
             result = subprocess.run(command, cwd=find_script(os.curdir), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             if result.returncode == 0:
                 logger.info("Classifier script executed successfully.")

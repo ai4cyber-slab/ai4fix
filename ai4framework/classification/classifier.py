@@ -1,3 +1,23 @@
+"""
+AI4Framework Classifier Module
+
+This module provides functionality for classifying code changes in a Git repository
+based on their potential security impact. It uses OpenAI's GPT models to analyze
+diff files and determine if security testing should be re-run.
+
+Usage:
+    python classifier.py -r <repo_path> -c <commit_sha> -k <openai_api_key> [-m <model>] [-t <temperature>]
+
+Arguments:
+    -r, --repo_path: Path to the Git repository (required)
+    -c, --commit_sha: Commit hash to analyze (required)
+    -m, --model: GPT model to use (default: "gpt-4o")
+    -t, --temperature: Temperature setting for the GPT model (default: 0)
+    -k, --key: OpenAI API key (required)
+
+The script outputs results to both a text log file and a JSON file in the 'out' directory.
+"""
+
 import os
 import sys
 import git
@@ -9,6 +29,8 @@ from diff_filtering import remove_unnecessary_diff
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from management.repo_manager import RepoManager
 
 # Creating the parser
 parser = argparse.ArgumentParser(description="Classifier script with arguments",
@@ -44,16 +66,30 @@ with open(f"{txt_path}.txt", "a") as log_file:
                     f"Temperature: {args.temperature}\n\n")
 
 
-# Method for handling errors and logs
 def error_and_log_handling(message, consol):
+    """
+    Handle errors and logging.
+
+    Args:
+        message (str): The message to log.
+        consol (bool): If True, also print the message to console.
+    """
     with open(f"{txt_path}.txt", "a") as log_file:
         log_file.write(message + "\n")
     if consol:
         print(message)
 
 
-# Method for retrieving the start and end position of changes in a diff file
 def diff_line_positions(diff_content):
+    """
+    Retrieve the start and end positions of changes in a diff file.
+
+    Args:
+        diff_content (str): The content of the diff file.
+
+    Returns:
+        list: A list of dictionaries containing start and end positions of changes.
+    """
     line_positions = []
 
     diff_lines = diff_content.split('\n')
@@ -67,26 +103,28 @@ def diff_line_positions(diff_content):
     return line_positions
 
 
-# Method for listing out changed files in a commit
 def list_changed_files(repo_path, commit_hash):
+    """
+    List the files changed in a specific commit.
+
+    Args:
+        repo_path (str): Path to the Git repository.
+        commit_hash (str): Hash of the commit to analyze.
+
+    Returns:
+        list: A list of changed file paths, or None if an error occurs.
+    """
     try:
-        # Check if the directory exists
-        if not os.path.isdir(repo_path):
-            print(f"The directory {repo_path} does not exist.")
-
-            # Exiting the script with an error code
-            sys.exit(1)
-
-        # Opening the repository
-        repo = git.Repo(repo_path)
+        repo_manager = RepoManager(repo_path, commit_hash)
         
-        # Getting the commit object
-        commit = repo.commit(commit_hash)
+        changed_files = repo_manager.get_changed_files()
         
-        # Getting the list of changed files
-        changed_files = commit.stats.files.keys()
+        if changed_files:
+            error_and_log_handling(f"Changed files in commit {commit_hash}: {changed_files}", True)
+        else:
+            error_and_log_handling(f"No files changed in commit {commit_hash}.", True)
         
-        return list(changed_files)
+        return changed_files
     
     except git.exc.InvalidGitRepositoryError:
         error_and_log_handling(f"The directory {repo_path} is not a valid Git repository.", True)
@@ -106,6 +144,13 @@ def list_changed_files(repo_path, commit_hash):
 
 
 def main():
+    """
+    Main function to run the classifier.
+
+    This function initializes the GPT model, retrieves changed files,
+    analyzes each file's diff, and determines if security testing should be re-run.
+    Results are logged and saved to a JSON file.
+    """
     DESCRIPTION_PROMPT = """
     You are a code analyst and you explain how codes work to expert programmers.
     Examine the given commit diff file and give such a programmer a detailed description of it's operation.
@@ -141,7 +186,7 @@ def main():
     """
 
 
-    # Initializing prompt templates
+    # Initializing prompt templates
     class LabelOutput(BaseModel):
         worth_to_re_run: str = Field(
             description="A string whose value is one of the following: "
@@ -177,18 +222,18 @@ def main():
         if changed_files is not None:
             error_and_log_handling("Successfully retrieved the commit files.", False)
 
-            os.chdir(args.repo_path) # Changing the location to the repo folder 
-            git_command = f'git log --pretty=%P -n 1 {args.commit_sha}' # Retrieving the parent commit
-            result = subprocess.run(git_command, shell=True, stdout=subprocess.PIPE, text=True)
-            parent = result.stdout.strip().split()[0]
-            error_and_log_handling("Successfully retrieved the parent commit.\n", False)
+        repo_manager = RepoManager(args.repo_path, args.commit_sha)
+        parent = repo_manager.get_parent_commit()
+        if parent:
+            error_and_log_handling(f"Successfully retrieved the parent commit: {parent}.", False)
 
             for file in changed_files:
                 if file.endswith('.java'):
-                    os.system(f'git diff {parent} {args.commit_sha} -- {file} > changes.diff') # Creating the diff file
+                    git_diff_file = os.path.join('changes.diff')
+                    os.system(f'git diff {parent} {args.commit_sha} -- {file} > {git_diff_file}') # Creating the diff file
                     error_and_log_handling(f"Successfully created the diff file of {file}.", False)
 
-                    with open('changes.diff', 'r', encoding='latin-1') as f:
+                    with open(git_diff_file, 'r', encoding='latin-1') as f:
                         diff_content = f.read()
 
                     unnecessary_diff = remove_unnecessary_diff(args.repo_path, diff_content)
@@ -218,11 +263,13 @@ def main():
                         else:
                             error_and_log_handling(f"{file} was labeled as not security relevant.\n", True)
                             
-                        os.system('rm changes.diff')
+                        # os.system('rm changes.diff')
+                        os.remove(git_diff_file)
 
                     except Exception as e:
                         error_and_log_handling(f"An error occurred during the labeling of {file}:\n{e}", True)
-                        os.system('rm changes.diff')
+                        # os.system('rm changes.diff')
+                        os.remove(git_diff_file)
                         continue    
         
         else:
