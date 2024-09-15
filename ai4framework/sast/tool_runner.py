@@ -5,7 +5,21 @@ from utils.logger import logger
 import os
 
 class ToolRunner:
+    """
+    A class to manage and run various static analysis security testing (SAST) tools.
+
+    This class provides methods to run PMD, SpotBugs, and Trivy on a given codebase,
+    and handles the execution and logging of these tools.
+    """
+
     def __init__(self, config, repo_manager):
+        """
+        Initialize the ToolRunner with configuration and repository manager.
+
+        Args:
+            config: Configuration object containing settings for the tools.
+            repo_manager: RepoManager object to interact with the Git repository.
+        """
         self.config = config
         self.repo_manager = repo_manager
         self.pmd_runner = PMDRunner(config)
@@ -13,6 +27,16 @@ class ToolRunner:
         self.trivy_runner = TrivyRunner(config)
 
     def run_tool(self, tool_name, runner_method, changed_files=None):
+        """
+        Run a specified SAST tool.
+
+        Args:
+            tool_name (str): Name of the tool being run.
+            runner_method (callable): Method to run the tool.
+            changed_files (list, optional): List of changed files to analyze.
+
+        Logs the start and completion of the tool execution, and any errors encountered.
+        """
         logger.info(f"Running {tool_name}...")
         try:
             if changed_files is not None:
@@ -23,19 +47,39 @@ class ToolRunner:
         except Exception as e:
             logger.error(f"Failed to run {tool_name}: {e}")
 
-
     def run_pmd(self):
+        """
+        Run PMD on changed Java files.
+
+        Retrieves the list of changed Java files and runs PMD on them.
+        """
         changed_java_files = self.repo_manager.get_changed_files()
         self.run_tool("PMD", self.pmd_runner.run, changed_java_files)
 
     def run_spotbugs(self):
+        """
+        Run SpotBugs on changed class files.
+
+        Finds the corresponding class files for changed Java files and runs SpotBugs on them.
+        """
         class_changed_files = self.find_class_changed_files()
         self.run_tool("SpotBugs", self.spotbugs_runner.run, class_changed_files)
 
     def run_trivy(self):
+        """
+        Run Trivy on the project.
+
+        Executes Trivy without specifying changed files, as it typically scans the entire project.
+        """
         self.run_tool("Trivy", self.trivy_runner.run)
 
     def find_class_changed_files(self):
+        """
+        Find the corresponding .class files for changed Java files.
+
+        Returns:
+            list: A list of paths to .class files corresponding to changed Java files.
+        """
         project_root = self.repo_manager.repo.working_dir
         class_files = []
 
@@ -50,18 +94,26 @@ class ToolRunner:
 
         return class_files if class_files else []
 
-
-
 def find_class_file_from_java(java_file_path, project_root):
-    path_parts = java_file_path.strip(os.path.sep).split(os.path.sep)
+    """
+    Find the corresponding .class file for a given Java file.
+
+    Args:
+        java_file_path (str): Path to the Java file.
+        project_root (str): Root directory of the project.
+
+    Returns:
+        str or None: Path to the corresponding .class file if found, None otherwise.
+    """
+    path_parts = java_file_path.split(os.path.sep)
     submodule_directory = path_parts[0] if not path_parts[0].startswith("src") else ""
 
-    if 'src/main/java' in java_file_path:
-        relative_class_path = java_file_path.split('src/main/java/', 1)[1]
-        output_dir = 'target/classes'
-    elif 'src/test/java' in java_file_path:
-        relative_class_path = java_file_path.split('src/test/java/', 1)[1]
-        output_dir = 'target/test-classes'
+    if os.path.join('src', 'main', 'java') in java_file_path:
+        relative_class_path = java_file_path.split(os.path.join('src', 'main', 'java') + os.path.sep, 1)[1]
+        output_dir = os.path.join('target', 'classes')
+    elif os.path.join('src', 'test', 'java') in java_file_path:
+        relative_class_path = java_file_path.split(os.path.join('src', 'test', 'java') + os.path.sep, 1)[1]
+        output_dir = os.path.join('target', 'test-classes')
     else:
         logger.debug(f"Invalid path: {java_file_path}")
         return None

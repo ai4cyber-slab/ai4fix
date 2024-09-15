@@ -6,10 +6,32 @@ import uuid
 from utils.logger import logger
 
 class SpotBugsRunner:
+    """
+    A class to run SpotBugs static code analysis tool and parse its results.
+
+    This class provides methods to execute SpotBugs on Java files, retrieve the generated report,
+    and parse the report into a structured format.
+    """
+
     def __init__(self, config):
+        """
+        Initialize the SpotBugsRunner with configuration settings.
+
+        Args:
+            config: Configuration object containing necessary settings for SpotBugs execution.
+        """
         self.config = config
 
     def run(self, changed_files):
+        """
+        Run SpotBugs on the specified Java files.
+
+        Args:
+            changed_files (list): List of Java file paths to analyze.
+
+        Raises:
+            SystemExit: If the SpotBugs check fails.
+        """
         command = (
             f"{self.config.get('DEFAULT', 'config.spotbugs_bin')} -textui "
             f"-xml:withMessages={self.config.get('REPORT', 'config.spotbugs_report_path')} "
@@ -22,6 +44,12 @@ class SpotBugsRunner:
             sys.exit(result.returncode)
 
     def get_report(self):
+        """
+        Retrieve the SpotBugs report content.
+
+        Returns:
+            str or None: The content of the SpotBugs report if it exists, None otherwise.
+        """
         report_path = self.config.get('REPORT', 'config.spotbugs_report_path')
         if os.path.exists(report_path):
             with open(report_path, 'r') as file:
@@ -29,6 +57,12 @@ class SpotBugsRunner:
         return None
 
     def parse_report(self):
+        """
+        Parse the SpotBugs report XML and extract issues.
+
+        Returns:
+            list: A list of dictionaries, each representing an issue found by SpotBugs.
+        """
         report_content = self.get_report()
         if not report_content:
             logger.debug("No report found to parse.")

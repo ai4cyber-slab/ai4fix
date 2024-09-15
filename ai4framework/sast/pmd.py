@@ -6,11 +6,32 @@ import uuid
 from utils.logger import logger
 
 class PMDRunner:
+    """
+    A class to run PMD (Programming Mistake Detector) static code analysis tool and parse its results.
+
+    This class provides methods to execute PMD on Java files, retrieve the generated report,
+    and parse the report into a structured format.
+    """
+
     def __init__(self, config):
+        """
+        Initialize the PMDRunner with configuration settings.
+
+        Args:
+            config: Configuration object containing necessary settings for PMD execution.
+        """
         self.config = config
 
     def run(self, java_files):
+        """
+        Run PMD on the specified Java files.
 
+        Args:
+            java_files (list): List of Java file paths to analyze.
+
+        Raises:
+            SystemExit: If the PMD check fails.
+        """
         command = (
                 f"{self.config.get('DEFAULT', 'config.pmd_bin')} check "
                 f"-d {','.join(java_files)} "
@@ -20,7 +41,6 @@ class PMDRunner:
                 "--no-fail-on-violation "
             )
 
-
         result = subprocess.run(command, cwd=self.config.get('DEFAULT', 'config.project_path'), shell=True, capture_output=True, text=True)
 
         if result.returncode != 0:
@@ -28,6 +48,12 @@ class PMDRunner:
             sys.exit(result.returncode)
 
     def get_report(self):
+        """
+        Retrieve the PMD report content.
+
+        Returns:
+            str or None: The content of the PMD report if it exists, None otherwise.
+        """
         report_path = self.config.get('REPORT', 'config.pmd_report_path')
         if os.path.exists(report_path):
             with open(report_path, 'r') as file:
@@ -35,6 +61,12 @@ class PMDRunner:
         return None
 
     def parse_report(self):
+        """
+        Parse the PMD report XML and extract issues.
+
+        Returns:
+            list: A list of dictionaries, each representing an issue found by PMD.
+        """
         report_content = self.get_report()
         if not report_content:
             logger.debug("No report found to parse.")
