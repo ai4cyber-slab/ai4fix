@@ -4,7 +4,27 @@ from utils.logger import logger
 class JSONProcessor:
     @staticmethod
     def extract_and_clean_json(input_file, output_file):
+        """
+        Extracts issues from an input JSON file, cleans and merges them, and saves to an output file.
+
+        Args:
+            input_file (str): Path to the input JSON file.
+            output_file (str): Path where the cleaned JSON will be saved.
+
+        Returns:
+            None: This method doesn't return anything as it writes the result to a file.
+        """
         def extract_issues(json_file):
+            """
+            Extracts and merges issues from a JSON file.
+
+            Args:
+                json_file (str): Path to the JSON file to process.
+
+            Returns:
+                list: A list of merged issues. If the file is empty or contains no valid issues,
+                      an empty list will be returned.
+            """
             with open(json_file, 'r') as infile:
                 data = json.load(infile)
 

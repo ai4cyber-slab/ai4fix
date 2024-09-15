@@ -1,27 +1,48 @@
 import subprocess
 import re
+import os
 from utils.logger import logger
 
 class Analyzer:
+    """
+    A class to run static analysis on a project using a specified analyzer tool.
+    """
+
     def __init__(self, analyzer_path, project_name, project_path, results_path):
+        """
+        Initialize the Analyzer with project details and paths.
+
+        Args:
+            analyzer_path (str): Path to the analyzer tool executable.
+            project_name (str): Name of the project to be analyzed.
+            project_path (str): Path to the project's root directory.
+            results_path (str): Path where analysis results will be stored.
+        """
         self.analyzer = analyzer_path
         self.project_name = project_name
         self.project_path = project_path
         self.results_path = results_path
     
     def run_analysis(self):
+        """
+        Run the analysis on the specified project.
+
+        This method executes the analyzer tool with the given project parameters,
+        captures and logs the output, and returns the path to the generated JSON file.
+
+        Returns:
+            str: Path to the generated JSON file containing analysis results.
+
+        Raises:
+            Exception: If an error occurs during the analysis process.
+        """
         logger.info(f"Analyzing project: {self.project_name}")
 
-        commands = [
-            f'{self.analyzer} -projectName={self.project_name} -projectBaseDir={self.project_path} -resultsDir={self.results_path} -currentDate=now -runFB=false -runAndroidHunter=false -runMetricHunter=false -runDCF=false -runMET=false -runVulnerabilityHunter=false -runMET=false -runLIM2Patterns=false -runFaultHunter=false -runPMD=false',
-            f'cp {self.results_path}/{self.project_name}/java/now/{self.project_name}-RTEHunter.txt {self.results_path}/{self.project_name}/java/now/{self.project_name}-RTEHunter.json'
-        ]
-
-        command_string = ' && '.join(commands)
+        command = f'{self.analyzer} -projectName={self.project_name} -projectBaseDir={self.project_path} -resultsDir={self.results_path} -currentDate=now -runFB=false'
         
         try:
             process = subprocess.Popen(
-                command_string,
+                command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -41,11 +62,12 @@ class Analyzer:
             if stderr_output:
                 for line in stderr_output.splitlines():
                     if line.strip():
-                        clean_error = re.sub(r'^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] ', '', output.strip())
+                        clean_error = re.sub(r'^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] ', '', line.strip())
                         logger.error(clean_error)
 
         except Exception as e:
             logger.error(f"An error occurred: {e}")
+            raise
 
-        json_file = f'{self.results_path}/{self.project_name}/java/now/{self.project_name}-RTEHunter.json'
+        json_file = os.path.join(self.results_path, self.project_name, 'java', 'now', f'{self.project_name}-RTEHunter.json')
         return json_file
