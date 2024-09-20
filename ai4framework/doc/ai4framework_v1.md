@@ -282,28 +282,53 @@ docker build -t code-analyzer-vs-version .
 
 Make sure to replace `code-analyzer-vs-version` with your desired image name if needed.
 
+---
 ### Step 4: Run the Docker Container
 
 Once the Docker image is built, you can create and run the container. If you don't provide the `OPENAI_API_KEY`, the classification part will be skipped when running the Python script later.
 
-Here's the command to run the container:
+Here's the command to run the container with code-server support:
 
 ```bash
 docker run -it -p 8080:8080 -e OPENAI_API_KEY='' -e PROJECT_PATH=/user_project -v C:/Users/HP/Music/pelo-project:/user_project code-analyzer-vs-version
+```
+
+#### Alternative: Running the Container without VS Code Support
+If you prefer to interact with the container directly via Bash without needing code-server, simply add `bash` to the end of the second Docker command:
+
+```bash
+docker run -it -e OPENAI_API_KEY='' -e PROJECT_PATH=/user_project -v C:/Users/HP/Music/pelo-project:/user_project code-analyzer-vs-version bash
+```
+
+Once inside the container, navigate to the project directory:
+
+```bash
+cd /user_project
+```
+
+Then run the analysis script:
+
+```bash
+python /app/orchestrator.py /user_project
+```
+
+If you **already provided** the `PROJECT_PATH` environment variable when running the container, you can omit the project path when running the script:
+
+```bash
+python /app/orchestrator.py
 ```
 
 #### Key Flags:
 - `-p 8080:8080`: Exposes port 8080 for code-server access via a browser.
 - `-e OPENAI_API_KEY=''`: You can leave this blank if you don't want to provide an OpenAI API key, or provide it if necessary.
 - `-v C:/Users/HP/Music/pelo-project:/user_project`: Mounts the local project directory to the `/user_project` directory inside the container.
-- `-e PROJECT_PATH=/user_project` project directory within the container.
+- `-e PROJECT_PATH=/user_project`: Project directory within the container.
 
-If you do not provide the OpenAI API key, the classification using GPT models will be skipped.
 
 #### Important:
  You can name the directory inside the container (`/user_project`) however you want, but ensure you consistently use the same name throughout your workflow. This directory will hold your local project ( eg: `C:/Users/HP/Music/pelo-project:/user_project`) inside the Docker container.
 
-### Step 5: Access Code-Server
+### Step 5: Access Code-Server (only if you did not use the Docker Bash command alternative)
 
 Once the container is running, open your web browser and go to the following URL to access code-server:
 
