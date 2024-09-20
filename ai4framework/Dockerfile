@@ -47,8 +47,8 @@ RUN curl -fsSL https://code-server.dev/install.sh | sh
 COPY AI4VULN.tgz /opt/AI4VULN.tgz
 
 # Unzip the AI4VULN.tgz file inside the container and rename the extracted folder to AI4VULN
-RUN tar -xvzf /opt/AI4VULN.tgz -C /opt/ && \
-    rm /opt/AI4VULN.tgz && \
+RUN tar -xvzf /opt/slab-9.19-d45fdf7b5.tgz -C /opt/ && \
+    rm /opt/slab-9.19-d45fdf7b5.tgz && \
     mv /opt/slab-9.19-d45fdf7b5 /opt/AI4VULN
 
 
