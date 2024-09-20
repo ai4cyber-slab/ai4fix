@@ -49,6 +49,13 @@ class SecurityClassifier:
         This method executes the external classifier script with the appropriate arguments
         and handles the output and potential errors.
         """
+        # Check if the OpenAI API key is available
+        if not openai.api_key:
+            logger.warning("OPENAI_API_KEY is not set. Skipping the classification process.")
+            return  # Skip the classification process if the API key is missing
+
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        os.chdir(current_dir)
         command = [
             "python", "classifier.py",
             "-r", self.repo_path,
@@ -65,7 +72,7 @@ class SecurityClassifier:
             elapsed_time = end_time - start_time
             if result.returncode == 0:
                 logger.info("Classifier script executed successfully.")
-                logger.info(result.stdout)
+                logger.info(result.stdout.strip())
                 logger.info(f"Classification completed in {elapsed_time:.2f} seconds")
             else:
                 logger.error("Classifier script failed with return code {}".format(result.returncode))

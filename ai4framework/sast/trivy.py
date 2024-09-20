@@ -21,6 +21,7 @@ class TrivyRunner:
             config: A configuration object containing necessary settings for Trivy.
         """
         self.config = config
+        self.report_path = self.config.get('REPORT', 'config.trivy_report_path', fallback='/app/sast/out/trivy.json')
 
     def run(self):
         """
@@ -34,7 +35,7 @@ class TrivyRunner:
             f"{self.config.get('DEFAULT', 'config.trivy_bin')} fs "
             f"{self.config.get('DEFAULT', 'config.project_path')} "
             f"--format json "
-            f"-o {self.config.get('REPORT', 'config.trivy_report_path')}"
+            f"-o {self.report_path}"
         )     
 
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
@@ -50,9 +51,8 @@ class TrivyRunner:
         Returns:
             str: The contents of the report file if it exists, None otherwise.
         """
-        report_path = self.config.get('REPORT', 'config.trivy_report_path')
-        if os.path.exists(report_path):
-            with open(report_path, 'r') as file:
+        if os.path.exists(self.report_path):
+            with open(self.report_path, 'r') as file:
                 return file.read()
         return None
 

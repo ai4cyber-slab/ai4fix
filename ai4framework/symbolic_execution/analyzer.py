@@ -39,8 +39,22 @@ class Analyzer:
         """
         logger.info(f"Analyzing project: {self.project_name}")
 
-        command = f'{self.analyzer} -projectName={self.project_name} -projectBaseDir={self.project_path} -resultsDir={self.results_path} -currentDate=now -runFB=false'
-        
+        # command = f'{self.analyzer} -projectName={self.project_name} -projectBaseDir={self.project_path} -resultsDir={self.results_path} -currentDate=now -runFB=false'
+        command = (
+        f'{self.analyzer} '
+        f'-projectName={self.project_name} '
+        f'-projectBaseDir={self.project_path} '
+        f'-resultsDir={self.results_path} '
+        f'-currentDate=now '
+        f'-runFB=false '
+        f'-runAndroidHunter=false '
+        f'-runMetricHunter=false '
+        f'-runDCF=false '
+        f'-runVulnerabilityHunter=false '
+        f'-runLIM2Patterns=false '
+        f'-runFaultHunter=false '
+        f'-runPMD=false'
+    )
         start_time = time.time()
         try:
             process = subprocess.Popen(

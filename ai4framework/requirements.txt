@@ -1,0 +1,10 @@
+openai
+python-dotenv
+GitPython
+pydantic
+langchain
+langchain-openai
+pyautogui
+keyboard
+configparser
+javalang

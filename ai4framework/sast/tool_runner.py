@@ -3,6 +3,7 @@ from .spotbugs import SpotBugsRunner
 from .trivy import TrivyRunner
 from utils.logger import logger
 import os
+import time
 
 class ToolRunner:
     """
@@ -38,14 +39,17 @@ class ToolRunner:
         Logs the start and completion of the tool execution, and any errors encountered.
         """
         logger.info(f"Running {tool_name}...")
+        start_time = time.time()
         try:
             if changed_files is not None:
                 runner_method(changed_files)
             else:
                 runner_method()
-            logger.info(f"{tool_name} completed successfully.")
+            elapsed_time = time.time() - start_time
+            logger.info(f"{tool_name} completed successfully in {elapsed_time:.2f} seconds.")
         except Exception as e:
-            logger.error(f"Failed to run {tool_name}: {e}")
+            elapsed_time = time.time() - start_time
+            logger.error(f"Failed to run {tool_name} after {elapsed_time:.2f} seconds: {e}")
 
     def run_pmd(self):
         """
@@ -80,6 +84,7 @@ class ToolRunner:
         Returns:
             list: A list of paths to .class files corresponding to changed Java files.
         """
+        start_time = time.time()
         project_root = self.repo_manager.repo.working_dir
         class_files = []
 
@@ -92,6 +97,8 @@ class ToolRunner:
             if class_file_path:
                 class_files.append(class_file_path)
 
+        elapsed_time = time.time() - start_time
+        logger.debug(f"Time taken to find changed class files: {elapsed_time:.2f} seconds")
         return class_files if class_files else []
 
 def find_class_file_from_java(java_file_path, project_root):
@@ -105,6 +112,7 @@ def find_class_file_from_java(java_file_path, project_root):
     Returns:
         str or None: Path to the corresponding .class file if found, None otherwise.
     """
+    start_time = time.time()
     path_parts = java_file_path.split(os.path.sep)
     submodule_directory = path_parts[0] if not path_parts[0].startswith("src") else ""
 
@@ -116,6 +124,8 @@ def find_class_file_from_java(java_file_path, project_root):
         output_dir = os.path.join('target', 'test-classes')
     else:
         logger.debug(f"Invalid path: {java_file_path}")
+        elapsed_time = time.time() - start_time
+        logger.debug(f"Time taken to process invalid path: {elapsed_time:.2f} seconds")
         return None
 
     relative_class_path = os.path.splitext(relative_class_path)[0] + '.class'
@@ -124,7 +134,11 @@ def find_class_file_from_java(java_file_path, project_root):
 
     if os.path.isfile(class_file_path):
         logger.debug(f"Class file found for: {java_file_path}")
+        elapsed_time = time.time() - start_time
+        logger.debug(f"Time taken to find class file: {elapsed_time:.2f} seconds")
         return class_file_path
     else:
         logger.debug(f"Class file not found for: {java_file_path}")
+        elapsed_time = time.time() - start_time
+        logger.debug(f"Time taken to search for class file: {elapsed_time:.2f} seconds")
         return None

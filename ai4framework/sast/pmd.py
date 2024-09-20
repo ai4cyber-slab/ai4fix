@@ -21,6 +21,7 @@ class PMDRunner:
             config: Configuration object containing necessary settings for PMD execution.
         """
         self.config = config
+        self.report_path = self.config.get('REPORT', 'config.pmd_report_path', fallback='/app/sast/out/pmd.xml')
 
     def run(self, java_files):
         """
@@ -32,17 +33,23 @@ class PMDRunner:
         Raises:
             SystemExit: If the PMD check fails.
         """
+        report_dir = os.path.dirname(self.report_path)
+    
+        # Ensure the directory for the report exists
+        if not os.path.exists(report_dir):
+            os.makedirs(report_dir)
+
         command = (
-                f"{self.config.get('DEFAULT', 'config.pmd_bin')} check "
-                f"-d {','.join(java_files)} "
-                f"-R {self.config.get('DEFAULT', 'config.pmd_ruleset')} "
-                f"-f xml "
-                f"-r {self.config.get('REPORT', 'config.pmd_report_path')} "
-                "--no-fail-on-violation "
-            )
+            f"{self.config.get('DEFAULT', 'config.pmd_bin')} check "  # Path to PMD binary
+            f"-d {','.join(java_files)} "  # Java files with the /user_project path prepended
+            f"-R {self.config.get('DEFAULT', 'config.pmd_ruleset', fallback='/app/utils/PMD-config.xml')} "  # Path to PMD ruleset
+            f"-f xml "  # Output format
+            f"-r {self.report_path} "  # Output report path
+            "--no-fail-on-violation"
+        )
 
         result = subprocess.run(command, cwd=self.config.get('DEFAULT', 'config.project_path'), shell=True, capture_output=True, text=True)
-
+        
         if result.returncode != 0:
             logger.error(f"PMD check failed: {result.stderr}")
             sys.exit(result.returncode)
@@ -54,9 +61,8 @@ class PMDRunner:
         Returns:
             str or None: The content of the PMD report if it exists, None otherwise.
         """
-        report_path = self.config.get('REPORT', 'config.pmd_report_path')
-        if os.path.exists(report_path):
-            with open(report_path, 'r') as file:
+        if os.path.exists(self.report_path):
+            with open(self.report_path, 'r') as file:
                 return file.read()
         return None
 

@@ -21,6 +21,7 @@ class SpotBugsRunner:
             config: Configuration object containing necessary settings for SpotBugs execution.
         """
         self.config = config
+        self.report_path = self.config.get('REPORT', 'config.spotbugs_report_path', fallback='/app/sast/out/spotbugs.xml')
 
     def run(self, changed_files):
         """
@@ -34,7 +35,7 @@ class SpotBugsRunner:
         """
         command = (
             f"{self.config.get('DEFAULT', 'config.spotbugs_bin')} -textui "
-            f"-xml:withMessages={self.config.get('REPORT', 'config.spotbugs_report_path')} "
+            f"-xml:withMessages={self.report_path} "
             f"{' '.join(changed_files)}"
         )
         result = subprocess.run(command, cwd=self.config.get('DEFAULT', 'config.project_path'), shell=True, capture_output=True, text=True)
@@ -50,9 +51,8 @@ class SpotBugsRunner:
         Returns:
             str or None: The content of the SpotBugs report if it exists, None otherwise.
         """
-        report_path = self.config.get('REPORT', 'config.spotbugs_report_path')
-        if os.path.exists(report_path):
-            with open(report_path, 'r') as file:
+        if os.path.exists(self.report_path):
+            with open(self.report_path, 'r') as file:
                 return file.read()
         return None
 

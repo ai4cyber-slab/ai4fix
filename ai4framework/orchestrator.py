@@ -3,6 +3,7 @@ from config.common_config import ConfigManager
 from utils.logger import logger
 from classification.security_classifier import SecurityClassifier
 import sast.sast_orchestrator
+import time
 
 class WorkflowFramework:
     """
@@ -25,12 +26,13 @@ class WorkflowFramework:
 
     def execute_workflow(self):
         logger.info("Starting workflow execution")
+        start_time = time.time()
         self.sast.run_all()
         self.security_classifier.classify()
         self.symbolic_execution.analyze()
 
-        logger.info("Workflow execution completed")
-        pass
+        elapsed_time = time.time() - start_time
+        logger.info(f"Workflow execution completed in {elapsed_time:.2f} seconds")
 
 
 if __name__ == "__main__":

@@ -18,6 +18,7 @@ class ReportMerger:
             config: Configuration object containing necessary settings.
         """
         self.config = config
+        self.project_path = self.config.get('DEFAULT', 'config.project_path')
 
     def merge_reports(self, *report_runners):
         """
@@ -42,7 +43,8 @@ class ReportMerger:
                 issues.extend(runner.parse_report())
 
             # Get the output path from config
-            output_path = self.config.get("ISSUES", "config.sast_issues_path", fallback=None)
+            output_path = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.project_path, 'sast_issues'))
+
             
             # Ensure the directory exists
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
