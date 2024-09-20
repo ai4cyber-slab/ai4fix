@@ -27,8 +27,8 @@ This guide provides detailed instructions on downloading necessary tools and con
 8. [Vulnerability Scanner: Trivy](#7-vulnerability-scanner-trivy)
 9. [Java Development Kit (JDK)](#8-java-development-kit-jdk)
 10. [Symbolic Execution Tool: RTEHunter](#9-symbolic-execution-tool-rtehunter)
-11. [Final Notes](#final-notes)
-12. [Building and Running AI4Framework with Code-Server using Docker](#building-and-running-ai4framework-with-code-server-using-docker)
+11. [Building and Running AI4Framework with Code-Server using Docker](#building-and-running-ai4framework-with-code-server-using-docker)
+12. [Final Notes](#final-notes)
 
 ---
 
@@ -251,67 +251,6 @@ config.analyzer_results_path=/path/to/your/project/results
 
 ---
 
-## Final Notes
-
-### Additional Dependencies
-
-- **Python Dependencies**:
-  - Always check the `requirements.txt` or `setup.py` file in the project for any additional Python dependencies.
-  - Install them using:
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-- **Java Dependencies**:
-  - Maven will automatically handle Java dependencies as long as the `pom.xml` file is correctly configured.
-  - To update dependencies, run:
-    ```bash
-    mvn clean install
-    ```
-
-### Security Best Practices
-
-- **Environment Variables**:
-  - Ensure that sensitive information, such as OpenAI API keys, is securely stored and not exposed in version control.
-  - Use `.env` files or secure environment variable management systems.
-
-- **Code Analysis Tools**:
-  - Regularly run PMD, SpotBugs, and Trivy to identify and mitigate potential vulnerabilities in your codebase.
-
-### Troubleshooting
-
-- **Common Issues**:
-  - **Path Not Found Errors**:
-    - Ensure all environment variables are correctly set.
-    - Verify the paths in `config.properties` point to the correct executable locations.
-  
-  - **Dependency Conflicts**:
-    - Use virtual environments for Python to isolate dependencies.
-    - Ensure Maven is correctly managing Java dependencies.
-
-- **Getting Help**:
-  - Contact us at ...
-
-### Updating the Framework
-
-- Regularly pull the latest changes from the repository to stay updated with new features and fixes:
-  ```bash
-  git pull origin main
-  ```
-
-- Update Python and Java dependencies as needed:
-  ```bash
-  pip install --upgrade -r requirements.txt
-  mvn clean install
-  ```
-
----
-
-
-Here's the detailed guide for building the AI4Framework Docker image with code-server, and instructions for running the container:
-
----
-
 ## Building and Running AI4Framework with Code-Server using Docker
 
 Follow the steps below to set up AI4Framework in a Docker container with code-server. This will allow you to perform code analysis and vulnerability scanning, along with using tools like PMD, SpotBugs, and Trivy, and potentially OpenAI's GPT models for classification.
@@ -331,6 +270,7 @@ Once the repository is cloned, navigate to the `ai4framework` directory:
 ```bash
 cd ai4framework
 ```
+Then Download the FEA Tool from the following link and place it in the ai4framework directory `https://drive.google.com/file/d/1ei_9an0VA6CL-jxsrtcZPXir67fstn4O/view?usp=sharing` in a `.tgz` format. (I couldn't push it to the repository as well because GitHub imposes a strict limit of 100 MB per file when pushing to a repository and FEA tool exceeds that limit)
 
 ### Step 3: Build the Docker Image
 
@@ -437,3 +377,64 @@ This will start the analysis process on your project.
 ---
 
 By following these steps, you will be able to build and run the AI4Framework with code-server inside a Docker container, and conduct code analysis directly through the VSCode interface.
+
+---
+
+## Final Notes
+
+### Additional Dependencies
+
+- **Python Dependencies**:
+  - Always check the `requirements.txt` or `setup.py` file in the project for any additional Python dependencies.
+  - Install them using:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+- **Java Dependencies**:
+  - Maven will automatically handle Java dependencies as long as the `pom.xml` file is correctly configured.
+  - To update dependencies, run:
+    ```bash
+    mvn clean install
+    ```
+
+### Security Best Practices
+
+- **Environment Variables**:
+  - Ensure that sensitive information, such as OpenAI API keys, is securely stored and not exposed in version control.
+  - Use `.env` files or secure environment variable management systems.
+
+- **Code Analysis Tools**:
+  - Regularly run PMD, SpotBugs, and Trivy to identify and mitigate potential vulnerabilities in your codebase.
+
+### Troubleshooting
+
+- **Common Issues**:
+  - **Path Not Found Errors**:
+    - Ensure all environment variables are correctly set.
+    - Verify the paths in `config.properties` point to the correct executable locations.
+  
+  - **Dependency Conflicts**:
+    - Use virtual environments for Python to isolate dependencies.
+    - Ensure Maven is correctly managing Java dependencies.
+
+- **Getting Help**:
+  - Contact us at ...
+
+### Updating the Framework
+
+- Regularly pull the latest changes from the repository to stay updated with new features and fixes:
+  ```bash
+  git pull origin main
+  ```
+
+- Update Python and Java dependencies as needed:
+  ```bash
+  pip install --upgrade -r requirements.txt
+  mvn clean install
+  ```
+
+---
+
+
+Here's the detailed guide for building the AI4Framework Docker image with code-server, and instructions for running the container:
