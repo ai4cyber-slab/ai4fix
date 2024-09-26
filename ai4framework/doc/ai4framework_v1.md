@@ -343,41 +343,35 @@ Make sure to replace `/user_project` with the correct project path inside the co
 Before running the Python script in VS Code for the project you want to analyze, you must create a config.properties file inside the project directory with the following content:
 ```
 [DEFAULT]
-# General project settings
-config.project_name=user_project  # Change to your project name in container
-config.project_path=/user_project  # Change to your project path in container
-
-config.base_dir=/user_project  # Change to your project path in container
-config.project_source_path=src/main/java  # Don't change this
-
-# Static analysis tools paths
-config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs  # Don't change this
-config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd  # Don't change this
-config.pmd_ruleset=/app/utils/PMD-config.xml  # Can be changed to another ruleset if needed, otherwise use it's the dafault
-
-config.trivy_bin=/usr/bin/trivy  # Don't change this
-
+config.project_name=user_project #change to specified project name directory in container
+config.project_path=/user_project #change to specified project directory in container
+config.results_path=/user_project/patches #change to specified project directory in container
+config.project_source_path=src/main/java # do not change
+config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # do not change
+config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # do not change
+config.pmd_ruleset=/app/utils/PMD-config.xml # change or leave the default
+config.trivy_bin=/usr/bin/trivy # do not change
+config.project_build_tool=mavenCLI
+config.jsons_listfile=/user_project/jsons.lists # change to specified project directory in container
 [CLASSIFIER]
-# GPT model and classification settings
-commit_sha=2f7bb20317500db89c1bc2c0d96275e09f3c62a1  # Change to the commit SHA you want to analyze
-gpt_model=gpt-4  # Pick the GPT model to use (default is gpt-4)
-temperature=0  # Set the temperature for GPT (default is 0)
-
+commit_sha=2f7bb20317500db89c1bc2c0d96275e09f3c62a1 # change to desired commit hash
+gpt_model=gpt-4o # desired model
+temperature=0
 [ISSUES]
-# Path for SAST issues
-config.sast_issues_path=/user_project/sast_issues.json  # Change '/user_project' to your project path in container
-
+config.issues_path=/user_project/issues.json #change to specified project directory in container
 [REPORT]
-# Report output paths (these can be customized)
-config.pmd_report_path=/app/sast/out/pmd.xml  # Can be changed if needed
-config.spotbugs_report_path=/app/sast/out/spotbugs.xml  # Can be changed if needed
-config.trivy_report_path=/app/sast/out/trivy.json  # Can be changed if needed
-
+config.pmd_report_path=/app/sast/out/pmd.xml 
+config.spotbugs_report_path=/app/sast/out/spotbugs.xml
+config.trivy_report_path=/app/sast/out/trivy.json
 [ANALYZER]
-# Analyzer tool paths (these should not be changed)
-config.analyzer=/opt/AI4VULN/Java/AnalyzerJava  # Don't change this
-config.analyzer_path=/opt/AI4VULN  # Don't change this
-config.analyzer_results_path=/user_project/results  # Change '/user_project' to your project path in container
+config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # do not change
+config.analyzer_path=/opt/AI4VULN # do not change
+config.analyzer_results_path=/user_project/results
+# Vscode-Plugin settings
+[PLUGIN]
+plugin.use_diff_mode=view Diffs
+plugin.executing_parameters=ls # do not change
+plugin.executable_path=/user_project/target #change to specified project directory in container
 ```
 
 
