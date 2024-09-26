@@ -301,7 +301,12 @@ class PatchGenerator:
                         diff_file.write(processed_diff_text)
                 except Exception as e:
                     logger.error(f"Error writing processed diff to file {diff_file_path}: {e}")
-
+                else:
+                    try:
+                        os.remove(raw_diff_file)
+                        logger.info(f"Removed raw diff file {raw_diff_file}.")
+                    except Exception as e:
+                        logger.error(f"Error removing raw diff file {raw_diff_file}: {e}")
                 # Add the patch to the warning's patches
                 if 'patches' not in item:
                     item['patches'] = []
