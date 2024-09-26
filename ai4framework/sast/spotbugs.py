@@ -22,6 +22,7 @@ class SpotBugsRunner:
         """
         self.config = config
         self.report_path = self.config.get('REPORT', 'config.spotbugs_report_path', fallback='/app/sast/out/spotbugs.xml')
+        self.BASE_SRC_DIR = os.path.join('src', 'main', 'java')
 
     def run(self, changed_files):
         """
@@ -82,8 +83,15 @@ class SpotBugsRunner:
             
             first_source_line = bug_instance.find('SourceLine')
             if first_source_line is not None:
+                relative_path = first_source_line.get('sourcepath', 'unknown file')
+                
+                if relative_path != 'unknown file':
+                    normalized_relative_path = os.path.normpath(relative_path)
+                    full_path = os.path.join(self.BASE_SRC_DIR, normalized_relative_path)
+                else:
+                    full_path = 'unknown file'
                 textrange = {
-                    "file": first_source_line.get('sourcepath', 'unknown file'),
+                    "file": full_path,
                     "startLine": int(first_source_line.get('start', '1')),
                     "endLine": int(first_source_line.get('end', first_source_line.get('start', '1'))),
                     "startColumn": int(first_source_line.get('startBytecode', '0')),

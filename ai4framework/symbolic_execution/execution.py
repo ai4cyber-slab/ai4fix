@@ -42,6 +42,6 @@ class SymbolicExecution:
         logger.info("Symbolic Execution Started ...")
         json_file = analyzer.run_analysis()
         cleaned_json_file = os.path.join(self.results_path, self.project_name, 'java', 'now', 'ai4vuln_issues.json')
-        JSONProcessor.extract_and_clean_json(json_file, cleaned_json_file)
+        JSONProcessor.extract_and_clean_json(json_file, cleaned_json_file, self.project_path)
 
         logger.info("Analysis and JSON processing complete.")
