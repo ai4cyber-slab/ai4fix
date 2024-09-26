@@ -15,11 +15,10 @@ class ConfigManager:
     """
 
     _config = None
-
     @classmethod
     def load_config(cls, config_file):
         """
-        Load configuration settings from a specified file.
+        Load configuration settings from a specified file, ignoring comments and comment-only lines.
 
         Args:
             config_file (str): Path to the configuration file.
@@ -29,7 +28,26 @@ class ConfigManager:
         """
         if cls._config is None:
             cls._config = configparser.ConfigParser()
-            cls._config.read(config_file)
+
+            # Preprocess the file to remove inline comments and skip comment-only lines
+            cleaned_lines = []
+            with open(config_file, 'r') as file:
+                for line in file:
+                    stripped_line = line.strip()
+
+                    # Ignore lines that are empty or start with a comment
+                    if not stripped_line or stripped_line.startswith('#'):
+                        continue
+
+                    # Remove inline comments
+                    line = stripped_line.split('#', 1)[0].strip()
+
+                    if line:  # Add non-empty lines to the cleaned list
+                        cleaned_lines.append(line)
+
+            # Join the cleaned lines and feed them to configparser
+            cls._config.read_string('\n'.join(cleaned_lines))
+
         return cls._config
 
     @classmethod
@@ -79,13 +97,13 @@ def get_project_root():
 
 def read_config_properties(file_path):
     """
-    Reads the config.properties file and extracts all configurations, ignoring section headers.
+    Reads the config.properties file and extracts all configurations, ignoring section headers and inline comments.
 
     Args:
         file_path (str): Path to the config.properties file.
 
     Returns:
-        dict: A dictionary of key-value pairs from the properties file, excluding section headers.
+        dict: A dictionary of key-value pairs from the properties file, excluding section headers and comments.
     """
     config = {}
 
@@ -100,7 +118,11 @@ def read_config_properties(file_path):
             # Process key-value pairs
             if '=' in line:
                 key, value = line.split('=', 1)
-                config[key.strip()] = value.strip()
+
+                # Remove inline comments if present
+                value = value.split('#', 1)[0].strip()
+
+                config[key.strip()] = value
 
     return config
 
