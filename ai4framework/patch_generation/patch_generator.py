@@ -2,25 +2,26 @@ import os
 import json
 import subprocess
 import openai
+from openai import OpenAI
 from dotenv import load_dotenv, find_dotenv
-from utils.logger import logger
 from collections import defaultdict
+from utils.logger import logger
 import re
 import difflib
 import time
 
 class PatchGenerator:
     def __init__(self, config):
-        """Initialize PatchGenerator with config."""
+        """Initialize CodeFixer with config."""
         # Load environment variables
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
         openai.api_key = os.getenv('OPENAI_API_KEY')
-        self.client = openai.OpenAI()  # Corrected to use openai directly
-                
+        self.client = OpenAI()
+            
         # Load configurations from file
         self.config = config
-                
+            
         # Set base directories and configurations dynamically
         self.base_dir = self.config.get('DEFAULT', 'config.project_path', fallback='')
         self.project_root = self.config.get('DEFAULT', 'config.project_path')
@@ -106,96 +107,7 @@ class PatchGenerator:
             return "\n".join(code_blocks).strip()
         return response_text.strip()
 
-    def process_diff(self, diff_text):
-        """Process the diff to exclude comment-only changes."""
-        lines = diff_text.splitlines(keepends=True)
-        new_lines = []
-        i = 0
-        while i < len(lines):
-            line = lines[i]
-            if line.startswith('@@'):
-                # Start of a hunk
-                hunk_lines = []
-                hunk_lines.append(line)
-                i += 1
-                while i < len(lines) and not lines[i].startswith('@@'):
-                    hunk_lines.append(lines[i])
-                    i += 1
-                # Process the hunk
-                processed_hunk = self.process_hunk(hunk_lines)
-                if processed_hunk:
-                    new_lines.extend(processed_hunk)
-                # If the processed hunk is empty, it's skipped
-            else:
-                # Header lines
-                new_lines.append(line)
-                i += 1
-        # Return the modified diff text
-        return ''.join(new_lines)
-
-    def is_comment_line(self, content):
-        """Determine if a line is a comment or empty."""
-        stripped_content = content.strip()
-        # Check for single-line and multi-line comments
-        return re.match(r'^(\s*(//|/\*|\*|\*/|#))|^\s*$', stripped_content) is not None
-
-    def process_hunk(self, hunk_lines):
-        """Process a single hunk of the diff."""
-        output_lines = []
-        # Keep the hunk header
-        output_lines.append(hunk_lines[0])
-        lines = hunk_lines[1:]
-        line_tuples = []
-        for line in lines:
-            if line.startswith('-') or line.startswith('+') or line.startswith(' '):
-                line_tuples.append((line[0], line[1:].rstrip('\n')))
-            else:
-                line_tuples.append(('', line.rstrip('\n')))
-
-        processed_line_tuples = []
-        all_changes_are_comments = True  # Flag to determine if all changes are comments
-        i = 0
-        while i < len(line_tuples):
-            line_type, content = line_tuples[i]
-            content_stripped = content.strip()
-            if line_type in ('-', '+'):
-                # Skip empty or whitespace-only lines
-                if content_stripped == '':
-                    i += 1
-                    continue
-                else:
-                    # Check if the line is a comment
-                    if self.is_comment_line(content):
-                        # Line is a comment, skip it
-                        i += 1
-                        continue
-                    else:
-                        # Line is not a comment
-                        all_changes_are_comments = False
-                        # Keep the line
-                        processed_line_tuples.append((line_type, content))
-                        i += 1
-            else:
-                # Context line, keep it
-                processed_line_tuples.append((line_type, content))
-                i += 1
-
-        # If all changes are comments or no changes remain, exclude the hunk
-        change_lines = [lt for lt in processed_line_tuples if lt[0] in ('-', '+')]
-        if not change_lines or all_changes_are_comments:
-            # Hunk has no relevant changes after processing
-            return []
-        else:
-            for line_type, content in processed_line_tuples:
-                if line_type in ('-', '+', ' '):
-                    output_lines.append(line_type + content + '\n')
-                else:
-                    # Line was marked for removal; skip it
-                    pass
-            return output_lines
-
     def process_warning(self, warning):
-        """Process a single warning to generate and apply patches."""
         explanation = warning['explanation']
         items = warning['items']
         
@@ -223,31 +135,35 @@ class PatchGenerator:
             # Get the full file content
             full_class_content = ''.join(file_content)
 
-            # Prepare the prompt for the AI model
+            
+
+           # Prepare the prompt for the AI model
             prompt = f"""Explanation of the issue:
             {explanation}
 
             Here is the full file code:
-
+            
             ```java
             {full_class_content}
             ```
+
             The problematic code is from line {startLine} to {endLine}:
 
+            
             ```java
             {problematic_code}
             ```
-            Please modify the code to fix the issue described in the explanation.
-            Provide the complete updated code of the file, and do not include any explanations or comments.
-            Ensure that the code compiles and maintains the original functionality except for the fix."""
+
+            Please modify the code to fix the issue described in the explanation. Provide the complete updated code of the file, and do not include any explanations or comments. Ensure that the code compiles and maintains the original functionality except for the fix."""
+        
             try:
                 response = self.client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": "You are a helpful assistant that can fix code issues."},
-                        {"role": "user", "content": prompt}
-                    ]
-                )
+                model="gpt-4o-mini",
+                messages=[
+                            {"role": "system", "content": "You are a helpful assistant that can fix code issues."},
+                            {"role": "user", "content": prompt}
+                        ]
+                    )
                 generated_code = self.extract_code_from_response(response.choices[0].message.content)
             except Exception as e:
                 logger.error(f"Error calling OpenAI API: {e}")
@@ -272,6 +188,7 @@ class PatchGenerator:
 
             if not error_detected:
                 logger.info(f"Maven tests passed.")
+                # file_name = os.path.basename(file_path)
                 # Generate diff between initial and modified content
                 diff = difflib.unified_diff(
                     initial_content.splitlines(keepends=True),
@@ -282,31 +199,15 @@ class PatchGenerator:
                 )
                 diff_text = ''.join(diff)
 
-                # Optionally, write the raw diff for debugging
-                raw_diff_file = os.path.join(self.diffs_output_dir, f"{os.path.splitext(os.path.basename(full_file_path))[0]}_raw_patch_{warning['id']}.diff")
-                try:
-                    with open(raw_diff_file, 'w') as diff_file:
-                        diff_file.write(diff_text)
-                except Exception as e:
-                    logger.error(f"Error writing raw diff to file {raw_diff_file}: {e}")
-
-                # Process the diff to exclude comment-only changes
-                processed_diff_text = self.process_diff(diff_text)
-
-                # Save the processed diff to a file
+                # Save the diff to a file
                 diff_file_name = f"{os.path.splitext(os.path.basename(full_file_path))[0]}_patch_{warning['id']}.diff"
                 diff_file_path = os.path.join(self.diffs_output_dir, diff_file_name)
                 try:
                     with open(diff_file_path, 'w') as diff_file:
-                        diff_file.write(processed_diff_text)
+                        diff_file.write(diff_text)
                 except Exception as e:
-                    logger.error(f"Error writing processed diff to file {diff_file_path}: {e}")
-                else:
-                    try:
-                        os.remove(raw_diff_file)
-                        logger.info(f"Removed raw diff file {raw_diff_file}.")
-                    except Exception as e:
-                        logger.error(f"Error removing raw diff file {raw_diff_file}: {e}")
+                    logger.error(f"Error writing diff to file {diff_file_path}: {e}")
+
                 # Add the patch to the warning's patches
                 if 'patches' not in item:
                     item['patches'] = []
@@ -323,8 +224,6 @@ class PatchGenerator:
                     logger.error(f"Error writing updated warnings to JSON file: {e}")
             else:
                 logger.error(f"Maven tests failed.")
-            
-            # Revert the file to its initial content
             try:
                 with open(full_file_path, 'w') as f:
                     f.write(initial_content)
@@ -333,7 +232,6 @@ class PatchGenerator:
                 logger.error(f"Error restoring original content to {full_file_path}: {e}")
 
     def main(self):
-        """Main method to initiate patch generation."""
         if not openai.api_key:
             logger.warning("OPENAI_API_KEY is not set. Skipping the patch generation process.")
             return
