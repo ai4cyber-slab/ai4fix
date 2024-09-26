@@ -270,7 +270,6 @@ Once the repository is cloned, navigate to the `ai4framework` directory:
 ```bash
 cd ai4framework
 ```
-Then Download the FEA Tool from the following link and place it in the ai4framework directory `https://drive.google.com/file/d/1ei_9an0VA6CL-jxsrtcZPXir67fstn4O/view?usp=sharing` in a `.tgz` format, it should be named (`slab-9.19-d45fdf7b5.tgz`). (I couldn't push it to the repository as well because GitHub imposes a strict limit of 100 MB per file when pushing to a repository and FEA tool exceeds that limit)
 
 ### Step 3: Build the Docker Image
 
