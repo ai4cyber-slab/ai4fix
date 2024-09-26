@@ -45,7 +45,7 @@ class SASTOrchestrator:
             self.tool_runner.run_pmd()
             self.run_maven_compile()
             self.tool_runner.run_spotbugs()
-            self.tool_runner.run_trivy()
+            # self.tool_runner.run_trivy()
             self.report_merger.merge_reports(
                 self.tool_runner.pmd_runner,
                 self.tool_runner.spotbugs_runner,
