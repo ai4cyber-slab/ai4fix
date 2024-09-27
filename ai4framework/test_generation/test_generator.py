@@ -87,7 +87,7 @@ class TestGenerator:
             if "BUILD FAILURE" in line or "[ERROR] COMPILATION ERROR :" in line:
                 error_detected = True
         return error_detected
-    
+
 
     def remove_class_declaration_and_package(self, new_methods):
             """
@@ -192,27 +192,95 @@ class TestGenerator:
             logger.warning("OPENAI_API_KEY is not set. Skipping the test generation process.")
             return
 
-        with open(self.json_file_path, 'r') as f:
-            data = json.load(f)
+        # Check if JSON issues file path is provided
+        if not self.json_file_path:
+            logger.error("JSON issues file path is not specified in the configuration.")
+            return
+
+        # Check if JSON issues file exists
+        if not os.path.isfile(self.json_file_path):
+            logger.error(f"JSON issues file does not exist at path: {self.json_file_path}. Skipping the test generation process.")
+            return
+
+        # Load JSON data
+        try:
+            with open(self.json_file_path, 'r') as f:
+                data = json.load(f)
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON issues file: {e}. Skipping the test generation process.")
+            return
+        except Exception as e:
+            logger.error(f"Unexpected error while reading JSON issues file: {e}. Skipping the test generation process.")
+            return
+
+        if not data:
+            logger.error("JSON issues file is empty. Skipping the test generation process.")
+            return
 
         entry = data[0]
 
-        # Extract necessary information
+        # Validate 'items' in the JSON entry
+        if 'items' not in entry or not entry['items']:
+            logger.error("No 'items' found in the JSON issues entry. Skipping the test generation process.")
+            return
+
         item = entry['items'][0]
+
+        # Validate required fields in the item
+        if 'textrange' not in item or 'file' not in item['textrange']:
+            logger.error("Missing 'textrange.file' in the JSON issues item. Skipping the test generation process.")
+            return
+
+        if 'patches' not in item or not item['patches']:
+            logger.error("No 'patches' found in the JSON issues item. Skipping the test generation process.")
+            return
+
+        if 'path' not in item['patches'][0]:
+            logger.error("Missing 'patches[0].path' in the JSON issues item. Skipping the test generation process.")
+            return
+
+        # Extract necessary information
         file_relative_path = item['textrange']['file']
         diff_relative_path = item['patches'][0]['path']
+
+        # Validate file paths
+        if not file_relative_path:
+            logger.error("The 'file' path in 'textrange' is empty. Skipping the test generation process.")
+            return
+
+        if not diff_relative_path:
+            logger.error("The 'path' in 'patches' is empty. Skipping the test generation process.")
+            return
 
         # Construct full paths
         file_path = os.path.join(self.project_root, file_relative_path.replace('/', os.sep))
         diff_path = os.path.join(self.diffs_path, diff_relative_path.replace('/', os.sep))
 
+        # Check if source file exists
+        if not os.path.isfile(file_path):
+            logger.error(f"Source file does not exist at path: {file_path}. Skipping the test generation process.")
+            return
+
+        # Check if diff file exists
+        if not os.path.isfile(diff_path):
+            logger.error(f"Diff file does not exist at path: {diff_path}. Skipping the test generation process.")
+            return
+
         # Read the content of the source file
-        with open(file_path, 'r') as f:
-            source_file_content = f.read()
+        try:
+            with open(file_path, 'r') as f:
+                source_file_content = f.read()
+        except Exception as e:
+            logger.error(f"Failed to read source file at {file_path}: {e}. Skipping the test generation process.")
+            return
 
         # Read the content of the diff file
-        with open(diff_path, 'r') as f:
-            diff_content = f.read()
+        try:
+            with open(diff_path, 'r') as f:
+                diff_content = f.read()
+        except Exception as e:
+            logger.error(f"Failed to read diff file at {diff_path}: {e}. Skipping the test generation process.")
+            return
 
         # Determine the test file path
         test_file_relative_path = file_relative_path.replace('/main/', '/test/').replace('.java', 'Test.java')
@@ -220,17 +288,36 @@ class TestGenerator:
 
         # Load the old test file code
         if os.path.exists(test_file_path):
-            with open(test_file_path, 'r') as f:
-                old_test_code = f.read()
+            try:
+                with open(test_file_path, 'r') as f:
+                    old_test_code = f.read()
+            except Exception as e:
+                logger.error(f"Failed to read existing test file at {test_file_path}: {e}. Skipping the test generation process.")
+                return
         else:
             old_test_code = ""
+            logger.info(f"No existing test file found at {test_file_path}. A new test file will be created.")
+
         logger.info(f"Test Generation Started ...\n")
         start_time = time.time()
+
         # Generate new test methods using the AI model
-        new_test_methods = self.generate_new_test_methods(source_file_content, old_test_code, diff_content)
+        try:
+            new_test_methods = self.generate_new_test_methods(source_file_content, old_test_code, diff_content)
+        except Exception as e:
+            logger.error(f"Failed to generate new test methods: {e}. Skipping the test generation process.")
+            return
+
+        if not new_test_methods:
+            logger.warning("No new test methods were generated. Skipping the test generation process.")
+            return
 
         # Insert the new test methods into the existing test class
-        new_test_code = self.insert_new_methods_to_test(old_test_code, new_test_methods)
+        try:
+            new_test_code = self.insert_new_methods_to_test(old_test_code, new_test_methods)
+        except Exception as e:
+            logger.error(f"Failed to insert new test methods: {e}. Skipping the test generation process.")
+            return
 
         # Save the updated test file
         os.makedirs(os.path.dirname(test_file_path), exist_ok=True)
@@ -239,28 +326,39 @@ class TestGenerator:
             with open(test_file_path, 'w') as f:
                 f.write(new_test_code)
         except Exception as e:
-            logger.error(f"Error writing file: {test_file_path}")
+            logger.error(f"Error writing to test file: {test_file_path}: {e}. Skipping the test generation process.")
             return
 
         logger.info(f"Generated and saved new test file: {test_file_path}")
 
         # Run Maven tests and analyze the output
-        result = self.run_maven_clean_test()
+        try:
+            result = self.run_maven_clean_test()
+        except Exception as e:
+            logger.error(f"Failed to run Maven tests: {e}.")
+            return
+
         error_detected = self.analyze_maven_output(result)
 
-        # If tests passed, overwrite the test file
+        # If tests passed, confirm success
         if not error_detected:
             logger.info(f"Maven tests passed for {test_file_relative_path}.")
         else:
             logger.error(f"Maven tests failed for {test_file_relative_path}.")
             if old_test_code:
-                with open(test_file_path, 'w') as f:
-                    f.write(old_test_code)
-                logger.info(f"Reverted changes to {test_file_path}.")
+                try:
+                    with open(test_file_path, 'w') as f:
+                        f.write(old_test_code)
+                    logger.info(f"Reverted changes to {test_file_path}.")
+                except Exception as e:
+                    logger.error(f"Failed to revert changes to {test_file_path}: {e}.")
             else:
                 # If there was no original test file, remove the newly created test file
-                os.remove(test_file_path)
-                logger.warn(f"Removed newly created test file: {test_file_path}.")
+                try:
+                    os.remove(test_file_path)
+                    logger.warn(f"Removed newly created test file: {test_file_path}.")
+                except Exception as e:
+                    logger.error(f"Failed to remove test file {test_file_path}: {e}.")
 
         # Calculate total time elapsed for test generation
         total_time_elapsed = time.time() - start_time
