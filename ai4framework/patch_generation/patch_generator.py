@@ -9,6 +9,7 @@ from utils.logger import logger
 import re
 import difflib
 import time
+import random
 
 class PatchGenerator:
     def __init__(self, config):
@@ -17,7 +18,7 @@ class PatchGenerator:
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
         openai.api_key = os.getenv('OPENAI_API_KEY')
-        self.client = OpenAI()
+        self.client = OpenAI(timeout=30)
             
         # Load configurations from file
         self.config = config
@@ -135,35 +136,34 @@ class PatchGenerator:
             # Get the full file content
             full_class_content = ''.join(file_content)
 
-            
-
-           # Prepare the prompt for the AI model
             prompt = f"""Explanation of the issue:
-            {explanation}
+                    {explanation}
 
-            Here is the full file code:
-            
-            ```java
-            {full_class_content}
-            ```
+                    Here is the full file code:
+                    
+                    ```java
+                    {full_class_content}
+                    ```
 
-            The problematic code is from line {startLine} to {endLine}:
+                    The problematic code is from line {startLine} to {endLine}:
 
-            
-            ```java
-            {problematic_code}
-            ```
+                    
+                    ```java
+                    {problematic_code}
+                    ```
+                    
+                    Instructions:
 
-            Please modify the code to fix the issue described in the explanation. Provide the complete updated code of the file, and do not include any explanations or comments. Ensure that the code compiles and maintains the original functionality except for the fix."""
-        
+                    - Modify only the code necessary to fix the issue described in the explanation.
+                    - Do not alter any other parts of the code, including comments, whitespace, or formatting.
+                    - Provide the complete updated code of the file with the changes required.
+                    - Ensure that the code compiles and maintains the original functionality except for the fix.
+                    """
             try:
-                response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                            {"role": "system", "content": "You are a helpful assistant that can fix code issues."},
-                            {"role": "user", "content": prompt}
-                        ]
-                    )
+                response = self.call_openai_with_retries(prompt)
+                if response is None:
+                    logger.error(f"Failed to get a response from OpenAI after retries.")
+                    continue
                 generated_code = self.extract_code_from_response(response.choices[0].message.content)
             except Exception as e:
                 logger.error(f"Error calling OpenAI API: {e}")
@@ -252,3 +252,33 @@ class PatchGenerator:
             logger.info(f"Finished processing warning ID {warning['id']}.\n")
         elapsed_time = time.time() - start_time
         logger.info(f"Patch generation completed in {elapsed_time:.2f} seconds\n")
+
+
+    def call_openai_with_retries(self, prompt, max_retries=5):
+        """Call OpenAI API with retry logic."""
+        retries = 0
+        while retries < max_retries:
+            try:
+                response = self.client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant that can fix code issues."},
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                return response
+            except openai.error.APIConnectionError as e:
+                logger.error(f"Connection error: {e}, retrying...")
+            except openai.error.Timeout as e:
+                logger.error(f"Timeout error: {e}, retrying...")
+            except openai.error.RateLimitError as e:
+                logger.error(f"Rate limit exceeded: {e}, retrying after delay...")
+                time.sleep(4)
+            except Exception as e:
+                logger.error(f"Unexpected error: {e}")
+                break
+            
+            retries += 1
+            sleep_time = 2 ** retries + random.uniform(0, 1)
+            time.sleep(sleep_time)
+        return None
