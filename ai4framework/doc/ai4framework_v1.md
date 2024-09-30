@@ -192,165 +192,13 @@ Below is a sample `config.properties` file. Update the paths according to your s
 
 ```properties
 [DEFAULT]
-# General settings
-config.project_name=your_project_name
-config.project_path=/path/to/your/project
-config.results_path=/path/to/your/project/patches
-config.project_exec_path=/path/to/your/project/target
-config.base_dir=/path/to/your/base/directory
-config.project_build_tool=mavenCLI
-config.project_source_path=src/main/java
-config.jsons_listfile=/path/to/your/project/jsons.lists
-config.prioritizer_path=/path/to/your/sorter/sorter.py
-config.prioritizer_mode=glove
-
-# Analyzer SAST tools
-config.spotbugs_bin=/path/to/spotbugs/bin/spotbugs
-config.spotbugs_output_file=/path/to/your/logs/jsons.list
-config.pmd_bin=/path/to/pmd/bin/pmd
-config.pmd_ruleset=/path/to/your/PMD-config.xml
-config.trivy_bin=/path/to/trivy
-
-config.jan_path=/path/to/your/JAN/Tools
-config.jan_edition=JAN.jar
-config.jan_compiler=jdk.compiler.jar
-config.additional_tools_path=/path/to/your/additional/tools
-config.jan2changepath_edition=JAN2ChangePath
-
-config.validation_results_path=/path/to/your/project/patches/validation
-config.archive_enabled=false
-config.archive_path=/path/to/your/archive
-
-# Vscode-Plugin settings
-plugin.generated_patches_path=/path/to/your/project/patches
-plugin.issues_path=/path/to/your/project/issues.lists
-plugin.subject_project_path=/path/to/your/project
-plugin.use_diff_mode=view Diffs
-
-# Classifier specific arguments
-[CLASSIFIER]
-commit_sha=your_commit_sha_here
-gpt_model=gpt-4
-temperature=0
-
-[ISSUES]
-config.sast_issues_path=/path/to/your/sast_issues.json
-
-# Reports paths
-[REPORT]
-config.pmd_report_path=/path/to/your/pmd.xml
-config.spotbugs_report_path=/path/to/your/spotbugs.xml
-config.trivy_report_path=/path/to/your/trivy.json
-
-# FEA: SYMBOLIC EXECUTION
-[ANALYZER]
-config.analyzer=/path/to/your/AnalyzerJava
-config.analyzer_path=/path/to/your/AI4VULN
-config.analyzer_results_path=/path/to/your/project/results
-```
-
----
-
-## Building and Running AI4Framework with Code-Server using Docker
-
-Follow the steps below to set up AI4Framework in a Docker container with code-server. This will allow you to perform code analysis and vulnerability scanning, along with using tools like PMD, SpotBugs, and Trivy, and potentially OpenAI's GPT models for classification.
-
-### Step 1: Clone the Repository
-
-First, clone the AI4Framework repository from your preferred Git hosting service (e.g., GitHub, GitLab):
-
-```bash
-git clone --branch dev https://github.com/ai4cyber-slab/ai4fix.git
-```
-
-### Step 2: Navigate to the AI4Framework Directory
-
-Once the repository is cloned, navigate to the `ai4framework` directory:
-
-```bash
-cd ai4framework
-```
-
-### Step 3: Build the Docker Image
-
-To build the Docker image that includes code-server and all necessary tools, use the following command. You can name the image as desired (in this example, we use `code-analyzer-vs-version`):
-
-```bash
-docker build -t code-analyzer-vs-version .
-```
-
-Make sure to replace `code-analyzer-vs-version` with your desired image name if needed.
-
----
-### Step 4: Run the Docker Container
-
-Once the Docker image is built, you can create and run the container. If you don't provide the `OPENAI_API_KEY`, the classification part will be skipped when running the Python script later.
-
-Here's the command to run the container with code-server support:
-
-```bash
-docker run -it -p 8080:8080 -e OPENAI_API_KEY='' -e PROJECT_PATH=/user_project -v C:/Users/HP/Music/pelo-project:/user_project code-analyzer-vs-version
-```
-
-#### Alternative: Running the Container without VS Code Support
-If you prefer to interact with the container directly via Bash without needing code-server, simply add `bash` to the end of the second Docker command:
-
-```bash
-docker run -it -e OPENAI_API_KEY='' -e PROJECT_PATH=/user_project -v C:/Users/HP/Music/pelo-project:/user_project code-analyzer-vs-version bash
-```
-
-Once inside the container, navigate to the project directory:
-
-```bash
-cd /user_project
-```
-
-Then run the analysis script:
-
-```bash
-python /app/orchestrator.py /user_project
-```
-
-If you **already provided** the `PROJECT_PATH` environment variable when running the container, you can omit the project path when running the script:
-
-```bash
-python /app/orchestrator.py
-```
-
-#### Key Flags:
-- `-p 8080:8080`: Exposes port 8080 for code-server access via a browser.
-- `-e OPENAI_API_KEY=''`: You can leave this blank if you don't want to provide an OpenAI API key, or provide it if necessary.
-- `-v C:/Users/HP/Music/pelo-project:/user_project`: Mounts the local project directory to the `/user_project` directory inside the container.
-- `-e PROJECT_PATH=/user_project`: Project directory within the container.
-
-
-#### Important:
- You can name the directory inside the container (`/user_project`) however you want, but ensure you consistently use the same name throughout your workflow. This directory will hold your local project ( eg: `C:/Users/HP/Music/pelo-project:/user_project`) inside the Docker container.
-
-### Step 5: Access Code-Server (only if you did not use the Docker Bash command alternative)
-
-Once the container is running, open your web browser and go to the following URL to access code-server:
-
-```
-http://localhost:8080/?folder=/user_project
-```
-
-Make sure to replace `/user_project` with the correct project path inside the container if different.
-
-### Step 6: Creating config.properties for the Project
-
-Before running the Python script in VS Code for the project you want to analyze, you must create a config.properties file inside the project directory with the following content:
-```
-[DEFAULT]
 config.project_name=user_project #change to specified project name directory in container
 config.project_path=/user_project #change to specified project directory in container
 config.results_path=/user_project/patches #change to specified project directory in container
-config.project_source_path=src/main/java # do not change
 config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # do not change
 config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # do not change
 config.pmd_ruleset=/app/utils/PMD-config.xml # change or leave the default
 config.trivy_bin=/usr/bin/trivy # do not change
-config.project_build_tool=mavenCLI
 config.jsons_listfile=/user_project/jsons.lists # change to specified project directory in container
 [CLASSIFIER]
 commit_sha=2f7bb20317500db89c1bc2c0d96275e09f3c62a1 # change to desired commit hash
@@ -371,20 +219,153 @@ config.analyzer_results_path=/user_project/results
 plugin.use_diff_mode=view Diffs
 plugin.executing_parameters=ls # do not change
 plugin.executable_path=/user_project/target #change to specified project directory in container
+plugin.script_path=/app # do not change
+plugin.test_folder_log=/user_project/src/test # change if needed
 ```
 
+---
 
-### Step 7: Run the Python Script
+## Building and Running AI4Framework with Code-Server using Docker
 
-Now, open the VSCode terminal in code-server and run the Python script for analysis. If you've already provided the project path as an environment variable (`PROJECT_PATH`), you can skip providing the path explicitly.
+Follow the steps below to set up AI4Framework in a Docker container with code-server. This will allow you to perform code analysis and vulnerability scanning, along with using tools like PMD, SpotBugs, and Trivy, and potentially OpenAI's GPT models for classification.
+### Step 1: Install Git LFS
 
-If you **did not** provide the project path as an environment variable, use this command:
+Before cloning the AI4Framework repository, ensure you have Git LFS (Large File Storage) installed on your system. This is necessary for handling large files that might be part of the repository. To install Git LFS, follow these steps:
+
+For **Ubuntu/Debian**:
+```bash
+sudo apt update && sudo apt install git-lfs
+```
+For **Red Hat/CentOS**:
+```bash
+sudo yum install git-lfs
+```
+For **Mac (with Homebrew)**:
+```bash
+brew install git-lfs
+```
+For **Windows**, download and install Git LFS from the official website: <https://git-lfs.github.com/>
+
+Once installed, initialize Git LFS:
+```bash
+git lfs install
+```
+
+### Step 2: Clone the Repository
+
+First, clone the AI4Framework repository from your preferred Git hosting service (e.g., GitHub, GitLab):
 
 ```bash
-python /app/orchestrator.py /user_project
+git clone --branch dev https://github.com/ai4cyber-slab/ai4fix.git
 ```
 
-If you **did** set the `PROJECT_PATH` environment variable earlier, you can simply run:
+### Step 3: Navigate to the AI4Framework Directory
+
+Once the repository is cloned, navigate to the `ai4framework` directory:
+
+```bash
+cd ai4framework
+```
+
+### Step 4: Build the Docker Image
+
+To build the Docker image that includes code-server and all necessary tools, use the following command. You can name the image as desired (in this example, we use `code-analyzer-vs-version`):
+
+```bash
+docker build -t code-analyzer-vs-version .
+```
+
+Make sure to replace `code-analyzer-vs-version` with your desired image name if needed.
+
+---
+### Step 5: Run the Docker Container
+
+Once the Docker image is built, you can create and run the container. If you don't provide the `OPENAI_API_KEY`, the classification part will be skipped when running the Python script later. It's essential to note that the `PROJECT_PATH` environment variable should always point to the directory that contains the `.git` directory of your project.
+
+Here's the command to run the container with code-server support:
+
+```bash
+docker run -it -p 8080:8080 -e OPENAI_API_KEY='sk-proj-....' -e PROJECT_PATH=/user_project -v C:/Users/HP/Music/Demo:/user_project code-analyzer-vs-version
+```
+
+#### Alternative: Running the Container without VS Code Support
+If you prefer to interact with the container directly via Bash without needing code-server, simply add `bash` to the end of the second Docker command:
+
+```bash
+docker run -it -e OPENAI_API_KEY='sk-proj-....' -e PROJECT_PATH=/user_project -v C:/Users/HP/Music/Demo:/user_project code-analyzer-vs-version bash
+```
+
+Once inside the container, navigate to the project directory:
+
+```bash
+cd /user_project
+```
+
+Then run the analysis script:
+```bash
+python /app/orchestrator.py
+```
+
+#### Key Flags:
+- `-p 8080:8080`: Exposes port 8080 for code-server access via a browser.
+- `-e OPENAI_API_KEY=''`: You can leave this blank if you don't want to provide an OpenAI API key, or provide it if necessary.
+- `-v C:/Users/HP/Music/Demo:/user_project`: Mounts the root directory of your project (e.g., a Maven project with multiple sub-projects) that contains the `.git` directory to the `/user_project` directory inside the container. For example, if you have a project like the Struts GitHub repository with multiple sub-projects, you would mount the Struts root directory. You can then specify the path to the desired subdirectory in the `config.properties` file.
+- `-e PROJECT_PATH=/user_project`: Specifies the project directory within the container, which should point to the mounted root directory of your project. You will configure the specific subdirectory path in the `config.properties` file.
+
+
+#### Important:
+ You can name the directory inside the container (`/user_project`) however you want, but ensure you consistently use the same name throughout your workflow. This directory will hold your local project ( eg: `C:/Users/HP/Music/Demo:/user_project`) inside the Docker container.
+
+### Step 6: Access Code-Server (only if you did not use the Docker Bash command alternative)
+
+Once the container is running, open your web browser and go to the following URL to access code-server:
+
+```
+http://localhost:8080/?folder=/user_project
+```
+
+Make sure to replace `/user_project` with the correct project path inside the container if different.
+
+### Step 7: Creating config.properties for the Project
+
+Before running the Python script in VS Code for the project you want to analyze, you must create a config.properties file inside the project directory that contains the `.git` with the following content:
+```properties
+[DEFAULT]
+config.project_name=user_project #change to specified project name directory in container
+config.project_path=/user_project #change to specified project directory in container
+config.results_path=/user_project/patches #change to specified project directory in container
+config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # do not change
+config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # do not change
+config.pmd_ruleset=/app/utils/PMD-config.xml # change or leave the default
+config.trivy_bin=/usr/bin/trivy # do not change
+config.jsons_listfile=/user_project/jsons.lists # change to specified project directory in container
+[CLASSIFIER]
+commit_sha=2f7bb20317500db89c1bc2c0d96275e09f3c62a1 # change to desired commit hash
+gpt_model=gpt-4o # desired model
+temperature=0
+[ISSUES]
+config.issues_path=/user_project/issues.json #change to specified project directory in container
+[REPORT]
+config.pmd_report_path=/app/sast/out/pmd.xml 
+config.spotbugs_report_path=/app/sast/out/spotbugs.xml
+config.trivy_report_path=/app/sast/out/trivy.json
+[ANALYZER]
+config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # do not change
+config.analyzer_path=/opt/AI4VULN # do not change
+config.analyzer_results_path=/user_project/results
+# Vscode-Plugin settings
+[PLUGIN]
+plugin.use_diff_mode=view Diffs
+plugin.executing_parameters=ls # do not change
+plugin.executable_path=/user_project/target #change to specified project directory in container
+plugin.script_path=/app # do not change
+plugin.test_folder_log=/user_project/src/test # change if needed
+```
+
+
+### Step 8: Run the Python Script
+
+Now, open the VSCode terminal in code-server and run the Python script for analysis.
 
 ```bash
 python /app/orchestrator.py
@@ -397,44 +378,71 @@ This will start the analysis process on your project.
 By following these steps, you will be able to build and run the AI4Framework with code-server inside a Docker container, and conduct code analysis directly through the VSCode interface.
 
 ---
+### Example: Analyzing a Big Project
+
+Let's consider a big project like Apache Struts, which is hosted on GitHub. Here's how you can configure the `config.properties` file and the Docker commands to analyze a certain maven sub-project such as `core`.
+
+#### `config.properties` Example
+
+```properties
+[DEFAULT]
+config.project_name=core #change to specified project name directory in container
+config.project_path=/user_project/core #change to specified project directory in container
+config.results_path=/user_project/core/patches #change to specified project directory in container
+config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # do not change
+config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # do not change
+config.pmd_ruleset=/app/utils/PMD-config.xml # change or leave the default
+config.trivy_bin=/usr/bin/trivy # do not change
+config.jsons_listfile=/user_project/core/jsons.lists # change to specified project directory in container
+[CLASSIFIER]
+commit_sha=735d1bc88d9beceb18558d12f565a466f96a5b2a # change to desired commit hash
+gpt_model=gpt-4o # desired model
+temperature=0
+[ISSUES]
+config.issues_path=/user_project/core/issues.json #change to specified project directory in container
+[REPORT]
+config.pmd_report_path=/app/sast/out/pmd.xml 
+config.spotbugs_report_path=/app/sast/out/spotbugs.xml
+config.trivy_report_path=/app/sast/out/trivy.json
+[ANALYZER]
+config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # do not change
+config.analyzer_path=/opt/AI4VULN # do not change
+config.analyzer_results_path=/user_project/core/results
+# Vscode-Plugin settings
+[PLUGIN]
+plugin.use_diff_mode=view Diffs
+plugin.executing_parameters=ls # do not change
+plugin.executable_path=/user_project/core/target #change to specified project directory in container
+plugin.script_path=/app # do not change
+plugin.test_folder_log=/user_project/core/src/test # change if needed
+```
+
+#### Docker Commands
+
+To build the Docker image for Apache Struts:
+
+```bash
+docker build -t code-analyzer-apache-struts .
+```
+
+To run the Docker container for Apache Struts, use the following command: in our case the holder of the `.git` is the struts repo root folder:
+
+```bash
+docker run -it -p 8080:8080 -e OPENAI_API_KEY='your_openapi_key' -e PROJECT_PATH=/user_project -v C:/Users/HP/Music/struts:/user_project code-analyzer-vs-version
+
+```
+
+These commands will build the Docker image and run the container for Apache Struts, allowing you to analyze the project with AI4Framework.
+
 
 ## Final Notes
-
-### Additional Dependencies
-
-- **Python Dependencies**:
-  - Always check the `requirements.txt` or `setup.py` file in the project for any additional Python dependencies.
-  - Install them using:
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-- **Java Dependencies**:
-  - Maven will automatically handle Java dependencies as long as the `pom.xml` file is correctly configured.
-  - To update dependencies, run:
-    ```bash
-    mvn clean install
-    ```
-
-### Security Best Practices
-
-- **Environment Variables**:
-  - Ensure that sensitive information, such as OpenAI API keys, is securely stored and not exposed in version control.
-  - Use `.env` files or secure environment variable management systems.
-
-- **Code Analysis Tools**:
-  - Regularly run PMD, SpotBugs, and Trivy to identify and mitigate potential vulnerabilities in your codebase.
 
 ### Troubleshooting
 
 - **Common Issues**:
   - **Path Not Found Errors**:
     - Ensure all environment variables are correctly set.
-    - Verify the paths in `config.properties` point to the correct executable locations.
-  
-  - **Dependency Conflicts**:
-    - Use virtual environments for Python to isolate dependencies.
-    - Ensure Maven is correctly managing Java dependencies.
+    - Verify the paths in `config.properties` point to the correct locations.
 
 - **Getting Help**:
   - Contact us at ...
@@ -442,17 +450,5 @@ By following these steps, you will be able to build and run the AI4Framework wit
 ### Updating the Framework
 
 - Regularly pull the latest changes from the repository to stay updated with new features and fixes:
-  ```bash
-  git pull origin main
-  ```
-
-- Update Python and Java dependencies as needed:
-  ```bash
-  pip install --upgrade -r requirements.txt
-  mvn clean install
-  ```
 
 ---
-
-
-Here's the detailed guide for building the AI4Framework Docker image with code-server, and instructions for running the container:
