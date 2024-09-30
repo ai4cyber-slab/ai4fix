@@ -15,7 +15,7 @@ class JsonPluginConverter:
         """
         self.config = config
         self.input_file = self.config.get('ISSUES', 'config.issues_path', fallback='')
-        self.output_directory = os.path.join(self.config.get('DEFAULT', 'config.project_path'), 'patches', 'jsons')
+        self.output_directory = os.path.join(self.config.get('DEFAULT', 'config.project_path'),'validation', 'jsons')
         self.json_txt_file = self.config.get('DEFAULT', 'config.jsons_listfile')
 
 
@@ -90,7 +90,9 @@ class JsonPluginConverter:
                 json.dump(output_json, f, indent=2)
 
             # Collect the absolute path of the JSON file
-            json_file_paths.append(os.path.abspath(output_file_path))
+            # json_file_paths.append(os.path.abspath(output_file_path))
+            json_file_paths.append(output_file_path)
+
 
         return json_file_paths
 

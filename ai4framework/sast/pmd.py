@@ -84,6 +84,10 @@ class PMDRunner:
 
         for file_element in pmd_root.findall('.//pmd:file', namespaces):
             file_name = file_element.get('name')
+            # if file_name.find('src') != -1:
+            #     file_path = file_name[file_name.find('src'):]
+            # elif file_name.find()
+            file_path = file_name.replace(self.config.get('DEFAULT', 'config.project_path'), '')[1:]
             for violation in file_element.findall('.//pmd:violation', namespaces):
                 issue = {
                     "id": str(uuid.uuid4().int)[:5],
@@ -94,7 +98,7 @@ class PMDRunner:
                         {
                             "patches": [],
                             "textrange": {
-                                "file": file_name,
+                                "file": file_path,
                                 "startLine": int(violation.get('beginline')),
                                 "endLine": int(violation.get('endline')),
                                 "startColumn": int(violation.get('begincolumn')),

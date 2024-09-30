@@ -85,7 +85,7 @@ class ToolRunner:
             list: A list of paths to .class files corresponding to changed Java files.
         """
         start_time = time.time()
-        project_root = self.repo_manager.repo.working_dir
+        # project_root = self.repo_manager.repo.working_dir
         class_files = []
 
         for java_file in self.repo_manager.get_changed_files():
@@ -93,7 +93,7 @@ class ToolRunner:
                 logger.warning(f"Skipping non-Java file: {java_file}")
                 continue
 
-            class_file_path = find_class_file_from_java(java_file, project_root)
+            class_file_path = find_class_file_from_java(java_file)
             if class_file_path:
                 class_files.append(class_file_path)
 
@@ -101,7 +101,7 @@ class ToolRunner:
         logger.debug(f"Time taken to find changed class files: {elapsed_time:.2f} seconds")
         return class_files if class_files else []
 
-def find_class_file_from_java(java_file_path, project_root):
+def find_class_file_from_java(java_file_path):
     """
     Find the corresponding .class file for a given Java file.
 
@@ -113,32 +113,21 @@ def find_class_file_from_java(java_file_path, project_root):
         str or None: Path to the corresponding .class file if found, None otherwise.
     """
     start_time = time.time()
-    path_parts = java_file_path.split(os.path.sep)
-    submodule_directory = path_parts[0] if not path_parts[0].startswith("src") else ""
-
-    if os.path.join('src', 'main', 'java') in java_file_path:
-        relative_class_path = java_file_path.split(os.path.join('src', 'main', 'java') + os.path.sep, 1)[1]
-        output_dir = os.path.join('target', 'classes')
-    elif os.path.join('src', 'test', 'java') in java_file_path:
-        relative_class_path = java_file_path.split(os.path.join('src', 'test', 'java') + os.path.sep, 1)[1]
-        output_dir = os.path.join('target', 'test-classes')
+    java_file = os.path.normpath(java_file_path)
+    
+    # Determine if it's a test file or main file
+    if os.path.sep + 'src' + os.path.sep + 'test' + os.path.sep in java_file:
+        # Test class files are usually in target/test-classes
+        class_path = java_file.replace(os.path.sep + 'src' + os.path.sep + 'test' + os.path.sep + 'java' + os.path.sep, os.path.sep + 'target' + os.path.sep + 'test-classes' + os.path.sep)
+    elif os.path.sep + 'src' + os.path.sep + 'main' + os.path.sep in java_file:
+        # Main class files are usually in target/classes
+        class_path = java_file.replace(os.path.sep + 'src' + os.path.sep + 'main' + os.path.sep + 'java' + os.path.sep, os.path.sep + 'target' + os.path.sep + 'classes' + os.path.sep)
     else:
-        logger.debug(f"Invalid path: {java_file_path}")
-        elapsed_time = time.time() - start_time
-        logger.debug(f"Time taken to process invalid path: {elapsed_time:.2f} seconds")
+        # If it's neither a test file nor a main file, return None
         return None
-
-    relative_class_path = os.path.splitext(relative_class_path)[0] + '.class'
-    class_file_path = os.path.join(project_root, submodule_directory, output_dir, relative_class_path)
-    logger.debug(f"Looking for .class file at: {class_file_path}")
-
-    if os.path.isfile(class_file_path):
-        logger.debug(f"Class file found for: {java_file_path}")
-        elapsed_time = time.time() - start_time
-        logger.debug(f"Time taken to find class file: {elapsed_time:.2f} seconds")
-        return class_file_path
-    else:
-        logger.debug(f"Class file not found for: {java_file_path}")
-        elapsed_time = time.time() - start_time
-        logger.debug(f"Time taken to search for class file: {elapsed_time:.2f} seconds")
-        return None
+    
+    # Replace .java with .class
+    class_path = class_path.replace('.java', '.class')
+    elapsed_time = time.time() - start_time
+    logger.debug(f"Time taken to search for class file: {elapsed_time:.2f} seconds")
+    return class_path

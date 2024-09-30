@@ -137,21 +137,15 @@ def map_config_to_vscode_settings(config):
     Returns:
         dict: Dictionary mapped to VS Code workspace settings keys.
     """
-    # mappings = {
-    #     "plugin.generated_patches_path": "aifix4seccode.analyzer.generatedPatchesPath",
-    #     "plugin.issues_path": "aifix4seccode.analyzer.issuesPath",
-    #     "plugin.subject_project_path": "aifix4seccode.analyzer.subjectProjectPath",
-    #     "plugin.use_diff_mode": "aifix4seccode.analyzer.useDiffMode",
-    #     "plugin.executing_parameters": "aifix4seccode.analyzer.executableParameters",
-    #     "plugin.executable_path": "aifix4seccode.analyzer.executablePath"
-    # }
     mappings = {
         "config.results_path": "aifix4seccode.analyzer.generatedPatchesPath",
         "config.jsons_listfile": "aifix4seccode.analyzer.issuesPath",
         "config.project_path": "aifix4seccode.analyzer.subjectProjectPath",
         "plugin.use_diff_mode": "aifix4seccode.analyzer.useDiffMode",
         "plugin.executing_parameters": "aifix4seccode.analyzer.executableParameters",
-        "plugin.executable_path": "aifix4seccode.analyzer.executablePath"
+        "plugin.executable_path": "aifix4seccode.analyzer.executablePath",
+        "plugin.script_path": "aifix4seccode.analyzer.pythonScriptPath",
+        "plugin.test_folder_log": "aifix4seccode.analyzer.testFolderPath"
     }
 
     vscode_settings = {}
@@ -193,8 +187,6 @@ def update_vscode_workspace_settings(configurations, workspace_path='.'):
     # Write back to the settings.json file
     with open(settings_file, 'w') as f:
         json.dump(settings_data, f, indent=4)
-
-    print(f"VS Code workspace settings updated at: {settings_file}")
 
 def main(config_file, workspace_path='.'):
     """

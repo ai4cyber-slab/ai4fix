@@ -27,6 +27,7 @@ class SASTOrchestrator:
         )
         self.tool_runner = ToolRunner(config, self.repo_manager)
         self.report_merger = ReportMerger(config)
+        self.projet_path = config.get('DEFAULT', 'config.project_path')
 
     def run_all(self):
         """
@@ -52,7 +53,8 @@ class SASTOrchestrator:
                 self.tool_runner.trivy_runner
             )
         finally:
-            self.repo_manager.revert_checkout()
+            # self.repo_manager.revert_checkout()
+            pass
 
     def run_maven_compile(self):
         """
@@ -62,10 +64,12 @@ class SASTOrchestrator:
         skipping tests to focus on compilation only.
         """
         try:
+            # ["mvn", "compile", "-DskipTests"],
             logger.info("Maven compilation started...")
+            # print(self.repo_manager.repo.working_dir)
             result = subprocess.run(
-                ["mvn", "compile", "-DskipTests"],
-                cwd=self.repo_manager.repo.working_dir,
+                ['mvn', 'compile', '-Dmaven.compiler.incremental=true', '-DskipTests'],
+                cwd=self.projet_path,
                 text=True
             )
             if result.returncode == 0:

@@ -2,7 +2,6 @@ import os
 import json
 import subprocess
 import openai
-from openai import OpenAI
 from dotenv import load_dotenv, find_dotenv
 from collections import defaultdict
 from utils.logger import logger
@@ -18,7 +17,7 @@ class PatchGenerator:
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
         openai.api_key = os.getenv('OPENAI_API_KEY')
-        self.client = OpenAI(timeout=30)
+        self.client = openai.OpenAI()
             
         # Load configurations from file
         self.config = config
@@ -30,15 +29,37 @@ class PatchGenerator:
         self.json_file_path = self.config.get('ISSUES', 'config.issues_path', fallback='')
         self.warnings = []
 
-    def run_maven_clean_test(self):
-        """Run 'mvn clean test' command and return the result."""
+    # def run_maven_clean_test(self):
+    #     """Run 'mvn clean test' command and return the result."""
+    #     result = subprocess.run(
+    #         ['mvn', 'clean', 'test'],
+    #         cwd=self.project_root,
+    #         capture_output=True,
+    #         text=True
+    #     )
+    #     return result
+    def run_maven_test(self):
+        """Run 'mvn test' command and return the result."""
         result = subprocess.run(
-            ['mvn', 'clean', 'test'],
+            ['mvn', 'test'],
             cwd=self.project_root,
             capture_output=True,
             text=True
         )
         return result
+    # javac path/to/YourClass.java
+
+    # def compile_java_file(self, java_file_path):
+    #     """Run 'mvn test' command and return the result."""
+    #     result = subprocess.run(
+    #         ['javac', rf'{java_file_path}'],
+    #         cwd=self.project_root,
+    #         capture_output=True,
+    #         text=True
+    #     )
+    #     return result
+
+
 
     def analyze_maven_output(self, result):
         """Analyze the Maven output to detect and categorize errors."""
@@ -179,7 +200,7 @@ class PatchGenerator:
             
             # Run 'mvn clean test'
             logger.info(f"Running 'mvn clean test' for warning ID {warning['id']}...")
-            result = self.run_maven_clean_test()
+            result = self.run_maven_test()
             
             # Analyze Maven output
             error_detected, error_type_counts, returned_error_message = self.analyze_maven_output(result)
@@ -267,11 +288,11 @@ class PatchGenerator:
                     ]
                 )
                 return response
-            except openai.error.APIConnectionError as e:
+            except openai.APIConnectionError as e:
                 logger.error(f"Connection error: {e}, retrying...")
-            except openai.error.Timeout as e:
+            except openai.Timeout as e:
                 logger.error(f"Timeout error: {e}, retrying...")
-            except openai.error.RateLimitError as e:
+            except openai.RateLimitError as e:
                 logger.error(f"Rate limit exceeded: {e}, retrying after delay...")
                 time.sleep(4)
             except Exception as e:

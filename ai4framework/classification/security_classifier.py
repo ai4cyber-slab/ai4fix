@@ -72,7 +72,7 @@ class SecurityClassifier:
             elapsed_time = end_time - start_time
             if result.returncode == 0:
                 logger.info("Classifier script executed successfully.")
-                logger.info(result.stdout.strip())
+                print(result.stdout.strip())
                 logger.info(f"Classification completed in {elapsed_time:.2f} seconds")
             else:
                 logger.error("Classifier script failed with return code {}".format(result.returncode))

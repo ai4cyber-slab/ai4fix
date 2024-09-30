@@ -28,7 +28,7 @@ class WorkflowFramework:
         self.security_classifier = SecurityClassifier(self.config)
         self.symbolic_execution = SymbolicExecution(self.config)
         self.patch_generator = PatchGenerator(self.config)
-        self.test_generator = TestGenerator(self.config)
+        # self.test_generator = TestGenerator(self.config)
         self.issues_merger = JSONCombiner(self.config)
         self.json_converter = JsonPluginConverter(self.config)
 
@@ -43,8 +43,8 @@ class WorkflowFramework:
         self.issues_merger.run()
         self.patch_generator.main()
         self.json_converter.process()
-        self.test_generator.main()
-        reload_vscode_window(self.config)
+        # self.test_generator.main()
+        # reload_vscode_window(self.config)
 
         elapsed_time = time.time() - start_time
         logger.info(f"Workflow execution completed in {elapsed_time:.2f} seconds")

@@ -3,6 +3,7 @@ import git
 import os
 import sys
 import subprocess
+from pathlib import Path
 
 class RepoManager:
     """
@@ -20,7 +21,8 @@ class RepoManager:
             repo_path (str): The path to the local Git repository.
             commit_hash (str): The hash of the commit to work with.
         """
-        self.repo = git.Repo(repo_path)
+        self.repo = git.Repo(repo_path, search_parent_directories=True)
+        self.repo_path = repo_path
         self.commit_hash = commit_hash
 
     def checkout_commit(self):
@@ -53,20 +55,66 @@ class RepoManager:
             logger.error(f"Failed to revert checkout: {e}")
             raise
 
-    def get_changed_files(self):
-        """
-        Get a list of files changed in the specified commit.
+    # def get_changed_files(self):
+    #     """
+    #     Get a list of files changed in the specified commit.
 
-        Returns:
-            list: A list of file paths that were changed in the commit.
+    #     Returns:
+    #         list: A list of file paths that were changed in the commit.
+    #     """
+    #     repo_path = self.repo.working_tree_dir
+    #     if not os.path.isdir(repo_path):
+    #         logger.error(f"The directory {repo_path} does not exist.")
+    #         sys.exit(1)
+    #     try:
+    #         commit = self.repo.commit(self.commit_hash)
+    #         changed_files = list(commit.stats.files.keys())
+    #         return changed_files
+    #     except Exception as e:
+    #         logger.error(f"An error occurred: {str(e)}")
+    #         return []
+    def get_changed_files(self, absolute=True):
         """
-        repo_path = self.repo.working_tree_dir
-        if not os.path.isdir(repo_path):
-            logger.error(f"The directory {repo_path} does not exist.")
+        Get a list of files changed in the specified commit, filtered to ensure files are under the repository root.
+        
+        Args:
+            absolute (bool, optional): If True, returns absolute paths of the changed files.
+                                    If False, returns relative paths from the repository root.
+                                    Defaults to True.
+        
+        Returns:
+            list: A list of file paths that were changed in the commit. 
+                Paths are absolute if `absolute=True`, otherwise, relative paths are returned.
+        """
+        repo_path = Path(self.repo_path)
+        dirs = [r for r in str(repo_path).split(os.sep) if r != '']
+        prefix = ''
+        if len(dirs) == 1:
+            prefix = 'src'
+        elif len(dirs) > 1:
+            prefix = os.path.join(*dirs[1:])
+        else:
+            prefix = ''
+
+        if not repo_path.is_dir():
+            logger.error(f"The repository directory {repo_path} does not exist.")
             sys.exit(1)
+        test_dir_prefix = str(os.path.join('src','test'))
         try:
             commit = self.repo.commit(self.commit_hash)
-            changed_files = list(commit.stats.files.keys())
+            all_changed_files = list(commit.stats.files.keys())
+            
+            # Filter files that are strictly under the repository path
+            changed_files = [
+                file_path for file_path in all_changed_files
+                if file_path.startswith(prefix)  # Ensure file exists within repo
+                and test_dir_prefix not in file_path  # Ensure file is not a test file
+            ]
+            
+            if absolute:
+                changed_files = [os.path.join(str(repo_path), file_path[file_path.find('src'):]) for file_path in changed_files]
+
+            logger.info(f"Total changed files: {len(changed_files)}")
             return changed_files
         except Exception as e:
             logger.error(f"An error occurred: {str(e)}")
