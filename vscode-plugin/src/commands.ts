@@ -705,13 +705,13 @@ export function init(
 
   async function openUpFile(patchPath: string) {
     logging.LogInfo("===== Executing openUpFile command. =====");
-
+  
     let project_folder = PROJECT_FOLDER;
     let patch_folder = PATCH_FOLDER;
     if (!PROJECT_FOLDER) {
       SetProjectFolder(vscode.workspace.workspaceFolders![0].uri.path);
     }
-
+  
     var patch = "";
     try {
       logging.LogInfo("Reading patch from " + PATCH_FOLDER + "/" + patchPath);
@@ -722,7 +722,7 @@ export function init(
         "Unable to read in patch file: " + err
       );
     }
-
+  
     var sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patch);
     var sourceFile: string;
     if (sourceFileMatch && sourceFileMatch[1]) {
@@ -737,8 +737,7 @@ export function init(
     var openFilePath = vscode.Uri.file(
       upath.normalize(upath.join(PROJECT_FOLDER, sourceFile))
     );
-    //var openFilePath = vscode.Uri.parse("file:///" + PROJECT_FOLDER + '/' + sourceFile); // not working on MacOS...
-
+  
     logging.LogInfo("Running diagnosis in opened file...");
     vscode.workspace.openTextDocument(openFilePath).then((document) => {
       vscode.window.showTextDocument(document).then(async () => {
@@ -752,13 +751,15 @@ export function init(
               vscode.window.activeTextEditor!.document,
               analysisDiagnostics
             );
-            // set selection of warning:
             await setIssueSelectionInEditor(patchPath);
-            const targetLine = await extractLineFromPatch(upath.join(PATCH_FOLDER, patchPath));
-            if (vscode.window.activeTextEditor) {
-              const position = new vscode.Position(targetLine - 1, 0);
-              vscode.window.activeTextEditor.selection = new vscode.Selection(position, position);
-              vscode.window.activeTextEditor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
+  
+            const editor = vscode.window.activeTextEditor;
+            if (editor) {
+              const selection = editor.selection;
+              editor.revealRange(
+                selection,
+                vscode.TextEditorRevealType.InCenter
+              );
             }
           }
         );
@@ -796,7 +797,7 @@ export function init(
     const match = /@@ -(\d+),\d+ \+\d+,\d+ @@/.exec(patchContent);
 
     if (match && match[1]) {
-      return parseInt(match[1]) + 5;
+      return parseInt(match[1]);
     } else {
       throw new Error("Unable to extract line number from patch file.");
     }
