@@ -396,7 +396,7 @@ export function init(
         },
         async () => {
           const generatedTestFilePath = await generateAndSaveTest(filePath, pythonScriptPath, testFolderPath, generatedPatchesPath);
-          vscode.window.showInformationMessage(`Test file created: ${generatedTestFilePath}`);
+          vscode.window.showInformationMessage(`Test file and its log file created: ${generatedTestFilePath}`);
           logging.LogInfo("Test generated successfully.");
           runGeneratedTest(filePath);
         }
@@ -408,9 +408,9 @@ export function init(
   }
 
   async function generateAndSaveTest(filePath: string, pythonScriptPath: string, testFolderPath: string, generatedPatchesPath: string): Promise<string> {
-    const fileExtension = path.extname(filePath);
+    const fileExtension = '.log'
     const baseFileName = path.basename(filePath, fileExtension);
-    const generatedTestFileName = `${baseFileName}AITest${fileExtension}`;
+    const generatedTestFileName = `${baseFileName}Test${fileExtension}`;
     const generatedTestFilePath = path.join(testFolderPath, generatedTestFileName);
     const diffFilePath = await findRelevantDiffFile(`${baseFileName}${fileExtension}`, generatedPatchesPath);
 
@@ -453,8 +453,8 @@ export function init(
         cancellable: false,
       },
       async () => {
-        const testClassName = path.basename(filePath, '.java') + 'AITest';
-        const testPath = path.join(subjectProjectPath, "core");
+        const testClassName = path.basename(filePath, '.java') + 'Test';
+        const testPath = path.join(subjectProjectPath);
 
         if (retryCount < 3) {
           try {
