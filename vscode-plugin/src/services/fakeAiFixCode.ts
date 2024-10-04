@@ -3,7 +3,7 @@ import { dirname, basename } from "path";
 import { updateHeritageClause } from "typescript";
 import { Terminal, window, ProgressLocation, workspace } from "vscode";
 import {
-  ANALYZER_EXE_PATH,
+  ISSUES_PATH,
   PATCH_FOLDER,
   PROJECT_FOLDER,
   utf8Stream,
@@ -27,16 +27,7 @@ export async function getIssues() {
 }
 
 export function getIssuesSync(currentFilePath = "") {
-  let issuesPath: string | undefined = "";
-  if (
-    workspace
-      .getConfiguration()
-      .get<string>("aifix4seccode.analyzer.issuesPath")
-  ) {
-    issuesPath = workspace
-      .getConfiguration()
-      .get<string>("aifix4seccode.analyzer.issuesPath");
-  }
+  let issuesPath = ISSUES_PATH;
   let fileContent: string;
   let parsedJson: any;
   // read content of list file - get all the json paths that are in that file and merge them into one json object.
@@ -49,12 +40,6 @@ export function getIssuesSync(currentFilePath = "") {
       logging.LogErrorAndShowErrorMessage(e.toUpperCase(), e.toUpperCase())
     } else if (e instanceof Error) { 
       logging.LogErrorAndShowErrorMessage(e.message, e.message)
-      if ('code' in e) {
-        if ((e as any).code.toString() === 'ENOENT') {
-          var adjustedIssuesPath = upath.join(upath.dirname(ANALYZER_EXE_PATH), 'results', 'jsons.lists')
-          jsonListContent = fs.readFileSync(adjustedIssuesPath!, utf8Stream);
-        }
-      }
     }
   }
   var patchJsonPaths: string[] = []

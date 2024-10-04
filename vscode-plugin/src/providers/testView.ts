@@ -5,7 +5,7 @@ import { getIssues } from "../services/fakeAiFixCode";
 import { objectify } from "tslint/lib/utils";
 import { isObjectLiteralExpression } from "typescript";
 import { writeFileSync } from "fs";
-import { ISSUE, utf8Stream } from "../constants";
+import { ISSUE, utf8Stream, ISSUES_PATH } from "../constants";
 var stringify = require("json-stringify");
 
 let tree: any;
@@ -277,16 +277,7 @@ function filterTree(patchPath: string) {
     let issuesStr = stringify(tree);
     console.log(issuesStr);
 
-    let issuesPath: string | undefined = "";
-    if (
-      vscode.workspace
-        .getConfiguration()
-        .get<string>("aifix4seccode.analyzer.issuesPath")
-    ) {
-      issuesPath = vscode.workspace
-        .getConfiguration()
-        .get<string>("aifix4seccode.analyzer.issuesPath");
-    }
+    let issuesPath = ISSUES_PATH;
     writeFileSync(issuesPath!, issuesStr, utf8Stream);
   });
   console.log(tree);

@@ -203,10 +203,10 @@ def main(config_file, workspace_path='.'):
     config = read_config_properties(config_file)
 
 
-    vscode_settings = map_config_to_vscode_settings(config)
+    #vscode_settings = map_config_to_vscode_settings(config)
 
 
-    update_vscode_workspace_settings(vscode_settings, workspace_path)
+    #update_vscode_workspace_settings(vscode_settings, workspace_path)
 
 
 

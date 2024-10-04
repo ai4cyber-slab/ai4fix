@@ -27,7 +27,6 @@ export function activate(context: vscode.ExtensionContext) {
 
   init(context, jsonOutlineProvider);
   log(process.env);
-  saveConfigParameters();
 
   // status bar items:
   // Start analysis status bar item:
@@ -67,7 +66,6 @@ export function activate(context: vscode.ExtensionContext) {
     const action = 'Reload';
 
     // save extension settings parameters to config file:
-    saveConfigParameters();
 
     vscode.window
       .showInformationMessage(
@@ -103,22 +101,4 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }
   });
-}
-
-function saveConfigParameters() {
-  var logger = fs.createWriteStream(upath.normalize(upath.join(constants.ANALYZER_EXE_PATH, 'config.properties')), { flags: 'w' })
-
-  logger.write(constants.LOG_HEADING);
-
-  logger.write(constants.ANALYZER_PARAMETERS_LOG);
-  logger.write(constants.ANALYZER_EXE_PATH_LOG);
-  logger.write(constants.PATCH_FOLDER_LOG);
-  logger.write(constants.ISSUES_PATH_LOG);
-
-  if (!constants.PROJECT_FOLDER || constants.PROJECT_FOLDER === "") {
-    constants.SetProjectFolder(vscode.workspace.workspaceFolders![0].uri.path);
-  }
-
-  logger.write(constants.PROJECT_FOLDER_LOG);
-  logger.write(constants.ANALYZER_USE_DIFF_MODE_LOG);
 }

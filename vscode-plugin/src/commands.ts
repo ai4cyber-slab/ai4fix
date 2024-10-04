@@ -16,12 +16,13 @@ import {
   getActiveDiffPanelWebviews,
 } from "./webview/store";
 import {
-  ANALYZER_EXE_PATH,
+  ISSUES_PATH,
+  TEST_FOLDER,
   PATCH_FOLDER,
   PROJECT_FOLDER,
-  ANALYZER_PARAMETERS,
   ANALYZER_USE_DIFF_MODE,
   SetProjectFolder,
+  SCRIPT_PATH,
   utf8Stream,
 } from "./constants";
 import { IChange, IFix, Iissue, IProjectAnalysis } from "./interfaces";
@@ -308,21 +309,9 @@ export function init(
   }
 
   function startAnalyzingProjectSync() {
-    let issuesPath = vscode.workspace
-      .getConfiguration()
-      .get<string>("aifix4seccode.analyzer.issuesPath") ?? "";
-
-    let generatedPatchesPath = vscode.workspace
-      .getConfiguration()
-      .get<string>("aifix4seccode.analyzer.generatedPatchesPath") ?? "";
-
-    let subjectProjectPath = vscode.workspace
-      .getConfiguration()
-      .get<string>("aifix4seccode.analyzer.subjectProjectPath") ?? "";
-
-    let pythonScriptPath = vscode.workspace
-      .getConfiguration()
-      .get<string>("aifix4seccode.analyzer.pythonScriptPath") ?? "";
+    let issuesPath = ISSUES_PATH;
+    let generatedPatchesPath = PATCH_FOLDER;
+    let subjectProjectPath = PROJECT_FOLDER;
     let jsonFilePaths: string | any[] = [];
 
     var currentFilePath = upath.normalize(
@@ -348,74 +337,36 @@ export function init(
     }
 
     return new Promise<void>((resolve) => {
-      if (!ANALYZER_EXE_PATH) {
-        logging.LogErrorAndShowErrorMessage(
-          "Unable to run analyzer! Analyzer executable path is missing.",
-          "Unable to run analyzer! Analyzer executable path is missing."
-        );
-        resolve();
-      } else if (!ANALYZER_PARAMETERS) {
-        logging.LogErrorAndShowErrorMessage(
-          "Unable to run analyzer! Analyzer parameters are missing.",
-          "Unable to run analyzer! Analyzer parameters are missing."
-        );
-        resolve();
-      } else {
-        // run analyzer with terminal (read params and analyzer path from config):
-        logging.LogInfo("Analyzer executable started.");
-        logging.LogInfo("Running " + ANALYZER_PARAMETERS);
-        let fullPathToPythonScript = path.join(pythonScriptPath, 'aifix.py');
-        var child = cp.exec(
-          `python "${fullPathToPythonScript}" "" "${jsonFilePaths}" "${generatedPatchesPath}" "${subjectProjectPath}" "${ANALYZER_PARAMETERS}" "${ANALYZER_EXE_PATH}"`,
-          { cwd: ANALYZER_EXE_PATH },
-          (error: { toString: () => string; }) => {
-            if (error) {
-              logging.LogErrorAndShowErrorMessage(
-                error.toString(),
-                "Unable to run analyzer! " + error.toString()
-              );
-            }
-          }
-        );
-        child.stdout.pipe(process.stdout);
-        // waiting for analyzer to finish, only then read the output.
-        child.on("exit", function () {
-          // if executable has finished:
-          logging.LogInfo("Analyzer executable finished.");
-          // Get Output from analyzer:
-          let output = fakeAiFixCode.getIssuesSync();
-          logging.LogInfo(
-            "issues got from analyzer output: " + JSON.stringify(output)
+      // Get Output from analyzer:
+      let output = fakeAiFixCode.getIssuesSync();
+      logging.LogInfo("issues got from analyzer output: " + JSON.stringify(output));
+
+      // Show issues treeView:
+      // tslint:disable-next-line: no-unused-expression
+      testView = new TestView(context);
+
+      // Initialize action commands of diagnostics made after analysis:
+      initActionCommands(context);
+
+      vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "Loading Diagnostics...",
+        },
+        async () => {
+          await refreshDiagnostics(
+            vscode.window.activeTextEditor!.document,
+            analysisDiagnostics
           );
+        }
+      );
 
-          // Show issues treeView:
-          // tslint:disable-next-line: no-unused-expression
-          testView = new TestView(context);
-
-          // Initialize action commands of diagnostics made after analysis:
-          initActionCommands(context);
-
-          vscode.window.withProgress(
-            {
-              location: vscode.ProgressLocation.Notification,
-              title: "Loading Diagnostics...",
-            },
-            async () => {
-              await refreshDiagnostics(
-                vscode.window.activeTextEditor!.document,
-                analysisDiagnostics
-              );
-            }
-          );
-
-          resolve();
-          logging.LogInfoAndShowInformationMessage(
-            "===== Finished analysis. =====",
-            "Finished analysis of project!"
-          );
-          //process.exit();
-        });
-      }
+      resolve();
+      logging.LogInfoAndShowInformationMessage(
+        "===== Finished analysis. =====",
+        "Finished analysis of project!"
+      );
+      //process.exit();
     });
   }
   async function generateTestForCurrentFile() {
@@ -433,9 +384,9 @@ export function init(
   const fs = require('fs').promises;
   async function generateTestForFile(filePath: string) {
     try {
-      let pythonScriptPath = await getConfigSetting("aifix4seccode.analyzer.pythonScriptPath", "Python script path is not set in the extension settings.");
-      const testFolderPath = await getConfigSetting("aifix4seccode.analyzer.testFolderPath", "Test folder path is not set in the extension settings.");
-      const generatedPatchesPath = await getConfigSetting("aifix4seccode.analyzer.generatedPatchesPath", "Generated patches path is not set in the extension settings.");
+      let pythonScriptPath = SCRIPT_PATH;
+      const testFolderPath = TEST_FOLDER;
+      let generatedPatchesPath = PATCH_FOLDER;
       pythonScriptPath = path.join(pythonScriptPath, 'GPTTest.py');
       await vscode.window.withProgress(
         {
@@ -487,18 +438,9 @@ export function init(
     return testCode.substring(startIndex + codeBlockStart.length, endIndex).trim();
   }
 
-  async function getConfigSetting(settingKey: string, errorMessage: string): Promise<string> {
-    const settingValue = vscode.workspace.getConfiguration().get<string>(settingKey);
-    if (!settingValue) {
-      vscode.window.showErrorMessage(errorMessage);
-      throw new Error(errorMessage);
-    }
-    return settingValue;
-  }
-
   let retryCount = 0;
   async function runGeneratedTest(filePath: string) {
-    let subjectProjectPath = vscode.workspace.getConfiguration().get("aifix4seccode.analyzer.subjectProjectPath");
+    let subjectProjectPath = PROJECT_FOLDER;
     if (!subjectProjectPath) {
       vscode.window.showErrorMessage("Test folder path is not set in the extension settings.");
       return;
@@ -590,116 +532,67 @@ export function init(
 
   function startAnalyzingFileSync() {
     return new Promise<void>((resolve) => {
-      if (!ANALYZER_EXE_PATH) {
-        logging.LogErrorAndShowErrorMessage(
-          "Unable to run analyzer! Analyzer executable path is missing.",
-          "Unable to run analyzer! Analyzer executable path is missing."
-        );
-        resolve();
-      } else if (!ANALYZER_PARAMETERS) {
-        logging.LogErrorAndShowErrorMessage(
-          "Unable to run analyzer! Analyzer parameters are missing.",
-          "Unable to run analyzer! Analyzer parameters are missing."
-        );
-        resolve();
-      } else {
-        var currentFilePath = upath.normalize(
-          vscode.window.activeTextEditor!.document.uri.path
-        );
+      var currentFilePath = upath.normalize(
+        vscode.window.activeTextEditor!.document.uri.path
+      );
 
-        let issuesPath = vscode.workspace
-          .getConfiguration()
-          .get<string>("aifix4seccode.analyzer.issuesPath") ?? "";
+      let issuesPath = ISSUES_PATH;
+      let generatedPatchesPath = PATCH_FOLDER;
+      let subjectProjectPath = PROJECT_FOLDER;
 
-        let generatedPatchesPath = vscode.workspace
-          .getConfiguration()
-          .get<string>("aifix4seccode.analyzer.generatedPatchesPath") ?? "";
+      if (process.platform === "win32" && currentFilePath.startsWith("/")) {
+        currentFilePath = currentFilePath.substring(1);
+      }
+      let jsonFilePath;
 
-        let subjectProjectPath = vscode.workspace
-          .getConfiguration()
-          .get<string>("aifix4seccode.analyzer.subjectProjectPath") ?? "";
+      try {
+        const data = readFileSync(issuesPath as any, "utf8");
+        let lines = data.split("\n");
+        let currentFileName = path.basename(currentFilePath);
+        jsonFilePath = lines.find((line: any) => path.basename(line) === currentFileName + '.json');
 
-        let pythonScriptPath = vscode.workspace
-          .getConfiguration()
-          .get<string>("aifix4seccode.analyzer.pythonScriptPath") ?? "";
-
-        if (process.platform === "win32" && currentFilePath.startsWith("/")) {
-          currentFilePath = currentFilePath.substring(1);
-        }
-        let jsonFilePath;
-
-        try {
-          const data = readFileSync(issuesPath as any, "utf8");
-          let lines = data.split("\n");
-          let currentFileName = path.basename(currentFilePath);
-          jsonFilePath = lines.find((line: any) => path.basename(line) === currentFileName + '.json');
-
-          if (!jsonFilePath) {
-            logging.LogError("Relevant JSON file path not found for the current file.");
-            return;
-          }
-        } catch (err) {
-          logging.LogError("Error reading the issuesPath file");
+        if (!jsonFilePath) {
+          logging.LogError("Relevant JSON file path not found for the current file.");
           return;
         }
-
-        // run analyzer with terminal (read params and analyzer path from config):
-        logging.LogInfo("Analyzer executable started.");
-        logging.LogInfo("Running " + ANALYZER_PARAMETERS + " -cu=" + currentFilePath);
-
-        let fullPathToPythonScript = path.join(pythonScriptPath, 'aifix.py');
-        var child = cp.exec(
-          `python "${fullPathToPythonScript}" "${currentFilePath}" "${jsonFilePath}" "${generatedPatchesPath}" "${subjectProjectPath}" "${ANALYZER_PARAMETERS}" "${ANALYZER_EXE_PATH}"`,
-          { cwd: ANALYZER_EXE_PATH },
-          (error: { toString: () => string; }) => {
-            if (error) {
-              logging.LogErrorAndShowErrorMessage(
-                error.toString(),
-                "Unable to run Python script! " + error.toString()
-              );
-            }
-          }
-        );
-
-        child.stdout.pipe(process.stdout);
-        // waiting for analyzer to finish, only then read the output.
-        child.on("exit", function () {
-          // if executable has finished:
-          logging.LogInfo("Analyzer executable finished.");
-          // Get Output from analyzer:
-          let output = fakeAiFixCode.getIssuesSync(currentFilePath);
-          logging.LogInfo(
-            "issues got from analyzer output: " + JSON.stringify(output)
-          );
-
-          // Show issues treeView:
-          // tslint:disable-next-line: no-unused-expression
-          testView = new TestView(context);
-
-          // Initialize action commands of diagnostics made after analysis:
-          initActionCommands(context);
-
-          vscode.window.withProgress(
-            {
-              location: vscode.ProgressLocation.Notification,
-              title: "Loading Diagnostics...",
-            },
-            async () => {
-              await refreshDiagnostics(
-                vscode.window.activeTextEditor!.document,
-                analysisDiagnostics
-              );
-            }
-          );
-
-          resolve();
-          logging.LogInfoAndShowInformationMessage(
-            "===== Finished analysis. =====",
-            "Finished analysis of project!"
-          );
-          //process.exit();
-        });
+      } catch (err) {
+        logging.LogError("Error reading the issuesPath file");
+        return;
       }
+
+      logging.LogInfo("Analyzer executable finished.");
+      // Get Output from analyzer:
+      let output = fakeAiFixCode.getIssuesSync(currentFilePath);
+      logging.LogInfo(
+        "issues got from analyzer output: " + JSON.stringify(output)
+      );
+
+      // Show issues treeView:
+      // tslint:disable-next-line: no-unused-expression
+      testView = new TestView(context);
+
+      // Initialize action commands of diagnostics made after analysis:
+      initActionCommands(context);
+
+      vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "Loading Diagnostics...",
+        },
+        async () => {
+          await refreshDiagnostics(
+            vscode.window.activeTextEditor!.document,
+            analysisDiagnostics
+          );
+        }
+      );
+
+      resolve();
+      logging.LogInfoAndShowInformationMessage(
+        "===== Finished analysis. =====",
+        "Finished analysis of project!"
+      );
+      //process.exit();
     });
   }
 
@@ -737,7 +630,6 @@ export function init(
     var openFilePath = vscode.Uri.file(
       upath.normalize(upath.join(PROJECT_FOLDER, sourceFile))
     );
-    //var openFilePath = vscode.Uri.parse("file:///" + PROJECT_FOLDER + '/' + sourceFile); // not working on MacOS...
 
     logging.LogInfo("Running diagnosis in opened file...");
     vscode.workspace.openTextDocument(openFilePath).then((document) => {
@@ -752,13 +644,15 @@ export function init(
               vscode.window.activeTextEditor!.document,
               analysisDiagnostics
             );
-            // set selection of warning:
             await setIssueSelectionInEditor(patchPath);
-            const targetLine = await extractLineFromPatch(upath.join(PATCH_FOLDER, patchPath));
-            if (vscode.window.activeTextEditor) {
-              const position = new vscode.Position(targetLine - 1, 0);
-              vscode.window.activeTextEditor.selection = new vscode.Selection(position, position);
-              vscode.window.activeTextEditor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
+
+            const editor = vscode.window.activeTextEditor;
+            if (editor) {
+              const selection = editor.selection;
+              editor.revealRange(
+                selection,
+                vscode.TextEditorRevealType.InCenter
+              );
             }
           }
         );
@@ -796,7 +690,7 @@ export function init(
     const match = /@@ -(\d+),\d+ \+\d+,\d+ @@/.exec(patchContent);
 
     if (match && match[1]) {
-      return parseInt(match[1]) + 5;
+      return parseInt(match[1]);
     } else {
       throw new Error("Unable to extract line number from patch file.");
     }
@@ -1223,32 +1117,14 @@ export function init(
     let issuesStr = stringify(issues);
     console.log(issuesStr);
 
-    let issuesPath: string | undefined = "";
-    if (
-      vscode.workspace
-        .getConfiguration()
-        .get<string>("aifix4seccode.analyzer.issuesPath")
-    ) {
-      issuesPath = vscode.workspace
-        .getConfiguration()
-        .get<string>("aifix4seccode.analyzer.issuesPath");
-    }
+    let issuesPath = ISSUES_PATH;
     writeFileSync(issuesPath!, issuesStr, utf8Stream);
   }
 
   function saveFileAndFixesToState(filePath: string) {
     logging.LogInfo(filePath);
 
-    let issuesPath: string | undefined = "";
-    if (
-      vscode.workspace
-        .getConfiguration()
-        .get<string>("aifix4seccode.analyzer.issuesPath")
-    ) {
-      issuesPath = vscode.workspace
-        .getConfiguration()
-        .get<string>("aifix4seccode.analyzer.issuesPath");
-    }
+    let issuesPath = ISSUES_PATH;
 
     var originalFileContent = readFileSync(filePath!, "utf8");
     var originalIssuesContent = readFileSync(issuesPath!, "utf8");
@@ -1383,10 +1259,7 @@ export function init(
     if (!PROJECT_FOLDER) {
       SetProjectFolder(vscode.workspace.workspaceFolders![0].uri.path);
     }
-
-    var outputFolder = vscode.workspace
-      .getConfiguration()
-      .get<string>("aifix4seccode.analyzer.generatedPatchesPath");
+    let outputFolder = PATCH_FOLDER;
     if (!outputFolder) {
       outputFolder = vscode.workspace.workspaceFolders![0].uri.path;
     }
@@ -1420,9 +1293,7 @@ export function init(
   }
 
   function getRightContent(patchPath: string, original: string) {
-    var outputFolder = vscode.workspace
-      .getConfiguration()
-      .get<string>("aifix4seccode.analyzer.generatedPatchesPath");
+    let outputFolder = PATCH_FOLDER;
     if (!outputFolder) {
       outputFolder = vscode.workspace.workspaceFolders![0].uri.path;
     }

@@ -2,7 +2,7 @@ import { refreshDiagnostics } from './language/diagnostics';
 import { writeFileSync } from 'fs';
 import { getIssues } from './services/fakeAiFixCode';
 import { getSafeFsPath } from './path';
-import { utf8Stream, PROJECT_FOLDER, ANALYZER_USE_DIFF_MODE } from './constants';
+import { utf8Stream, PROJECT_FOLDER, ANALYZER_USE_DIFF_MODE, ISSUES_PATH } from './constants';
 import { env } from 'process';
 import { workspace, Uri, window, ProgressLocation } from 'vscode';
 import { testView } from './commands';
@@ -102,10 +102,7 @@ export function applyPatchToFile(leftPath: string, rightContent: string, patchPa
       let issuesStr = stringify(issueGroups);
       console.log(issuesStr);
 
-      let issuesPath: string | undefined = '';
-      if (workspace.getConfiguration().get<string>('aifix4seccode.analyzer.issuesPath')) {
-        issuesPath = workspace.getConfiguration().get<string>('aifix4seccode.analyzer.issuesPath');
-      }
+      let issuesPath = ISSUES_PATH;
       writeFileSync(issuesPath!, issuesStr, utf8Stream);
 
       // 3.

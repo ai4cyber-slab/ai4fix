@@ -8,7 +8,7 @@ import { getTitle, ensureDirectoryExistence } from './utils';
 import { consoleTestResultHandler } from 'tslint/lib/test';
 import { updateUserDecisions } from '../commands';
 import { getSafeFsPath } from '../path';
-import { ANALYZER_EXE_PATH, PATCH_FOLDER, PROJECT_FOLDER } from '../constants';
+import { PATCH_FOLDER, PROJECT_FOLDER } from '../constants';
 import { Guid } from './guid';
 
 var path = require('path');

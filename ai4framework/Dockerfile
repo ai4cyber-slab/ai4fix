@@ -89,10 +89,10 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY . /app
 
 # Copy the plugin into the container
-COPY aifix4seccode-vscode-1.0.38.vsix /opt/aifix4seccode-vscode-1.0.38.vsix
+COPY aifix4seccode-vscode-1.0.39.vsix /opt/aifix4seccode-vscode-1.0.39.vsix
 
 # Install the VSIX extension using code-server
-RUN code-server --install-extension /opt/aifix4seccode-vscode-1.0.38.vsix
+RUN code-server --install-extension /opt/aifix4seccode-vscode-1.0.39.vsix
 
 # Expose port 8080 for code-server
 EXPOSE 8080
