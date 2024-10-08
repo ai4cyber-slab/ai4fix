@@ -257,7 +257,7 @@ class PatchGenerator:
             while retries < max_retries:
                 try:
                     response = self.client.chat.completions.create(
-                        model="gpt-4o-mini",
+                        model=f"{self.config.get('CLASSIFIER', 'gpt_model')}",
                         messages=[
                             {"role": "system", "content": "You are a helpful assistant that can fix code issues."},
                             {"role": "user", "content": prompt}
@@ -280,4 +280,4 @@ class PatchGenerator:
                 retries += 1
                 time.sleep(2 ** retries + random.uniform(0, 1))
         except Exception as e:
-            sys.exit(0)
+            return None

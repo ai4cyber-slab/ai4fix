@@ -66,7 +66,6 @@ def signal_handler(sig, frame):
     """
     Handle termination signals (e.g., Ctrl+C) and perform cleanup.
     """
-    print("\nScript interrupted. Cleaning up...")
     kill_rg_processes()
     sys.exit(0)
 
