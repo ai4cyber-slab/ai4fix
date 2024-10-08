@@ -200,7 +200,7 @@ def main(config_file, workspace_path='.'):
         None
     """
 
-    config = read_config_properties(config_file)
+    # config = read_config_properties(config_file)
 
 
     #vscode_settings = map_config_to_vscode_settings(config)

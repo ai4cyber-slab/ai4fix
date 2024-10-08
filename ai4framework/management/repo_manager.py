@@ -21,9 +21,20 @@ class RepoManager:
             repo_path (str): The path to the local Git repository.
             commit_hash (str): The hash of the commit to work with.
         """
-        self.repo = git.Repo(repo_path, search_parent_directories=True)
         self.repo_path = repo_path
         self.commit_hash = commit_hash
+
+
+        if not os.path.exists(repo_path):
+            raise FileNotFoundError(f"The repository path '{repo_path}' does not exist.")
+
+
+        try:
+            self.repo = git.Repo(repo_path, search_parent_directories=True)
+        except git.exc.InvalidGitRepositoryError:
+            raise ValueError(f"'{repo_path}' is not a valid Git repository.")
+        except git.exc.NoSuchPathError:
+            raise ValueError(f"The path '{repo_path}' does not exist.")
 
     def checkout_commit(self):
         """
