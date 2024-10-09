@@ -123,7 +123,7 @@ class RepoManager:
             ]
             
             if absolute:
-                changed_files = [os.path.join(str(repo_path), file_path[file_path.find('src'):]) for file_path in changed_files]
+                changed_files = [os.path.join(str(repo_path), file_path[file_path.find('src'):]) for file_path in changed_files if os.path.exists(os.path.join(str(repo_path), file_path[file_path.find('src'):]))]
 
             logger.info(f"Total changed files: {len(changed_files)}")
             return changed_files
