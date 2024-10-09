@@ -4,6 +4,7 @@ from utils.logger import logger
 from management.repo_manager import RepoManager
 from .tool_runner import ToolRunner
 from .report_merger import ReportMerger
+import sys
 
 
 class SASTOrchestrator:
@@ -76,6 +77,7 @@ class SASTOrchestrator:
                 logger.info("Maven compile successful")
             else:
                 logger.error("Maven compile failed")
+                sys.exit(0)
         except Exception as e:
             logger.error(f"An error occurred during Maven compilation: {e}")
 
