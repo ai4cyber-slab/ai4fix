@@ -32,13 +32,41 @@ class PatchGenerator:
 
     def run_maven_test(self):
         """Run 'mvn test' command and return the result."""
-        result = subprocess.run(
+        with subprocess.Popen(
             ['mvn', 'test'],
             cwd=self.project_root,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True
-        )
+        ) as process:
+            stdout, stderr = process.communicate()
+            result = subprocess.CompletedProcess(args=['mvn', 'test'], returncode=process.returncode, stdout=stdout, stderr=stderr)
         return result
+    # def run_maven_test(self):
+    #     """Run 'mvn test' command and return the result."""
+    #     try:
+    #         # Use 'with' to handle the subprocess safely
+    #         with subprocess.Popen(
+    #             ['mvn', 'test'],
+    #             cwd=self.project_root,
+    #             stdout=subprocess.PIPE,
+    #             stderr=subprocess.PIPE,
+    #             text=True
+    #         ) as process:
+    #             stdout, stderr = process.communicate()
+
+    #         if process.returncode == 0:
+    #             print("Maven tests executed successfully.")
+    #         else:
+    #             print(f"Maven tests failed with return code {process.returncode}")
+    #             print(f"Error output: {stderr}")
+            
+    #         return process.returncode, stdout, stderr
+
+    #     except Exception as e:
+    #         print(f"An error occurred while running 'mvn test': {str(e)}")
+    #         return None, None, None
+
 
     def analyze_maven_output(self, result):
         """Analyze the Maven output to detect and categorize errors."""

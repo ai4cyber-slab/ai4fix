@@ -42,6 +42,47 @@ class SecurityClassifier:
         openai.api_key = os.getenv('OPENAI_API_KEY')
         self.repo_path = self.config.get("DEFAULT", "config.project_path")
 
+    # def classify(self):
+    #     """
+    #     Run the classification process.
+
+    #     This method executes the external classifier script with the appropriate arguments
+    #     and handles the output and potential errors.
+    #     """
+    #     # Check if the OpenAI API key is available
+    #     if not openai.api_key:
+    #         logger.warning("OPENAI_API_KEY is not set. Skipping the classification process.")
+    #         return  # Skip the classification process if the API key is missing
+
+    #     current_dir = os.path.dirname(os.path.abspath(__file__))
+    #     os.chdir(current_dir)
+    #     command = [
+    #         "python", "classifier.py",
+    #         "-r", self.repo_path,
+    #         "-c", self.config.get('CLASSIFIER', 'commit_sha'),
+    #         "-m", self.config.get('CLASSIFIER', 'gpt_model'),
+    #         "-t", self.config.get('CLASSIFIER', 'temperature'),
+    #         "-k", openai.api_key
+    #     ]
+    #     try:
+    #         logger.info("Classification started ...")
+    #         start_time = time.time()
+    #         result = subprocess.run(command, cwd=find_script(os.curdir), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    #         end_time = time.time()
+    #         elapsed_time = end_time - start_time
+    #         if result.returncode == 0:
+    #             logger.info("Classifier script executed successfully.")
+    #             print(result.stdout.strip())
+    #             logger.info(f"Classification completed in {elapsed_time:.2f} seconds")
+    #         else:
+    #             logger.error("Classifier script failed with return code {}".format(result.returncode))
+    #             logger.error("Error output:")
+    #             logger.error(result.stderr)
+    #             logger.error(f"Classification failed after {elapsed_time:.2f} seconds")
+    #     except Exception as e:
+    #         logger.error(f"An error occurred while running the classifier script: {e}")
+    #         logger.error(f"Classification process interrupted after {time.time() - start_time:.2f} seconds")
+
     def classify(self):
         """
         Run the classification process.
@@ -64,21 +105,30 @@ class SecurityClassifier:
             "-t", self.config.get('CLASSIFIER', 'temperature'),
             "-k", openai.api_key
         ]
+
         try:
             logger.info("Classification started ...")
             start_time = time.time()
-            result = subprocess.run(command, cwd=find_script(os.curdir), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+            # Use 'with' to ensure proper handling of subprocess resources
+            with subprocess.Popen(
+                command, cwd=find_script(os.curdir),
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            ) as process:
+                stdout, stderr = process.communicate()
+
             end_time = time.time()
             elapsed_time = end_time - start_time
-            if result.returncode == 0:
+
+            if process.returncode == 0:
                 logger.info("Classifier script executed successfully.")
-                print(result.stdout.strip())
+                print(stdout.strip())
                 logger.info(f"Classification completed in {elapsed_time:.2f} seconds")
             else:
-                logger.error("Classifier script failed with return code {}".format(result.returncode))
-                logger.error("Error output:")
-                logger.error(result.stderr)
+                logger.error(f"Classifier script failed with return code {process.returncode}")
+                logger.error(f"Error output: {stderr}")
                 logger.error(f"Classification failed after {elapsed_time:.2f} seconds")
+
         except Exception as e:
-            logger.error(f"An error occurred while running the classifier script: {e}")
+            logger.error(f"An error occurred while running the classifier script: {str(e)}")
             logger.error(f"Classification process interrupted after {time.time() - start_time:.2f} seconds")

@@ -21,8 +21,38 @@ class PMDRunner:
             config: Configuration object containing necessary settings for PMD execution.
         """
         self.config = config
-        self.report_path = self.config.get('REPORT', 'config.pmd_report_path', fallback='/app/sast/out/pmd.xml')
+        self.report_path = self.config.get('REPORT', 'config.pmd_report_path', fallback=os.path.join(os.sep, 'app','sast','out','pmd.xml'))
 
+    # def run(self, java_files):
+    #     """
+    #     Run PMD on the specified Java files.
+
+    #     Args:
+    #         java_files (list): List of Java file paths to analyze.
+
+    #     Raises:
+    #         SystemExit: If the PMD check fails.
+    #     """
+    #     report_dir = os.path.dirname(self.report_path)
+    
+    #     # Ensure the directory for the report exists
+    #     if not os.path.exists(report_dir):
+    #         os.makedirs(report_dir)
+
+    #     command = (
+    #         f"{self.config.get('DEFAULT', 'config.pmd_bin')} check "  # Path to PMD binary
+    #         f"-d {','.join(java_files)} "  # Java files with the /user_project path prepended
+    #         f"-R {self.config.get('DEFAULT', 'config.pmd_ruleset', fallback='/app/utils/PMD-config.xml')} "  # Path to PMD ruleset
+    #         f"-f xml "  # Output format
+    #         f"-r {self.report_path} "  # Output report path
+    #         "--no-fail-on-violation"
+    #     )
+
+    #     result = subprocess.run(command, cwd=self.config.get('DEFAULT', 'config.project_path'), shell=True, capture_output=True, text=True)
+        
+    #     if result.returncode != 0:
+    #         logger.error(f"PMD check failed: {result.stderr}")
+    #         sys.exit(result.returncode)
     def run(self, java_files):
         """
         Run PMD on the specified Java files.
@@ -34,13 +64,13 @@ class PMDRunner:
             SystemExit: If the PMD check fails.
         """
         report_dir = os.path.dirname(self.report_path)
-    
+        
         # Ensure the directory for the report exists
         if not os.path.exists(report_dir):
             os.makedirs(report_dir)
 
         command = (
-            f"{self.config.get('DEFAULT', 'config.pmd_bin')} check "  # Path to PMD binary
+            f"{self.config.get('DEFAULT', 'config.pmd_bin', fallback=os.path.join(os.sep, 'opt','pmd-bin-7.4.0','bin','pmd'))} check "  # Path to PMD binary with fallback
             f"-d {','.join(java_files)} "  # Java files with the /user_project path prepended
             f"-R {self.config.get('DEFAULT', 'config.pmd_ruleset', fallback='/app/utils/PMD-config.xml')} "  # Path to PMD ruleset
             f"-f xml "  # Output format
@@ -48,11 +78,21 @@ class PMDRunner:
             "--no-fail-on-violation"
         )
 
-        result = subprocess.run(command, cwd=self.config.get('DEFAULT', 'config.project_path'), shell=True, capture_output=True, text=True)
-        
-        if result.returncode != 0:
-            logger.error(f"PMD check failed: {result.stderr}")
-            sys.exit(result.returncode)
+        try:
+            # Use 'with' to safely manage the subprocess
+            with subprocess.Popen(command, cwd=self.config.get('DEFAULT', 'config.project_path'), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as process:
+                stdout, stderr = process.communicate()
+
+            if process.returncode == 0:
+                logger.info("PMD check completed successfully.")
+            else:
+                logger.error(f"PMD check failed with return code {process.returncode}: {stderr}")
+                sys.exit(process.returncode)
+
+        except Exception as e:
+            logger.error(f"An error occurred while running PMD: {str(e)}")
+            sys.exit(1)
+
 
     def get_report(self):
         """

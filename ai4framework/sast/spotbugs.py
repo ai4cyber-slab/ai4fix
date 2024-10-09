@@ -21,10 +21,30 @@ class SpotBugsRunner:
             config: Configuration object containing necessary settings for SpotBugs execution.
         """
         self.config = config
-        self.report_path = self.config.get('REPORT', 'config.spotbugs_report_path', fallback='/app/sast/out/spotbugs.xml')
+        self.report_path = self.config.get('REPORT', 'config.spotbugs_report_path', fallback=os.path.join(os.sep, 'app','sast','out','spotbugs.xml'))
         self.BASE_SRC_DIR = os.path.join('src', 'main', 'java')
         self.BASE_TEST_DIR = os.path.join('src', 'test', 'java')
 
+    # def run(self, changed_files):
+    #     """
+    #     Run SpotBugs on the specified Java files.
+
+    #     Args:
+    #         changed_files (list): List of Java file paths to analyze.
+
+    #     Raises:
+    #         SystemExit: If the SpotBugs check fails.
+    #     """
+    #     command = (
+    #         f"{self.config.get('DEFAULT', 'config.spotbugs_bin')} -textui "
+    #         f"-xml:withMessages={self.report_path} "
+    #         f"{' '.join(changed_files)}"
+    #     )
+    #     result = subprocess.run(command, cwd=self.config.get('DEFAULT', 'config.project_path'), shell=True, capture_output=True, text=True)
+
+    #     if result.returncode != 0:
+    #         logger.error(f"SpotBugs check failed: {result.stderr}")
+    #         sys.exit(result.returncode)
     def run(self, changed_files):
         """
         Run SpotBugs on the specified Java files.
@@ -35,16 +55,31 @@ class SpotBugsRunner:
         Raises:
             SystemExit: If the SpotBugs check fails.
         """
+        spotbugs_bin = self.config.get('DEFAULT', 'config.spotbugs_bin', fallback=os.path.join(os.sep, 'opt','spotbugs-4.8.6','bin','spotbugs'))
         command = (
-            f"{self.config.get('DEFAULT', 'config.spotbugs_bin')} -textui "
+            f"{spotbugs_bin} -textui "
             f"-xml:withMessages={self.report_path} "
             f"{' '.join(changed_files)}"
         )
-        result = subprocess.run(command, cwd=self.config.get('DEFAULT', 'config.project_path'), shell=True, capture_output=True, text=True)
 
-        if result.returncode != 0:
-            logger.error(f"SpotBugs check failed: {result.stderr}")
-            sys.exit(result.returncode)
+        try:
+            # Use 'with' to safely manage the subprocess
+            with subprocess.Popen(
+                command, cwd=self.config.get('DEFAULT', 'config.project_path'),
+                shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            ) as process:
+                stdout, stderr = process.communicate()
+
+            if process.returncode == 0:
+                logger.info("SpotBugs check completed successfully.")
+            else:
+                logger.error(f"SpotBugs check failed with return code {process.returncode}: {stderr}")
+                sys.exit(process.returncode)
+
+        except Exception as e:
+            logger.error(f"An error occurred while running SpotBugs: {str(e)}")
+            sys.exit(1)
+
 
     def get_report(self):
         """

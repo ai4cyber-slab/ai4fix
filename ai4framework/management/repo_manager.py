@@ -131,6 +131,24 @@ class RepoManager:
             logger.error(f"An error occurred: {str(e)}")
             return []
 
+    # def get_parent_commit(self):
+    #     """
+    #     Get the parent commit of the specified commit.
+
+    #     Returns:
+    #         str: The hash of the parent commit, or None if retrieval fails.
+    #     """
+    #     try:
+    #         os.chdir(self.repo.working_tree_dir)
+    #         git_command = f'git log --pretty=%P -n 1 {self.commit_hash}'
+    #         result = subprocess.run(git_command, shell=True, stdout=subprocess.PIPE, text=True)
+    #         parent_commit = result.stdout.strip().split()[0]
+    #         logger.info(f"Successfully retrieved the parent commit: {parent_commit}")
+    #         return parent_commit
+    #     except Exception as e:
+    #         logger.error(f"Failed to retrieve parent commit: {e}")
+    #         return None
+
     def get_parent_commit(self):
         """
         Get the parent commit of the specified commit.
@@ -139,14 +157,27 @@ class RepoManager:
             str: The hash of the parent commit, or None if retrieval fails.
         """
         try:
+            # Change to the repository's working directory
             os.chdir(self.repo.working_tree_dir)
-            git_command = f'git log --pretty=%P -n 1 {self.commit_hash}'
-            result = subprocess.run(git_command, shell=True, stdout=subprocess.PIPE, text=True)
-            parent_commit = result.stdout.strip().split()[0]
-            logger.info(f"Successfully retrieved the parent commit: {parent_commit}")
-            return parent_commit
+
+            # Git command to retrieve the parent commit
+            git_command = ['git', 'log', '--pretty=%P', '-n', '1', self.commit_hash]
+
+            # Use 'with' to handle the subprocess safely
+            with subprocess.Popen(git_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as process:
+                stdout, stderr = process.communicate()
+
+            if process.returncode == 0:
+                parent_commit = stdout.strip().split()[0]
+                logger.info(f"Successfully retrieved the parent commit: {parent_commit}")
+                return parent_commit
+            else:
+                logger.error(f"Failed to retrieve parent commit. Git command returned error code {process.returncode}")
+                logger.error(f"Error output: {stderr}")
+                return None
+
         except Exception as e:
-            logger.error(f"Failed to retrieve parent commit: {e}")
+            logger.error(f"An error occurred while retrieving the parent commit: {str(e)}")
             return None
 
     @classmethod

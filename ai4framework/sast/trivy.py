@@ -23,6 +23,26 @@ class TrivyRunner:
         self.config = config
         self.report_path = self.config.get('REPORT', 'config.trivy_report_path', fallback='/app/sast/out/trivy.json')
 
+    # def run(self):
+    #     """
+    #     Execute a Trivy filesystem scan on the specified project path.
+
+    #     This method constructs the Trivy command using configuration settings,
+    #     runs the scan, and saves the output to a JSON file. If the scan fails,
+    #     it logs an error and exits the program.
+    #     """
+    #     command = (
+    #         f"{self.config.get('DEFAULT', 'config.trivy_bin')} fs "
+    #         f"{self.config.get('DEFAULT', 'config.project_path')} "
+    #         f"--format json "
+    #         f"-o {self.report_path}"
+    #     )     
+
+    #     result = subprocess.run(command, shell=True, capture_output=True, text=True)
+
+    #     if result.returncode != 0:
+    #         logger.error(f"Trivy scan failed: {result.stderr}")
+    #         sys.exit(result.returncode)
     def run(self):
         """
         Execute a Trivy filesystem scan on the specified project path.
@@ -32,17 +52,29 @@ class TrivyRunner:
         it logs an error and exits the program.
         """
         command = (
-            f"{self.config.get('DEFAULT', 'config.trivy_bin')} fs "
+            f"{self.config.get('DEFAULT', 'config.trivy_bin', fallback=os.path.join(os.sep, 'usr','bin','trivy'))} fs "
             f"{self.config.get('DEFAULT', 'config.project_path')} "
             f"--format json "
-            f"-o {self.report_path}"
-        )     
+            f"-o {self.config.get('REPORT', 'config.trivy_report_path', fallback=os.path.join(os.sep, 'app','sast','out','trivy.json'))}"
+        )
 
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+        try:
+            # Use 'with' to safely manage the subprocess
+            with subprocess.Popen(
+                command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            ) as process:
+                stdout, stderr = process.communicate()
 
-        if result.returncode != 0:
-            logger.error(f"Trivy scan failed: {result.stderr}")
-            sys.exit(result.returncode)
+            if process.returncode == 0:
+                logger.info("Trivy scan completed successfully.")
+            else:
+                logger.error(f"Trivy scan failed with return code {process.returncode}: {stderr}")
+                sys.exit(process.returncode)
+
+        except Exception as e:
+            logger.error(f"An error occurred while running the Trivy scan: {str(e)}")
+            sys.exit(1)
+
 
     def get_report(self):
         """

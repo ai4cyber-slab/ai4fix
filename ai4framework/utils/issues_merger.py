@@ -20,8 +20,14 @@ class JSONCombiner:
 
     def combine_json_files(self):
         """Combines two JSON files based on the configured paths."""
-        data1 = self.load_json(self.sast_issues_path)
-        data2 = self.load_json(self.ai4vuln_issues_path)
+        if os.path.exists(self.sast_issues_path):
+            data1 = self.load_json(self.sast_issues_path)
+        else:
+            data1 = []
+        if os.path.exists(self.ai4vuln_issues_path):
+            data2 = self.load_json(self.ai4vuln_issues_path)
+        else:
+            data2 = []
         combined_data = data1 + data2
         return combined_data
 

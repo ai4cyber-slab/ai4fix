@@ -57,6 +57,29 @@ class SASTOrchestrator:
             # self.repo_manager.revert_checkout()
             pass
 
+    # def run_maven_compile(self):
+    #     """
+    #     Run Maven compile command for the project.
+
+    #     This method attempts to compile the project using Maven,
+    #     skipping tests to focus on compilation only.
+    #     """
+    #     try:
+    #         # ["mvn", "compile", "-DskipTests"],
+    #         logger.info("Maven compilation started...")
+    #         # print(self.repo_manager.repo.working_dir)
+    #         result = subprocess.run(
+    #             ['mvn', 'compile', '-Dmaven.compiler.incremental=true', '-DskipTests'],
+    #             cwd=self.projet_path,
+    #             text=True
+    #         )
+    #         if result.returncode == 0:
+    #             logger.info("Maven compile successful")
+    #         else:
+    #             logger.error("Maven compile failed")
+    #             sys.exit(0)
+    #     except Exception as e:
+    #         logger.error(f"An error occurred during Maven compilation: {e}")
     def run_maven_compile(self):
         """
         Run Maven compile command for the project.
@@ -65,21 +88,29 @@ class SASTOrchestrator:
         skipping tests to focus on compilation only.
         """
         try:
-            # ["mvn", "compile", "-DskipTests"],
             logger.info("Maven compilation started...")
-            # print(self.repo_manager.repo.working_dir)
-            result = subprocess.run(
+
+            # Use 'with' to safely manage the subprocess
+            with subprocess.Popen(
                 ['mvn', 'compile', '-Dmaven.compiler.incremental=true', '-DskipTests'],
                 cwd=self.projet_path,
-                text=True
-            )
-            if result.returncode == 0:
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
+            ) as process:
+                # Read and log stdout in real-time
+                for line in process.stdout:
+                    print(line.strip())  # Log each line of output as it's printed
+                process.wait()  # Wait for the process to finish
+
+            if process.returncode == 0:
                 logger.info("Maven compile successful")
             else:
-                logger.error("Maven compile failed")
-                sys.exit(0)
+                logger.error(f"Maven compile failed with return code {process.returncode}")
+                sys.exit(process.returncode)
+
         except Exception as e:
-            logger.error(f"An error occurred during Maven compilation: {e}")
+            logger.error(f"An error occurred during Maven compilation: {str(e)}")
+            sys.exit(1)
+
 
 
 # Helper functions

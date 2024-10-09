@@ -100,20 +100,46 @@ class PomModifier:
         version_elem = ET.SubElement(dependency, 'version')
         version_elem.text = version
 
+    # def run_maven_dependency_resolve(self):
+    #     # Run 'mvn dependency:resolve' command
+    #     result = subprocess.run(
+    #         [r'mvn', 'dependency:resolve'],
+    #         cwd=self.project_root,
+    #         capture_output=True,
+    #         text=True
+    #     )
+    #     # If any error occurs, restore the pom.xml to its initial content
+    #     if result.returncode != 0:
+    #         print(f"Error occurred during 'mvn dependency:resolve' with exit code {result.returncode}.")
+    #         self.restore_pom()  # Restore from backup if it fails
+    #     else:
+    #         print("Maven dependency resolution successful.")
+    import subprocess
+
     def run_maven_dependency_resolve(self):
-        # Run 'mvn dependency:resolve' command
-        result = subprocess.run(
-            [r'mvn', 'dependency:resolve'],
-            cwd=self.project_root,
-            capture_output=True,
-            text=True
-        )
-        # If any error occurs, restore the pom.xml to its initial content
-        if result.returncode != 0:
-            print(f"Error occurred during 'mvn dependency:resolve' with exit code {result.returncode}.")
-            self.restore_pom()  # Restore from backup if it fails
-        else:
-            print("Maven dependency resolution successful.")
+        try:
+            # Run 'mvn dependency:resolve' command using 'with' to capture output safely
+            with subprocess.Popen(
+                [r'mvn', 'dependency:resolve'],
+                cwd=self.project_root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            ) as process:
+                stdout, stderr = process.communicate()
+
+            if process.returncode != 0:
+                print(f"Error occurred during 'mvn dependency:resolve' with exit code {process.returncode}.")
+                print(f"Error message: {stderr}")
+                self.restore_pom()  # Restore from backup if it fails
+            else:
+                print("Maven dependency resolution successful.")
+                print(stdout)
+
+        except subprocess.SubprocessError as e:
+            print(f"An exception occurred while running 'mvn dependency:resolve': {str(e)}")
+            self.restore_pom()  # Restore from backup in case of an exception
+
     
 
     def main(project_root):

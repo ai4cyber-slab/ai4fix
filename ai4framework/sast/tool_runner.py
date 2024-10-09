@@ -47,6 +47,8 @@ class ToolRunner:
                 runner_method()
             elapsed_time = time.time() - start_time
             logger.info(f"{tool_name} completed successfully in {elapsed_time:.2f} seconds.")
+        except KeyboardInterrupt as k:
+            logger.warning("program interrupted, shutting down...")
         except Exception as e:
             elapsed_time = time.time() - start_time
             logger.error(f"Failed to run {tool_name} after {elapsed_time:.2f} seconds: {e}")

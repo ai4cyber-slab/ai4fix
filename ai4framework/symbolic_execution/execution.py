@@ -2,6 +2,8 @@ from symbolic_execution.analyzer import Analyzer
 from symbolic_execution.json_processor import JSONProcessor
 from utils.logger import logger
 import os
+import subprocess
+import re
 
 class SymbolicExecution:
     """
@@ -22,7 +24,7 @@ class SymbolicExecution:
         self.project_name = self.config.get("DEFAULT", "config.project_name")
         self.project_path = self.config.get("DEFAULT", "config.project_path")
         self.results_path = self.config.get("ANALYZER", "config.analyzer_results_path")
-        self.analyzer_path = self.config.get("ANALYZER", "config.analyzer")
+        self.analyzer_path = self.config.get("ANALYZER", "config.analyzer", fallback=os.path.join(os.sep, 'opt','AI4VULN','Java','AnalyzerJava'))
     
     def analyze(self):
         """
@@ -38,6 +40,15 @@ class SymbolicExecution:
         Note: This method doesn't return a value, as its purpose is to execute
         the analysis process and log the results.
         """
+        with subprocess.Popen(["java", "-version"], stderr=subprocess.PIPE, stdout=subprocess.PIPE, text=True) as process:
+            java_version = process.communicate()[1]  # Capture the stderr output where the version info is
+            pattern = r'version "(\d+\.\d+\.\d+)"'
+            match = re.search(pattern, java_version)
+            if match:
+                version = match.group(1)
+                if not "11." in version:
+                    logger.warning("Java version over 11 detected. Skipping Symbolic execution analysis.")
+                    return
         analyzer = Analyzer(self.analyzer_path, self.project_name, self.project_path, self.results_path)
         logger.info("Symbolic Execution Started ...")
         json_file = analyzer.run_analysis()
