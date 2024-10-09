@@ -7,7 +7,8 @@ class JSONCombiner:
         self.config = config
         self.project_path = self.config.get("DEFAULT", "config.project_path")
         self.project_name = self.config.get("DEFAULT", "config.project_name")
-        self.sast_issues_path = os.path.join(self.project_path, 'sast_issues.json')
+        # self.sast_issues_path = os.path.join(self.project_path, 'sast_issues.json')
+        self.sast_issues_path = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.config.get("ISSUES", "config.issues_path").replace("issues.json", "sast_issues.json")))
         self.results_path = self.config.get("ANALYZER", "config.analyzer_results_path")
         self.combined_output_path = self.config.get('ISSUES', 'config.issues_path')
         self.ai4vuln_issues_path = os.path.join(self.results_path, self.project_name, 'java', 'now', 'ai4vuln_issues.json')

@@ -120,6 +120,7 @@ class PatchGenerator:
             - Do not alter comments, whitespace, or formatting.
             - Provide the complete updated code.
             """
+            os.makedirs(self.diffs_output_dir, exist_ok=True)
             response = self.call_openai_with_retries(prompt)
 
             if response is None:
@@ -148,7 +149,7 @@ class PatchGenerator:
             result = self.run_maven_test()
 
             error_detected, _, _ = self.analyze_maven_output(result)
-            os.makedirs(self.diffs_output_dir, exist_ok=True)
+            # os.makedirs(self.diffs_output_dir, exist_ok=True)
 
             if not error_detected:
                 logger.info(f"Maven tests passed.")
