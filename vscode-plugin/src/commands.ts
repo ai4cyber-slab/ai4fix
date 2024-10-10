@@ -508,7 +508,6 @@ export function init(
           const generatedTestFilePath = await generateAndSaveTest(filePath, pythonScriptPath, testFolderPath, generatedPatchesPath);
           vscode.window.showInformationMessage(`Test and log files created: ${generatedTestFilePath}`);
           vscode.window.showInformationMessage(`Test file created and TestFileLog added: ${generatedTestFilePath}`);
-          vscode.window.showInformationMessage(`Test and log files created: ${generatedTestFilePath}`);
           logging.LogInfo("Test generated successfully.");
           runGeneratedTest(filePath);
         }

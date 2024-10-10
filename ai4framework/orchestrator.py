@@ -52,16 +52,6 @@ def kill_rg_processes():
     Function to kill any lingering 'rg' (ripgrep) processes and print their names.
     """
     try:
-<<<<<<< HEAD
-        with subprocess.Popen("ps aux | grep rg | grep -v grep | awk '{print $2, $11}'", shell=True, stdout=subprocess.PIPE, text=True) as process:
-            result = process.communicate()[0]
-            processes = result.strip().split('\n')
-
-            for process in processes:
-                if process:
-                    pid, name = process.split(' ', 1)
-                    os.kill(int(pid), 9)
-=======
         result = subprocess.check_output("ps aux | grep rg | grep -v grep | awk '{print $2, $11}'", shell=True)
         processes = result.decode('utf-8').strip().split('\n')
 
@@ -69,7 +59,6 @@ def kill_rg_processes():
             if process:
                 pid, name = process.split(' ', 1)
                 os.kill(int(pid), 9)
->>>>>>> 90b8edd (test modification in plugin and patch generation exception handelling)
 
     except Exception as e:
         print(f"Error killing processes: {e}")
@@ -79,36 +68,12 @@ def signal_handler(sig, frame):
     """
     Handle termination signals (e.g., Ctrl+C) and perform cleanup.
     """
-<<<<<<< HEAD
-=======
     print("\nScript interrupted. Cleaning up...")
->>>>>>> 90b8edd (test modification in plugin and patch generation exception handelling)
     kill_rg_processes()
     sys.exit(0)
 
 
 if __name__ == "__main__":
-<<<<<<< HEAD
-    try:
-        with subprocess.Popen(['java', '-version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as process:
-            stderr_output = process.communicate()[1]
-            pattern = r'version "(\d+\.\d+\.\d+)"'
-            match = re.search(pattern, stderr_output)
-
-            if match:
-                version = match.group(1)
-                if not "11." in version:
-                    logger.warning("Java 11 should be used. Exiting.")
-                    sys.exit(0)
-            else:
-                logger.error("Unable to detect Java version.")
-                sys.exit(1)
-
-    except Exception as e:
-        logger.error(f"An error occurred while checking Java version: {e}")
-        sys.exit(1)
-=======
->>>>>>> 90b8edd (test modification in plugin and patch generation exception handelling)
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
