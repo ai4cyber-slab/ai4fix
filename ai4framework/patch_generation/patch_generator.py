@@ -42,6 +42,7 @@ class PatchGenerator:
             stdout, stderr = process.communicate()
             result = subprocess.CompletedProcess(args=['mvn', 'test'], returncode=process.returncode, stdout=stdout, stderr=stderr)
         return result
+<<<<<<< HEAD
     # def run_maven_test(self):
     #     """Run 'mvn test' command and return the result."""
     #     try:
@@ -67,6 +68,8 @@ class PatchGenerator:
     #         print(f"An error occurred while running 'mvn test': {str(e)}")
     #         return None, None, None
 
+=======
+>>>>>>> 90b8edd (test modification in plugin and patch generation exception handelling)
 
     def analyze_maven_output(self, result):
         """Analyze the Maven output to detect and categorize errors."""
@@ -148,7 +151,10 @@ class PatchGenerator:
             - Do not alter comments, whitespace, or formatting.
             - Provide the complete updated code.
             """
+<<<<<<< HEAD
             os.makedirs(self.diffs_output_dir, exist_ok=True)
+=======
+>>>>>>> 90b8edd (test modification in plugin and patch generation exception handelling)
             response = self.call_openai_with_retries(prompt)
 
             if response is None:
@@ -177,7 +183,11 @@ class PatchGenerator:
             result = self.run_maven_test()
 
             error_detected, _, _ = self.analyze_maven_output(result)
+<<<<<<< HEAD
             # os.makedirs(self.diffs_output_dir, exist_ok=True)
+=======
+            os.makedirs(self.diffs_output_dir, exist_ok=True)
+>>>>>>> 90b8edd (test modification in plugin and patch generation exception handelling)
 
             if not error_detected:
                 logger.info(f"Maven tests passed.")
@@ -286,7 +296,11 @@ class PatchGenerator:
             while retries < max_retries:
                 try:
                     response = self.client.chat.completions.create(
+<<<<<<< HEAD
                         model=f"{self.config.get('CLASSIFIER', 'gpt_model')}",
+=======
+                        model="gpt-4o-mini",
+>>>>>>> 90b8edd (test modification in plugin and patch generation exception handelling)
                         messages=[
                             {"role": "system", "content": "You are a helpful assistant that can fix code issues."},
                             {"role": "user", "content": prompt}
@@ -309,4 +323,8 @@ class PatchGenerator:
                 retries += 1
                 time.sleep(2 ** retries + random.uniform(0, 1))
         except Exception as e:
+<<<<<<< HEAD
             return None
+=======
+            sys.exit(0)
+>>>>>>> 90b8edd (test modification in plugin and patch generation exception handelling)
