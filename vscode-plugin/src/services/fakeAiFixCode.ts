@@ -26,6 +26,57 @@ export async function getIssues() {
   return issuesJson;
 }
 
+export async function getIssues2() {
+  const issuesJson = {} as any;
+
+  // Read the ISSUES_PATH file to get the list of JSON file paths
+  const jsonListContent = readFileSync(ISSUES_PATH, "utf8");
+  
+  const jsonFilePaths = jsonListContent
+    .trim()
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+
+  for (const jsonFilePath of jsonFilePaths) {
+    // Resolve relative paths based on the directory of ISSUES_PATH
+    const absoluteJsonFilePath = path.isAbsolute(jsonFilePath)
+      ? jsonFilePath
+      : path.resolve(path.dirname(ISSUES_PATH), jsonFilePath);
+
+    // Read and parse the JSON file
+    const jsonContent = readFileSync(absoluteJsonFilePath, "utf8");
+    const issuesInFile = JSON.parse(jsonContent);
+
+    // Extract the Java file name from the JSON file name or from the data
+    const javaFileName = upath.basename(absoluteJsonFilePath, '.json');
+
+    // Iterate over issue categories in the JSON file
+    for (const issueCategory of issuesInFile) {
+      const issueType = issueCategory.name;
+      const issueItems = issueCategory.items;
+
+      issueItems.forEach((issueItem: any) => {
+        issueItem.JavaFileName = javaFileName;
+        issueItem.name = issueType;
+
+        if (!issueItem.explanation && issueItem.patches && issueItem.patches.length > 0) {
+          issueItem.explanation = issueItem.patches[0].explanation;
+        }
+      });
+
+      // Accumulate issues by type
+      if (!issuesJson[issueType]) {
+        issuesJson[issueType] = [];
+      }
+      issuesJson[issueType].push(...issueItems);
+    }
+  }
+
+  return issuesJson;
+}
+
+
 export function getIssuesSync(currentFilePath = "") {
   let issuesPath = ISSUES_PATH;
   let fileContent: string;

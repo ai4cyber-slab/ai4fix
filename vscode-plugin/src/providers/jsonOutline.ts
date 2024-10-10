@@ -4,6 +4,7 @@ import * as path from 'path';
 import { refreshDiagnostics } from "../language/diagnostics";
 import { analysisDiagnostics } from "../extension";
 import { ANALYZER_USE_DIFF_MODE } from "../constants";
+import { TestView } from "../providers/testView";
 
 export class JsonOutlineProvider implements vscode.TreeDataProvider<number> {
 
@@ -26,7 +27,7 @@ export class JsonOutlineProvider implements vscode.TreeDataProvider<number> {
     vscode.workspace.onDidChangeConfiguration(() => {
       this.autoRefresh = vscode.workspace.getConfiguration('aifix4seccode-vscode_jsonOutline').get('autorefresh');
     });
-    this.onActiveEditorChanged();
+    //this.onActiveEditorChanged();
   }
 
   refresh(offset?: number): void {

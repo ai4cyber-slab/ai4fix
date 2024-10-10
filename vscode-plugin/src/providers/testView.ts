@@ -203,13 +203,26 @@ function getTreeItem(key: string): vscode.TreeItem {
           key.length > 1 ? [[key.length - 2, key.length - 1]] : void 0,
       };
     }
+
+    let commandArguments: any;
+    if (treeElement.patches && treeElement.patches.length > 0) {
+      // When patches are available, pass the patch path
+      commandArguments = [treeElement.patches[0].path];
+    } else {
+      // When patches are empty, pass the issue data
+      commandArguments = [{
+        sourceFile: treeElement.sourceFile,
+        textRange: treeElement.textRange
+      }];
+    }
+
     return {
       label: itemLabel,
       tooltip,
       command: {
-        title: "Open patch",
+        title: "Open issue",
         command: "aifix4seccode-vscode.openUpFile",
-        arguments: [treeElement.path],
+        arguments: commandArguments,
       },
       collapsibleState: vscode.TreeItemCollapsibleState.None,
       iconPath: {
@@ -238,6 +251,7 @@ function getTreeItem(key: string): vscode.TreeItem {
   }
 }
 
+
 function getTreeElement(element: any) {
   if (!isNaN(element)) {
     return undefined;
@@ -246,8 +260,17 @@ function getTreeElement(element: any) {
   parent = parent[element];
   if (!parent) {
     //
-    let issues: any = Object.values(tree);
-    return issues[Object.keys(tree).indexOf(element.split('-')[0])][element.split('#')[1] - 1].patches[0];
+    let issuesArray: any = Object.values(tree);
+    let issueIndex = Object.keys(tree).indexOf(element.split('-')[0]);
+    let issueItem = issuesArray[issueIndex][element.split('#')[1] - 1];
+
+    // Add sourceFile information extracted from the JSON file name or other means
+    let sourceFileName = issueItem["JavaFileName"];
+
+    return {
+      ...issueItem,
+      sourceFile: sourceFileName
+    };
   }
   return parent;
 }

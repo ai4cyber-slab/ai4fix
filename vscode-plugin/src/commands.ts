@@ -41,6 +41,7 @@ import { basename, dirname } from "path";
 import { applyPatchToFile } from "./patch";
 import { getSafeFsPath } from "./path";
 import { initActionCommands } from "./language/codeActions";
+import * as child_process from 'child_process';
 
 import * as cp from "child_process";
 
@@ -58,8 +59,13 @@ export let testView: TestView;
 
 let issues: any;
 
+let issueGroups = {};
+
 async function initIssues() {
   issues = await fakeAiFixCode.getIssues();
+  if (Object.keys(issueGroups).length === 0) {
+    issueGroups = await fakeAiFixCode.getIssues2();
+  }
 }
 
 export async function updateUserDecisions(
@@ -211,6 +217,7 @@ export function init(
 
   async function getOutputFromAnalyzer() {
     logging.LogInfo("===== Analysis started from command. =====");
+
     vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
@@ -218,9 +225,112 @@ export function init(
         cancellable: false,
       },
       async () => {
-        return startAnalyzingProjectSync();
+        return runOrchestratorScript();
       }
     );
+  }
+
+  function runOrchestratorScript() {
+    let issuesPath = ISSUES_PATH;
+    try {
+      writeFileSync(issuesPath, "", "utf8");
+      logging.LogInfo(`Cleared content of the file at ${issuesPath}`);
+    } catch (error) {
+      logging.LogErrorAndShowErrorMessage(`Failed to clear content of the file at ${issuesPath}:`, error as any);
+    }
+    let generatedPatchesPath = PATCH_FOLDER;
+    let subjectProjectPath = PROJECT_FOLDER;
+    let jsonFilePaths: string[] = [];
+
+    return new Promise<void>((resolve, reject) => {
+      const scriptPath = upath.normalize(upath.join(SCRIPT_PATH, 'orchestrator.py'));
+  
+      const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
+      const command = `${pythonCommand} "${scriptPath}"`;
+  
+      const options: child_process.ExecOptions = {
+        cwd: PROJECT_FOLDER,
+        shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/sh',
+      };
+  
+      logging.LogInfo(`Running orchestrator in: ${PROJECT_FOLDER}`);
+  
+      // Execute the command
+      const childProc = child_process.exec(command, options, (error, stdout, stderr) => {
+        if (error) {
+          logging.LogErrorAndShowErrorMessage("Error running orchestrator.py", error.message);
+          reject(error);
+          return;
+        }
+  
+        if (stderr) {
+          logging.LogError(`orchestrator.py stderr: ${stderr}`);
+        }
+  
+        logging.LogInfo(`orchestrator.py output: ${stdout}`);
+        resolve();
+      });
+  
+      childProc.stdout?.on('data', (data) => {
+        logging.LogInfo(`orchestrator.py: ${data}`);
+      });
+  
+      childProc.stderr?.on('data', (data) => {
+        logging.LogError(`orchestrator.py error: ${data}`);
+      });
+    })
+      .then(() => {
+    var currentFilePath = upath.normalize(vscode.window.activeTextEditor!.document.uri.path);
+    if (process.platform === "win32" && currentFilePath.startsWith("/")) {
+      currentFilePath = currentFilePath.substring(1);
+    }
+
+    try {
+      const data = readFileSync(issuesPath, "utf8");
+      let lines = data.split("\n");
+
+      jsonFilePaths = lines.filter((line: string) => line.trim().endsWith('.json'));
+
+      if (jsonFilePaths.length === 0) {
+        logging.LogError("No JSON file paths found in the issuesPath file.");
+        return;
+      }
+    } catch (err) {
+      logging.LogError("Error reading the issuesPath file: " + err);
+      return;
+    }
+
+    return new Promise<void>((resolve) => {
+      // Get Output from analyzer:
+      let output = fakeAiFixCode.getIssuesSync();
+      logging.LogInfo("issues got from analyzer output: " + JSON.stringify(output));
+
+      // Show issues treeView:
+      testView = new TestView(context);
+
+      // Initialize action commands of diagnostics made after analysis:
+      initActionCommands(context);
+
+      vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "Loading Diagnostics...",
+        },
+        async () => {
+          await refreshDiagnostics(vscode.window.activeTextEditor!.document, analysisDiagnostics);
+        }
+      );
+
+      resolve();
+      logging.LogInfoAndShowInformationMessage(
+        "===== Finished analysis. =====",
+        "Finished analysis of project!"
+      );
+    });
+    })
+     .catch((err) => {
+      logging.LogError(`Error during analysis: ${err}`);
+    });
   }
 
   async function getOutputFromAnalyzerOfAFile() {
@@ -397,6 +507,7 @@ export function init(
         async () => {
           const generatedTestFilePath = await generateAndSaveTest(filePath, pythonScriptPath, testFolderPath, generatedPatchesPath);
           vscode.window.showInformationMessage(`Test and log files created: ${generatedTestFilePath}`);
+          vscode.window.showInformationMessage(`Test file created and TestFileLog added: ${generatedTestFilePath}`);
           logging.LogInfo("Test generated successfully.");
           runGeneratedTest(filePath);
         }
@@ -597,7 +708,7 @@ export function init(
     });
   }
 
-  async function openUpFile(patchPath: string) {
+  async function openUpFile(patchPathOrIssue: string | any) {
     logging.LogInfo("===== Executing openUpFile command. =====");
 
     let project_folder = PROJECT_FOLDER;
@@ -606,84 +717,163 @@ export function init(
       SetProjectFolder(vscode.workspace.workspaceFolders![0].uri.path);
     }
 
-    var patch = "";
+    let sourceFile: string;
+    let textRange: any;
     try {
-      logging.LogInfo("Reading patch from " + PATCH_FOLDER + "/" + patchPath);
-      patch = readFileSync(upath.join(PATCH_FOLDER, patchPath), "utf8");
-    } catch (err) {
-      logging.LogErrorAndShowErrorMessage(
-        String(err),
-        "Unable to read in patch file: " + err
-      );
-    }
+      if (typeof patchPathOrIssue === 'string') {
+        // Existing logic for when patchPath is provided
+        const patchPath = patchPathOrIssue;
+        let patch = "";
+        try {
+          logging.LogInfo("Reading patch from " + PATCH_FOLDER + "/" + patchPath);
+          patch = readFileSync(upath.join(PATCH_FOLDER, patchPath), "utf8");
+        } catch (err) {
+          logging.LogErrorAndShowErrorMessage(
+            String(err),
+            "Unable to read in patch file: " + err
+          );
+        }
 
-    var sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patch);
-    var sourceFile: string;
-    if (sourceFileMatch && sourceFileMatch[1]) {
-      sourceFile = sourceFileMatch[1];
-    } else {
-      logging.LogErrorAndShowErrorMessage(
-        "Unable to find source file in '" + patchPath + "'",
-        "Unable to find source file in '" + patchPath + "'"
-      );
-      throw Error("Unable to find source file in '" + patchPath + "'");
-    }
-    var openFilePath = vscode.Uri.file(
-      upath.normalize(upath.join(PROJECT_FOLDER, sourceFile))
-    );
+        const sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patch);
+        if (sourceFileMatch && sourceFileMatch[1]) {
+          sourceFile = sourceFileMatch[1];
+        } else {
+          logging.LogErrorAndShowErrorMessage(
+            "Unable to find source file in '" + patchPath + "'",
+            "Unable to find source file in '" + patchPath + "'"
+          );
+          throw Error("Unable to find source file in '" + patchPath + "'");
+        }
 
-    logging.LogInfo("Running diagnosis in opened file...");
-    vscode.workspace.openTextDocument(openFilePath).then((document) => {
-      vscode.window.showTextDocument(document).then(async () => {
-        vscode.window.withProgress(
-          {
-            location: vscode.ProgressLocation.Notification,
-            title: "Loading Diagnostics...",
-          },
-          async () => {
-            await refreshDiagnostics(
-              vscode.window.activeTextEditor!.document,
-              analysisDiagnostics
-            );
-            await setIssueSelectionInEditor(patchPath);
+        // Fetch textRange using setIssueSelectionInEditor
+        await setIssueSelectionInEditor(patchPath);
+      } else {
+        // New logic for when issue data is provided directly
+        const issueData = patchPathOrIssue;
+        sourceFile = issueData.sourceFile;
+        textRange = issueData.textRange;
+      }
 
-            const editor = vscode.window.activeTextEditor;
-            if (editor) {
-              const selection = editor.selection;
-              editor.revealRange(
-                selection,
-                vscode.TextEditorRevealType.InCenter
-              );
-            }
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "Loading and opening file...",
+          cancellable: false,
+        },
+        async (progress) => {
+          progress.report({ message: "Searching for the source file..." });
+
+          // Find the full path to the source file
+          const sourceFilePath = await findFileInProject(sourceFile);
+          progress.report({ message: `path: '${sourceFilePath}'.` });
+
+          if (!sourceFilePath) {
+            const errorMessage = `Source file '${sourceFile}' not found in project.`;
+            logging.LogErrorAndShowErrorMessage(errorMessage, errorMessage);
+            throw new Error(errorMessage);
           }
-        );
-      });
-    });
+
+          progress.report({ message: "Opening the source file..." });
+          const openFilePath = vscode.Uri.file(sourceFilePath);
+          logging.LogInfo(`Matched source file path: ${openFilePath.fsPath}`);
+
+          const document = await vscode.workspace.openTextDocument(openFilePath);
+          await vscode.window.showTextDocument(document);
+
+          progress.report({ message: "Running diagnostics..." });
+          await refreshDiagnostics(document, analysisDiagnostics);
+
+          if (textRange) {
+            progress.report({ message: "Highlighting the issue..." });
+            await highlightIssueInEditor(textRange);
+          }
+
+          logging.LogInfo("Diagnostics and highlighting completed.");
+          progress.report({ message: "Finished." });
+        }
+      );
+    } catch (error) {
+      // Display the error using a progress notification as well.
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "Error during file operation",
+          cancellable: false,
+        },
+        async (progress) => {
+          progress.report({ message: `Error: ${error}` });
+          logging.LogErrorAndShowErrorMessage(
+            `Unexpected error in openUpFile: ${error}`,
+            "An unexpected error occurred while trying to open the file."
+          );
+        }
+      );
+    }
+
     logging.LogInfo("===== Finished openUpFile command. =====");
   }
 
-  async function setIssueSelectionInEditor(patchPath: string) {
+
+  async function findFileInProject(fileName: string): Promise<string | null> {
+    const projectFolder = PROJECT_FOLDER;
+
+    if (!projectFolder) {
+      logging.LogErrorAndShowErrorMessage(
+        'Project folder is not set.',
+        'Project folder is not set.'
+      );
+      return null;
+    }
+
+    const searchPattern = new vscode.RelativePattern(projectFolder, `**/${fileName}`);
+    const excludePattern = new vscode.RelativePattern(projectFolder, '**/node_modules/**');
+
+    const files = await vscode.workspace.findFiles(searchPattern, excludePattern);
+
+    if (files.length > 0) {
+      return files[0].fsPath;
+    } else {
+      return null;
+    }
+  }
+
+  async function highlightIssueInEditor(textRange: any) {
+    const editor = vscode.window.activeTextEditor;
+    if (editor) {
+      const newSelection = new vscode.Selection(
+        textRange["startLine"] - 1,
+        textRange["startColumn"],
+        textRange["endLine"] - 1,
+        textRange["endColumn"]
+      );
+      editor.selection = newSelection;
+      editor.revealRange(
+        newSelection,
+        vscode.TextEditorRevealType.InCenter
+      );
+    }
+  }
+
+  async function setIssueSelectionInEditor(patchPathOrIssue: string | any) {
     await initIssues();
+
     let targetTextRange: any = {};
 
-    Object.values(issues).forEach((issueArrays: any) => {
-      issueArrays.forEach((issueArray: any) => {
-        if (issueArray["patches"].some((x: any) => x["path"] === patchPath)) {
-          targetTextRange = issueArray["textRange"];
-        }
+    if (typeof patchPathOrIssue === 'string') {
+      const patchPath = patchPathOrIssue;
+      Object.values(issueGroups).forEach((issueArrays: any) => {
+        issueArrays.forEach((issueArray: any) => {
+          if (issueArray["patches"].some((x: any) => x["path"] === patchPath)) {
+            targetTextRange = issueArray["textRange"];
+          }
+        });
       });
-    });
+    } else {
+      const issueData = patchPathOrIssue;
+      targetTextRange = issueData.textRange;
+    }
 
-    const editor = vscode.window.activeTextEditor;
-    const position = editor?.selection.active;
-
-    var newSelection = new vscode.Selection(
-      targetTextRange["startLine"] - 1,
-      targetTextRange["startColumn"],
-      targetTextRange["endLine"] - 1,
-      targetTextRange["endColumn"]
-    );
-    editor!.selection = newSelection;
+    await highlightIssueInEditor(targetTextRange);
   }
 
   async function extractLineFromPatch(patchPath: string) {

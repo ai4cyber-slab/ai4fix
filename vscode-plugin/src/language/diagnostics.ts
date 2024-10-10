@@ -2,7 +2,7 @@ import { readFileSync } from "fs";
 import * as vscode from "vscode";
 import { ANALYZER_MENTION, PATCH_FOLDER, PROJECT_FOLDER } from "../constants";
 import { IFix, Iissue, IIssueRange } from "../interfaces";
-import { getIssues } from "../services/fakeAiFixCode";
+import { getIssues2 } from "../services/fakeAiFixCode";
 import * as logging from "../services/logging";
 var path = require("path");
 var upath = require("upath");
@@ -10,7 +10,7 @@ var upath = require("upath");
 let issueGroups = {};
 
 async function initIssues() {
-  issueGroups = await getIssues();
+  issueGroups = await getIssues2();
 }
 
 export async function refreshDiagnostics(
@@ -54,8 +54,11 @@ function createItemDiagnostic(
     issue.textRange.endLine - 1,
     issue.textRange.endColumn
   );
-
-  const message = `${issue.issueName}: ${issue.explanation}`;
+  
+  if (issue.explanation===undefined){
+    issue.explanation = "There is no available patch for this warning."
+  }
+  const message = `${issue.JavaFileName}: ${issue.explanation}`;
 
   const diagnostic = new vscode.Diagnostic(
     range,
