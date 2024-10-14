@@ -298,10 +298,10 @@ function filterTree(patchPath: string) {
       })
     })
     let issuesStr = stringify(tree);
-    console.log(issuesStr);
+    // console.log(issuesStr);
 
-    let issuesPath = ISSUES_PATH;
-    writeFileSync(issuesPath!, issuesStr, utf8Stream);
+    // let issuesPath = ISSUES_PATH;
+    // writeFileSync(issuesPath!, issuesStr, utf8Stream);
   });
   console.log(tree);
 }

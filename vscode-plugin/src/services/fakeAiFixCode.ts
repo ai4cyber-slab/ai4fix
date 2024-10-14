@@ -57,8 +57,12 @@ export async function getIssues2() {
       const issueItems = issueCategory.items;
 
       issueItems.forEach((issueItem: any) => {
+        // Extract the 'id' from the individual issueItem (not the issueCategory)
+        const issueId = issueItem.id || issueCategory.id; // Use issueItem.id if available, otherwise fallback to issueCategory.id
+
         issueItem.JavaFileName = javaFileName;
         issueItem.name = issueType;
+        issueItem.id = issueId; // Ensure the 'id' is added to each issueItem
 
         if (!issueItem.explanation && issueItem.patches && issueItem.patches.length > 0) {
           issueItem.explanation = issueItem.patches[0].explanation;
@@ -134,14 +138,52 @@ export function getIssuesSync(currentFilePath = "") {
   return issuesJson;
 }
 
+// function processNewJsonFormat(json: any[]): Record<string, any[]> {
+//   let issuesJson: Record<string, any[]> = {};
+
+//   json.forEach(issueGroup => {
+//     const issueName = issueGroup.name;
+//     const issueExplanation = issueGroup.explanation;
+
+//     issueGroup.items.forEach((item: { textRange: { startLine: any; endLine: any; startColumn: any; endColumn: any; }; patches: any; explanation?: any; issueName?: string; }) => {
+//       if (!issuesJson[issueName]) {
+//         issuesJson[issueName] = [];
+//       }
+
+//       let existingItemIndex = issuesJson[issueName].findIndex(existingItem =>
+//         existingItem.textRange.startLine === item.textRange.startLine &&
+//         existingItem.textRange.endLine === item.textRange.endLine &&
+//         existingItem.textRange.startColumn === item.textRange.startColumn &&
+//         existingItem.textRange.endColumn === item.textRange.endColumn
+//       );
+
+//       if (existingItemIndex !== -1) {
+//         issuesJson[issueName][existingItemIndex].patches = issuesJson[issueName][existingItemIndex].patches.concat(item.patches);
+//       } else {
+//         item.explanation = issueExplanation;
+//         item.issueName = issueName;
+//         issuesJson[issueName].push(item);
+//       }
+//     });
+//   });
+
+//   return issuesJson;
+// }
+
 function processNewJsonFormat(json: any[]): Record<string, any[]> {
   let issuesJson: Record<string, any[]> = {};
 
   json.forEach(issueGroup => {
     const issueName = issueGroup.name;
     const issueExplanation = issueGroup.explanation;
+    const issueId = issueGroup.id;  // Add issue ID from the group
 
-    issueGroup.items.forEach((item: { textRange: { startLine: any; endLine: any; startColumn: any; endColumn: any; }; patches: any; explanation?: any; issueName?: string; }) => {
+    issueGroup.items.forEach((item: { 
+      textRange: { startLine: any; endLine: any; startColumn: any; endColumn: any; }; 
+      patches: any; 
+      explanation?: any; 
+      issueName?: string; 
+    }) => {
       if (!issuesJson[issueName]) {
         issuesJson[issueName] = [];
       }
@@ -154,17 +196,23 @@ function processNewJsonFormat(json: any[]): Record<string, any[]> {
       );
 
       if (existingItemIndex !== -1) {
+        // If the item already exists, concatenate patches
         issuesJson[issueName][existingItemIndex].patches = issuesJson[issueName][existingItemIndex].patches.concat(item.patches);
       } else {
+        // Add ID to the new item
         item.explanation = issueExplanation;
         item.issueName = issueName;
-        issuesJson[issueName].push(item);
+        issuesJson[issueName].push({
+          id: issueId,  // Add the issue ID here before patches
+          ...item
+        });
       }
     });
   });
 
   return issuesJson;
 }
+
 
 export async function getFixes(leftPath: string, patchPath: string) {
   let issueGroups = await getIssues();

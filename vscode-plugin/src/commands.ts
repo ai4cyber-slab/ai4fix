@@ -168,8 +168,8 @@ export function init(
       getOutputFromAnalyzerOfAFile
     ),
     vscode.commands.registerCommand(
-      "aifix4seccode-vscode.redoLastFix",
-      redoLastFix
+      "aifix4seccode-vscode.undoLastFix",
+      undoLastFix
     ),
     vscode.commands.registerCommand(
       "aifix4seccode-vscode.openUpFile",
@@ -280,10 +280,10 @@ export function init(
       });
     })
       .then(() => {
-    var currentFilePath = upath.normalize(vscode.window.activeTextEditor!.document.uri.path);
-    if (process.platform === "win32" && currentFilePath.startsWith("/")) {
-      currentFilePath = currentFilePath.substring(1);
-    }
+    // var currentFilePath = upath.normalize(vscode.window.activeTextEditor!.document.uri.path);
+    // if (process.platform === "win32" && currentFilePath.startsWith("/")) {
+    //   currentFilePath = currentFilePath.substring(1);
+    // }
 
     try {
       const data = readFileSync(issuesPath, "utf8");
@@ -301,9 +301,9 @@ export function init(
     }
 
     return new Promise<void>((resolve) => {
-      // Get Output from analyzer:
-      let output = fakeAiFixCode.getIssuesSync();
-      logging.LogInfo("issues got from analyzer output: " + JSON.stringify(output));
+      // // Get Output from analyzer:
+      // let output = fakeAiFixCode.getIssuesSync();
+      // logging.LogInfo("issues got from analyzer output: " + JSON.stringify(output));
 
       // Show issues treeView:
       testView = new TestView(context);
@@ -320,6 +320,12 @@ export function init(
           await refreshDiagnostics(vscode.window.activeTextEditor!.document, analysisDiagnostics);
         }
       );
+
+            
+      let output = fakeAiFixCode.getIssuesSync();
+      logging.LogInfo(
+        "issues got from analyzer output: " + JSON.stringify(output)
+    );
 
       resolve();
       logging.LogInfoAndShowInformationMessage(
@@ -347,18 +353,12 @@ export function init(
     );
   }
 
-  async function redoLastFix() {
-    logging.LogInfo("===== Redo Last Fix started from command. =====");
+  async function undoLastFix() {
+    logging.LogInfo("===== Undo Last Fix started from command. =====");
 
-    var lastFilePath = path.normalize(
-      JSON.parse(context.workspaceState.get<string>("lastFilePath")!)
-    );
-    var lastFileContent = JSON.parse(
-      context.workspaceState.get<string>("lastFileContent")!
-    );
-    var lastIssuesPath = path.normalize(
-      JSON.parse(context.workspaceState.get<string>("lastIssuesPath")!)
-    );
+    var lastFilePath = path.normalize(context.workspaceState.get<string>("lastFilePath")!);
+    var lastFileContent = context.workspaceState.get<string>("lastFileContent")!;
+    var lastIssuesPath = path.normalize(context.workspaceState.get<string>("lastIssuesPath")!);
     var lastIssuesContent = JSON.parse(
       context.workspaceState.get<string>("lastIssuesContent")!
     );
@@ -415,7 +415,7 @@ export function init(
       });
     });
 
-    logging.LogInfo("===== Redo Last Fix command finished executing. =====");
+    logging.LogInfo("===== Undo Last Fix command finished executing. =====");
   }
 
   function startAnalyzingProjectSync() {
@@ -507,7 +507,6 @@ export function init(
         async () => {
           const generatedTestFilePath = await generateAndSaveTest(filePath, pythonScriptPath, testFolderPath, generatedPatchesPath);
           vscode.window.showInformationMessage(`Test and log files created: ${generatedTestFilePath}`);
-          vscode.window.showInformationMessage(`Test file created and TestFileLog added: ${generatedTestFilePath}`);
           logging.LogInfo("Test generated successfully.");
           runGeneratedTest(filePath);
         }
@@ -1286,6 +1285,10 @@ export function init(
     await initIssues();
     if (issues) {
       const webview = getActiveDiffPanelWebview();
+      var currentFilePath = upath.normalize(
+        vscode.window.activeTextEditor!.document.uri.path
+      );
+      saveFileAndFixesToState(currentFilePath)
 
       Object.keys(issues).forEach((key) => {
         let patchFolder = PATCH_FOLDER;
@@ -1293,9 +1296,12 @@ export function init(
         issues[key].forEach((issue: any) => {
           issue.patches.forEach((patch: any) => {
             if (patch.path === patchPath || patchPath.includes(patch.path)) {
+              console.log("Removing issue with id: " + issue.id); // 10/12/2024
+              const warning_id = issue.id
               issues[key].splice(issues[key].indexOf(issue), 1);
-              if (!issues[key].length) {
-                delete issues[key];
+              if (warning_id) {
+                // delete issues[key];
+                removeObjectById(warning_id, currentFilePath)
               }
             }
           });
@@ -1306,30 +1312,89 @@ export function init(
       // }
     }
     let issuesStr = stringify(issues);
-    console.log(issuesStr);
+    console.log("from filter out cm.ts " + issuesStr);
 
-    let issuesPath = ISSUES_PATH;
-    writeFileSync(issuesPath!, issuesStr, utf8Stream);
+    // let issuesPath = ISSUES_PATH;
+    // writeFileSync(issuesPath!, issuesStr, utf8Stream);
   }
+  async function removeObjectById(id: string, currentFilePath: string): Promise<[string, string]> {
+    try {
+      // Create the JSON file path
+      const jsonFilePath = createJsonFilePath(currentFilePath);
+      console.log('JSON file path:', jsonFilePath); // Check if path is correct
+      
+      // Read the content of the JSON file
+      const fileContent = await fs.readFile(jsonFilePath, 'utf-8');
+      console.log('File content:', fileContent); // Check if file content is correctly read
+      
+      // Parse the JSON content
+      let jsonArray;
+      try {
+        jsonArray = JSON.parse(fileContent);
+      } catch (parseError) {
+        console.error('Error parsing JSON:', parseError);
+        throw parseError;
+      }
+      
+      console.log('Parsed JSON array:', jsonArray); // Check if the parsed content is as expected
+  
+      // Ensure jsonArray is actually an array
+      if (!Array.isArray(jsonArray)) {
+        throw new Error('Parsed JSON is not an array');
+      }
+  
+      // Filter out the object with the matching ID
+      const updatedJsonArray = jsonArray.filter((item: any) => {
+        if (item && item.id) {
+          return item.id !== id;
+        } else {
+          console.error('Item does not have an id or is undefined:', item);
+          return true;
+        }
+      });
+  
+      // Stringify the updated array
+      const updatedContent = JSON.stringify(updatedJsonArray, null, 2);
+  
+      // Write the updated content back to the JSON file
+      await fs.writeFile(jsonFilePath, updatedContent, 'utf-8');
+  
+      console.log(`Successfully removed the object with id: ${id}`);
+  
+      // Return the original file content and JSON file path
+      return [fileContent, jsonFilePath];
+    } catch (error) {
+      console.error('Error while processing the file:', error);
+      throw error; // Re-throw the error if needed
+    }
+  }
+  
+
+
+function createJsonFilePath(currentFilePath: string): string {
+  const SRC_PATH = currentFilePath.substring(currentFilePath.indexOf('src'));
+  const json_file_path = path.join(path.dirname(PATCH_FOLDER), 'validation', 'jsons', SRC_PATH) + '.json';
+  return json_file_path;
+}
 
   function saveFileAndFixesToState(filePath: string) {
     logging.LogInfo(filePath);
 
-    let issuesPath = ISSUES_PATH;
+    let jsonFilePath = createJsonFilePath(filePath);
 
     var originalFileContent = readFileSync(filePath!, "utf8");
-    var originalIssuesContent = readFileSync(issuesPath!, "utf8");
+    var originalIssuesContent = readFileSync(jsonFilePath, "utf8");
     context.workspaceState.update(
       "lastFileContent",
-      JSON.stringify(originalFileContent)
+      originalFileContent
     );
-    context.workspaceState.update("lastFilePath", JSON.stringify(filePath));
+    context.workspaceState.update("lastFilePath", filePath);
 
     context.workspaceState.update(
       "lastIssuesContent",
       JSON.stringify(originalIssuesContent)
     );
-    context.workspaceState.update("lastIssuesPath", JSON.stringify(issuesPath));
+    context.workspaceState.update("lastIssuesPath", jsonFilePath);
     logging.LogInfo(filePath);
   }
 

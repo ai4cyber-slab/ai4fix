@@ -102,8 +102,8 @@ export function applyPatchToFile(leftPath: string, rightContent: string, patchPa
       let issuesStr = stringify(issueGroups);
       console.log(issuesStr);
 
-      let issuesPath = ISSUES_PATH;
-      writeFileSync(issuesPath!, issuesStr, utf8Stream);
+      // let issuesPath = ISSUES_PATH;
+      // writeFileSync(issuesPath!, issuesStr, utf8Stream);
 
       // 3.
       workspace.openTextDocument(leftPath).then(document => {

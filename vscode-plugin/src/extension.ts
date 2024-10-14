@@ -8,6 +8,8 @@ import { initActionCommands } from './language/codeActions';
 import * as logging from './services/logging';
 import * as constants from './constants';
 import { refreshDiagnostics } from "./language/diagnostics";
+import { exec } from 'child_process';
+import { SCRIPT_PATH } from './constants';
 var fs = require('fs');
 
 var upath = require("upath");
@@ -17,7 +19,7 @@ export let analysisDiagnostics = vscode.languages.createDiagnosticCollection('ai
 
 let analysisStatusBarItem: vscode.StatusBarItem;
 let analyzeCurrentFileStatusBarItem: vscode.StatusBarItem;
-let redoFixStatusBarItem: vscode.StatusBarItem;
+let undoFixStatusBarItem: vscode.StatusBarItem;
 let generateTestForCurrentFileStatusBarItem: vscode.StatusBarItem;
 
 export function activate(context: vscode.ExtensionContext) {
@@ -45,13 +47,13 @@ export function activate(context: vscode.ExtensionContext) {
   analyzeCurrentFileStatusBarItem.text = "$(symbol-keyword) Analyze Current File";
   analyzeCurrentFileStatusBarItem.show();
 
-  // Redo last fix:
-  redoFixStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-  redoFixStatusBarItem.command = 'aifix4seccode-vscode.redoLastFix';
-  context.subscriptions.push(redoFixStatusBarItem);
+  // Undo last fix:
+  undoFixStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+  undoFixStatusBarItem.command = 'aifix4seccode-vscode.undoLastFix';
+  context.subscriptions.push(undoFixStatusBarItem);
 
-  redoFixStatusBarItem.text = "$(redo) Undo Last Fix";
-  redoFixStatusBarItem.show();
+  undoFixStatusBarItem.text = "$(undo) Undo Last Fix";
+  undoFixStatusBarItem.show();
 
   // Generate Test for Current File:
   generateTestForCurrentFileStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -101,4 +103,21 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }
   });
+
+vscode.commands.registerCommand('aifix4seccode-vscode.generatePatchForSingleWarning', (warningId: string, javaFilePath: string, projectFolder: string, patchFolder: string, issues_path: string) => {
+  // Construct the command with arguments for the Python script
+  let pythonScriptPath = SCRIPT_PATH;
+  pythonScriptPath = path.join(pythonScriptPath, 'single_warning_patch.py');
+  const command = `python3 ${pythonScriptPath} -j ${javaFilePath} -wid ${warningId} -pp ${projectFolder} -dod ${patchFolder} -jl ${issues_path}`;
+
+  // Execute the Python script
+  exec(command, (error, stdout, stderr) => {
+    if (error) {
+      vscode.window.showErrorMessage(`Error running Python script: ${stderr}`);
+      return;
+    }
+    vscode.window.showInformationMessage(`Patch Generated with Success!: ${stdout}`);
+  });
+});
+
 }

@@ -136,8 +136,8 @@
         "command": "aifix4seccode-vscode.generateTestForCurrentFile"
       },
       {
-        "title": "[AIFix4SecCode] Redo Last Fix",
-        "command": "aifix4seccode-vscode.redoLastFix"
+        "title": "[AIFix4SecCode] Undo Last Fix",
+        "command": "aifix4seccode-vscode.undoLastFix"
       },
       {
         "title": "[AIFix4SecCode] Open Up File",
@@ -206,6 +206,10 @@
       {
         "command": "testView.changeTitle",
         "title": "Test View: Change Title"
+      },
+      {
+        "command": "aifix4seccode-vscode.generatePatchForSingleWarning",
+        "title": "Generate patch for single warning"
       }
     ],
     "configuration": {

@@ -2,7 +2,7 @@ import { readFileSync } from "fs";
 import * as vscode from "vscode";
 import { ANALYZER_MENTION, PATCH_FOLDER, PROJECT_FOLDER } from "../constants";
 import { IFix, Iissue, IIssueRange } from "../interfaces";
-import { getIssues2 } from "../services/fakeAiFixCode";
+import { getIssues2, getIssuesSync } from "../services/fakeAiFixCode";
 import * as logging from "../services/logging";
 var path = require("path");
 var upath = require("upath");
@@ -11,6 +11,7 @@ let issueGroups = {};
 
 async function initIssues() {
   issueGroups = await getIssues2();
+  console.log("Issue Groups (JSON): diagnostics", JSON.stringify(issueGroups));
 }
 
 export async function refreshDiagnostics(
@@ -33,7 +34,13 @@ export async function refreshDiagnostics(
       });
     }
 
-    aiFixCodeDiagnostics.set(doc.uri, diagnostics);
+    // aiFixCodeDiagnostics.set(doc.uri, diagnostics);
+    if (diagnostics.length === 0) {
+      aiFixCodeDiagnostics.clear();
+    } else {
+      aiFixCodeDiagnostics.set(doc.uri, diagnostics);
+    }
+    
     logging.LogInfo("Finished diagnosis.");
   } catch (error) {
     console.error("Unable to run diagnosis on file:", error);

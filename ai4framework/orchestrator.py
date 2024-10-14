@@ -13,7 +13,7 @@ from utils.issues_merger import JSONCombiner
 from utils.plugin_json_converter import JsonPluginConverter
 import time
 import re
-
+import argparse
 
 
 class WorkflowFramework:
@@ -24,7 +24,7 @@ class WorkflowFramework:
     of a software project.
     """
 
-    def __init__(self):
+    def __init__(self, skip_patches=False):
         self.config = ConfigManager.get_config()
         self.sast = sast.sast_orchestrator.SASTOrchestrator(self.config)
         self.security_classifier = SecurityClassifier(self.config)
@@ -33,6 +33,7 @@ class WorkflowFramework:
         # self.test_generator = TestGenerator(self.config)
         self.issues_merger = JSONCombiner(self.config)
         self.json_converter = JsonPluginConverter(self.config)
+        self.skip_patches = skip_patches
 
     def execute_workflow(self):
         logger.info("Starting workflow execution")
@@ -41,7 +42,8 @@ class WorkflowFramework:
         self.security_classifier.classify()
         self.symbolic_execution.analyze()
         self.issues_merger.run()
-        self.patch_generator.main()
+        if not self.skip_patches:
+            self.patch_generator.main()
         self.json_converter.process()
 
         elapsed_time = time.time() - start_time
@@ -52,13 +54,14 @@ def kill_rg_processes():
     Function to kill any lingering 'rg' (ripgrep) processes and print their names.
     """
     try:
-        result = subprocess.check_output("ps aux | grep rg | grep -v grep | awk '{print $2, $11}'", shell=True)
-        processes = result.decode('utf-8').strip().split('\n')
+        with subprocess.Popen("ps aux | grep rg | grep -v grep | awk '{print $2, $11}'", shell=True, stdout=subprocess.PIPE, text=True) as process:
+            result = process.communicate()[0]
+            processes = result.strip().split('\n')
 
-        for process in processes:
-            if process:
-                pid, name = process.split(' ', 1)
-                os.kill(int(pid), 9)
+            for process in processes:
+                if process:
+                    pid, name = process.split(' ', 1)
+                    os.kill(int(pid), 9)
 
     except Exception as e:
         print(f"Error killing processes: {e}")
@@ -68,18 +71,20 @@ def signal_handler(sig, frame):
     """
     Handle termination signals (e.g., Ctrl+C) and perform cleanup.
     """
-    print("\nScript interrupted. Cleaning up...")
     kill_rg_processes()
     sys.exit(0)
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Execute the security analysis workflow.')
+    parser.add_argument('--skip-patches', action='store_true', help='If provided, the patches part will be skipped.')
+    args, unknown = parser.parse_known_args()
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
 
-    framework = WorkflowFramework()
+    framework = WorkflowFramework(skip_patches=args.skip_patches)
     framework.execute_workflow()
 
 
