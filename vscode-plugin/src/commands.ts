@@ -355,13 +355,25 @@ export function init(
 
   async function undoLastFix() {
     logging.LogInfo("===== Undo Last Fix started from command. =====");
+    
+    // Retrieve the last file path
+    let lastFilePath = context.workspaceState.get<string>("lastFilePath")!;
 
-    var lastFilePath = path.normalize(context.workspaceState.get<string>("lastFilePath")!);
-    var lastFileContent = context.workspaceState.get<string>("lastFileContent")!;
-    var lastIssuesPath = path.normalize(context.workspaceState.get<string>("lastIssuesPath")!);
-    var lastIssuesContent = JSON.parse(
-      context.workspaceState.get<string>("lastIssuesContent")!
-    );
+    // Correct the file path for Windows systems
+    if (process.platform === "win32") {
+      // Remove any leading '/c:/' or '\\c:\\'
+      lastFilePath = lastFilePath.replace(/^([/\\])?c:[/\\]/i, 'C:\\');
+    }
+
+    // Normalize the path after the correction
+    lastFilePath = path.normalize(lastFilePath);
+
+    logging.LogInfo("Corrected file path: " + lastFilePath);
+
+    // Get the file content to revert
+    const lastFileContent = context.workspaceState.get<string>("lastFileContent")!;
+    const lastIssuesPath = path.normalize(context.workspaceState.get<string>("lastIssuesPath")!);
+    const lastIssuesContent = JSON.parse(context.workspaceState.get<string>("lastIssuesContent")!);
 
     // Set content of issues:
     writeFileSync(lastIssuesPath, lastIssuesContent);
@@ -1084,7 +1096,9 @@ export function init(
                   "patchPath" in webview.params
                 ) {
                   filterOutIssues(webview.params.patchPath!).then(() => {
-
+                    if ("leftPath" in webview.params){
+                      updateIssuesAfterPatch(webview.params.leftPath!, patchPath);
+                    }
                     getOutputFromAnalyzerOfAFile();
                   });
                 }
@@ -1109,6 +1123,7 @@ export function init(
       if ("patchPath" in webview.params && webview.params.patchPath) {
         patchPath = webview.params.patchPath;
       }
+      
 
     } else if (ANALYZER_USE_DIFF_MODE == "view Patch files") {
       // 1. Get the content of the original file
@@ -1163,7 +1178,10 @@ export function init(
 
       // 3.
       applyPatchToFile(path.normalize(sourceFile), patched, patchFilepath);
+
       filterOutIssues(patchFilepath);
+
+      updateIssuesAfterPatch(sourceFile, patchFilepath);
 
       // 4.
       vscode.commands.executeCommand("setContext", "patchApplyEnabled", false);
@@ -1171,6 +1189,95 @@ export function init(
 
     }
     logging.LogInfo("===== Finished applyPatch command. =====");
+  }
+
+  function updateIssuesAfterPatch(sourceFilePath: string, patchFilePath: string) {
+    const patchContent = readFileSync(upath.join(PATCH_FOLDER, patchFilePath), "utf8");
+  
+    const parsedPatch = diff.parsePatch(patchContent);
+  
+    const lineShifts = computeLineShifts(parsedPatch);
+  
+    updateIssuesTextRanges(sourceFilePath, lineShifts);
+  }
+
+  function computeLineShifts(parsedPatch: any): { [lineNumber: number]: number } {
+    const lineShifts: { [lineNumber: number]: number } = {};
+    let cumulativeShift = 0;
+  
+    parsedPatch.forEach((hunk: { hunks: any[]; }) => {
+      hunk.hunks.forEach(chunk => {
+        const startLine = chunk.oldStart;
+        const oldLines = chunk.oldLines || 0;
+        const newLines = chunk.newLines || 0;
+        const lineDiff = newLines - oldLines;
+  
+        cumulativeShift += lineDiff;
+  
+        lineShifts[startLine] = cumulativeShift;
+      });
+    });
+  
+    return lineShifts;
+  }
+
+  function updateIssuesTextRanges(sourceFilePath: string, lineShifts: { [lineNumber: number]: number }) {
+    // Load the issues for the source file
+    const issuesJsonPaths = getIssuesJsonPathsForSourceFile(sourceFilePath);
+  
+    issuesJsonPaths.forEach(jsonPath => {
+      const issuesContent = readFileSync(jsonPath, 'utf8');
+      const issues = JSON.parse(issuesContent);
+  
+      let updated = false;
+  
+      issues.forEach((issue: any) => {
+        issue.items.forEach((item: any) => {
+          const startLine = item.textRange.startLine;
+          const endLine = item.textRange.endLine;
+  
+          let shift = 0;
+  
+          // Determine the shift for the current issue based on the line shifts
+          for (const line in lineShifts) {
+            const lineNumber = parseInt(line, 10);
+            if (startLine > lineNumber) {
+              shift = lineShifts[line];
+            }
+          }
+  
+          if (shift !== 0) {
+            // Update the text ranges
+            item.textRange.startLine += shift;
+            item.textRange.endLine += shift;
+            updated = true;
+          }
+        });
+      });
+  
+      if (updated) {
+        // Write back the updated issues
+        writeFileSync(jsonPath, JSON.stringify(issues, null, 2), 'utf8');
+      }
+    });
+  }
+
+  function getIssuesJsonPathsForSourceFile(sourceFilePath: string): string[] {
+    const issuesPathContent = readFileSync(ISSUES_PATH, "utf8");
+    const jsonFilePaths = issuesPathContent
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .map(jsonPath => path.resolve(jsonPath));
+  
+    const sourceFileBaseName = path.basename(sourceFilePath, '.java');
+  
+    const matchingJsonPaths = jsonFilePaths.filter(jsonPath => {
+      const jsonBaseName = path.basename(jsonPath, '.json');
+      return jsonBaseName.includes(sourceFileBaseName);
+    });
+  
+    return matchingJsonPaths;
   }
 
   function declinePatch() {
@@ -1360,6 +1467,7 @@ export function init(
       await fs.writeFile(jsonFilePath, updatedContent, 'utf-8');
   
       console.log(`Successfully removed the object with id: ${id}`);
+      getOutputFromAnalyzer()
   
       // Return the original file content and JSON file path
       return [fileContent, jsonFilePath];
@@ -1370,20 +1478,37 @@ export function init(
   }
   
 
-
 function createJsonFilePath(currentFilePath: string): string {
   const SRC_PATH = currentFilePath.substring(currentFilePath.indexOf('src'));
   const json_file_path = path.join(path.dirname(PATCH_FOLDER), 'validation', 'jsons', SRC_PATH) + '.json';
   return json_file_path;
 }
 
-  function saveFileAndFixesToState(filePath: string) {
-    logging.LogInfo(filePath);
+function saveFileAndFixesToState(filePath: string) {
+  // Normalize the path correctly
+  let normalizedFilePath = filePath;
 
-    let jsonFilePath = createJsonFilePath(filePath);
+  // For Windows, remove '/c:/' if it's part of the file path
+  if (process.platform === "win32") {
+    if (normalizedFilePath.startsWith('/c:/')) {
+      normalizedFilePath = normalizedFilePath.replace('/c:/', 'C:\\');
+    } else if (normalizedFilePath.startsWith('C:') && normalizedFilePath.includes('/')) {
+      // Handle mixed slashes (both C: and /)
+      normalizedFilePath = upath.toUnix(normalizedFilePath).replace('/c:/', 'C:\\');
+    }
+  } else {
+    // For Unix systems, normalize as needed
+    normalizedFilePath = upath.normalize(filePath);
+  }
 
-    var originalFileContent = readFileSync(filePath!, "utf8");
-    var originalIssuesContent = readFileSync(jsonFilePath, "utf8");
+  logging.LogInfo("Final normalized file path: " + normalizedFilePath);
+
+  // Now, use the corrected file path to read the file contents
+  let jsonFilePath = createJsonFilePath(normalizedFilePath);
+
+  // Now, using the corrected file path to read the file contents
+  var originalFileContent = readFileSync(normalizedFilePath, "utf8");
+  var originalIssuesContent = readFileSync(jsonFilePath, "utf8");
     context.workspaceState.update(
       "lastFileContent",
       originalFileContent
