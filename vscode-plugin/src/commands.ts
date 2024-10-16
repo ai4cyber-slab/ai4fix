@@ -230,19 +230,86 @@ export function init(
     );
   }
 
-  function runOrchestratorScript() {
+  async function getDiagnosticsAfterPatch() {
+    logging.LogInfo("===== Analysis started from command. =====");
+
+    vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "Analyzing project!",
+        cancellable: false,
+      },
+      async () => {
+        return refreshDiagnosticsWithoutAnalysis();
+      }
+    );
+  }
+
+  function refreshDiagnosticsWithoutAnalysis() {
     let issuesPath = ISSUES_PATH;
-    try {
-      writeFileSync(issuesPath, "", "utf8");
-      logging.LogInfo(`Cleared content of the file at ${issuesPath}`);
-    } catch (error) {
-      logging.LogErrorAndShowErrorMessage(`Failed to clear content of the file at ${issuesPath}:`, error as any);
-    }
     let generatedPatchesPath = PATCH_FOLDER;
     let subjectProjectPath = PROJECT_FOLDER;
     let jsonFilePaths: string[] = [];
 
-    return new Promise<void>((resolve, reject) => {
+    try {
+      const data = readFileSync(issuesPath, "utf8");
+      let lines = data.split("\n");
+
+      jsonFilePaths = lines.filter((line: string) => line.trim().endsWith('.json'));
+
+      if (jsonFilePaths.length === 0) {
+        logging.LogError("No JSON file paths found in the issuesPath file.");
+        return;
+      }
+    } catch (err) {
+      logging.LogError("Error reading the issuesPath file: " + err);
+      return;
+    }
+
+    return new Promise<void>((resolve) => {
+      // Show issues treeView:
+      testView = new TestView(context);
+
+      // Initialize action commands of diagnostics made after analysis:
+      initActionCommands(context);
+
+      vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "Loading Diagnostics...",
+        },
+        async () => {
+          await refreshDiagnostics(vscode.window.activeTextEditor!.document, analysisDiagnostics);
+        }
+      );
+
+            
+      let output = fakeAiFixCode.getIssuesSync();
+      logging.LogInfo(
+        "issues got from analyzer output: " + JSON.stringify(output)
+    );
+
+      resolve();
+      logging.LogInfoAndShowInformationMessage(
+        "===== Finished analysis. =====",
+        "Finished analysis of project!"
+      );
+    });
+  }
+
+  function runOrchestratorScript() {
+    let issuesPath = ISSUES_PATH;
+    /* try {
+      writeFileSync(issuesPath, "", "utf8");
+      logging.LogInfo(`Cleared content of the file at ${issuesPath}`);
+    } catch (error) {
+      logging.LogErrorAndShowErrorMessage(`Failed to clear content of the file at ${issuesPath}:`, error as any);
+    } */
+    let generatedPatchesPath = PATCH_FOLDER;
+    let subjectProjectPath = PROJECT_FOLDER;
+    let jsonFilePaths: string[] = [];
+
+    /* return new Promise<void>((resolve, reject) => {
       const scriptPath = upath.normalize(upath.join(SCRIPT_PATH, 'orchestrator.py'));
   
       const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
@@ -279,7 +346,7 @@ export function init(
         logging.LogError(`orchestrator.py error: ${data}`);
       });
     })
-      .then(() => {
+      .then(() => { */
     // var currentFilePath = upath.normalize(vscode.window.activeTextEditor!.document.uri.path);
     // if (process.platform === "win32" && currentFilePath.startsWith("/")) {
     //   currentFilePath = currentFilePath.substring(1);
@@ -333,10 +400,10 @@ export function init(
         "Finished analysis of project!"
       );
     });
-    })
+    /* })
      .catch((err) => {
       logging.LogError(`Error during analysis: ${err}`);
-    });
+    }); */
   }
 
   async function getOutputFromAnalyzerOfAFile() {
@@ -392,7 +459,8 @@ export function init(
               path.normalize(webview.params.patchPath!),
               lastFilePath
             ).then(() => {
-              getOutputFromAnalyzerOfAFile();
+              //getOutputFromAnalyzerOfAFile();
+              getDiagnosticsAfterPatch();
               async () => {
 
                 vscode.window.withProgress(
@@ -554,7 +622,7 @@ export function init(
     const endIndex = testCode.indexOf('```', startIndex + codeBlockStart.length);
 
     if (startIndex === -1 || endIndex === -1) {
-      console.error('Generated test may be empty.');
+      logging.LogError('Generated test may be empty.');
       return '';
     }
 
@@ -631,7 +699,7 @@ export function init(
       const command = `python "${scriptPath}" "${filePath}" "${testFilePath}" "${diffFilePath}"`;
       cp.exec(command, (error: any, stdout: string, stderr: any) => {
         if (error) {
-          console.error("Error during running the python script:", stderr);
+          logging.LogErrorAndShowErrorMessage("Error during running the python script:", stderr);
           reject(error);
         } else {
           resolve(stdout);
@@ -1032,7 +1100,7 @@ export function init(
     try {
       patch = readFileSync(PATCH_FOLDER + "/" + params.patchPath, "utf8");
     } catch (err) {
-      console.log(err);
+      logging.LogError(err as any);
     }
 
     var sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patch);
@@ -1057,7 +1125,7 @@ export function init(
 
   function applyPatch() {
     logging.LogInfo("===== Executing applyPatch command. =====");
-
+    let issues_path = ISSUES_PATH;
     if (ANALYZER_USE_DIFF_MODE == "view Diffs") {
       let patchPath = "";
       const webview = getActiveDiffPanelWebview();
@@ -1068,7 +1136,7 @@ export function init(
           "applied",
           webview.params.patchPath!,
           webview.params.leftPath!
-        ).then(() => {
+        ).then(async () => {
           if ("leftPath" in webview.params && "patchPath" in webview.params) {
             // Saving issues.json and file contents in state,
             // so later the changes can be reverted if user asks for it:
@@ -1076,7 +1144,7 @@ export function init(
               saveFileAndFixesToState(webview.params.leftPath!);
             }
 
-            webview.api.applyPatch();
+            await webview.api.applyPatch();
 
             var openFilePath = vscode.Uri.file(
               upath.normalize(String(webview.params.leftPath))
@@ -1099,14 +1167,14 @@ export function init(
                     if ("leftPath" in webview.params){
                       updateIssuesAfterPatch(webview.params.leftPath!, patchPath);
                     }
-                    getOutputFromAnalyzerOfAFile();
+                    //getDiagnosticsAfterPatch();
                   });
                 }
               });
             });
           }
         });
-      }
+      }      
 
       activeDiffPanelWebviews.splice(
         activeDiffPanelWebviews.indexOf(webview),
@@ -1174,7 +1242,7 @@ export function init(
       }
       var patched = diff.applyPatch(sourceFileContent, patchFileContent);
 
-      console.log(patched);
+      logging.LogInfo(patched);
 
       // 3.
       applyPatchToFile(path.normalize(sourceFile), patched, patchFilepath);
@@ -1183,6 +1251,8 @@ export function init(
 
       updateIssuesAfterPatch(sourceFile, patchFilepath);
 
+      getDiagnosticsAfterPatch()
+
       // 4.
       vscode.commands.executeCommand("setContext", "patchApplyEnabled", false);
       getOutputFromAnalyzerOfAFile();
@@ -1190,6 +1260,7 @@ export function init(
     }
     logging.LogInfo("===== Finished applyPatch command. =====");
   }
+
 
   function updateIssuesAfterPatch(sourceFilePath: string, patchFilePath: string) {
     const patchContent = readFileSync(upath.join(PATCH_FOLDER, patchFilePath), "utf8");
@@ -1205,16 +1276,21 @@ export function init(
     const lineShifts: { [lineNumber: number]: number } = {};
     let cumulativeShift = 0;
   
-    parsedPatch.forEach((hunk: { hunks: any[]; }) => {
+    parsedPatch.forEach((hunk: { hunks: any[] }) => {
       hunk.hunks.forEach(chunk => {
         const startLine = chunk.oldStart;
         const oldLines = chunk.oldLines || 0;
         const newLines = chunk.newLines || 0;
         const lineDiff = newLines - oldLines;
   
-        cumulativeShift += lineDiff;
+        // Apply the cumulative shift to all lines affected by this patch
+        for (let i = 0; i < oldLines; i++) {
+          const currentLine = startLine + i;
+          lineShifts[currentLine] = cumulativeShift;
+        }
   
-        lineShifts[startLine] = cumulativeShift;
+        // Update the cumulative shift
+        cumulativeShift += lineDiff;
       });
     });
   
@@ -1222,7 +1298,6 @@ export function init(
   }
 
   function updateIssuesTextRanges(sourceFilePath: string, lineShifts: { [lineNumber: number]: number }) {
-    // Load the issues for the source file
     const issuesJsonPaths = getIssuesJsonPathsForSourceFile(sourceFilePath);
   
     issuesJsonPaths.forEach(jsonPath => {
@@ -1238,13 +1313,14 @@ export function init(
   
           let shift = 0;
   
-          // Determine the shift for the current issue based on the line shifts
-          for (const line in lineShifts) {
+          // Apply shifts cumulatively for the whole text range of the issue
+          Object.keys(lineShifts).forEach(line => {
             const lineNumber = parseInt(line, 10);
-            if (startLine > lineNumber) {
-              shift = lineShifts[line];
+            
+            if (startLine >= lineNumber) {
+              shift = lineShifts[lineNumber];
             }
-          }
+          });
   
           if (shift !== 0) {
             // Update the text ranges
@@ -1392,58 +1468,47 @@ export function init(
     await initIssues();
     if (issues) {
       const webview = getActiveDiffPanelWebview();
-      var currentFilePath = upath.normalize(
+      const currentFilePath = upath.normalize(
         vscode.window.activeTextEditor!.document.uri.path
       );
-      saveFileAndFixesToState(currentFilePath)
-
-      Object.keys(issues).forEach((key) => {
-        let patchFolder = PATCH_FOLDER;
-
-        issues[key].forEach((issue: any) => {
-          issue.patches.forEach((patch: any) => {
+      saveFileAndFixesToState(currentFilePath);
+  
+      for (const key of Object.keys(issues)) {
+        for (const issue of issues[key]) {
+          for (const patch of issue.patches) {
             if (patch.path === patchPath || patchPath.includes(patch.path)) {
-              console.log("Removing issue with id: " + issue.id); // 10/12/2024
-              const warning_id = issue.id
+              logging.LogInfoAndShowInformationMessage("Removing issue with id: ", issue.id);
+              const warning_id = issue.id;
               issues[key].splice(issues[key].indexOf(issue), 1);
               if (warning_id) {
-                // delete issues[key];
-                removeObjectById(warning_id, currentFilePath)
+                await removeObjectById(warning_id, currentFilePath);
               }
             }
-          });
-        });
-      });
-      // if (!tree[key].patches.length) {
-      //     delete tree[key];
-      // }
+          }
+        }
+      }
     }
-    let issuesStr = stringify(issues);
-    console.log("from filter out cm.ts " + issuesStr);
-
-    // let issuesPath = ISSUES_PATH;
-    // writeFileSync(issuesPath!, issuesStr, utf8Stream);
+  
+    const issuesStr = stringify(issues);
+    logging.LogInfo("from filter out cm.ts " + issuesStr);
   }
+  
   async function removeObjectById(id: string, currentFilePath: string): Promise<[string, string]> {
     try {
       // Create the JSON file path
       const jsonFilePath = createJsonFilePath(currentFilePath);
-      console.log('JSON file path:', jsonFilePath); // Check if path is correct
       
       // Read the content of the JSON file
       const fileContent = await fs.readFile(jsonFilePath, 'utf-8');
-      console.log('File content:', fileContent); // Check if file content is correctly read
       
       // Parse the JSON content
       let jsonArray;
       try {
         jsonArray = JSON.parse(fileContent);
       } catch (parseError) {
-        console.error('Error parsing JSON:', parseError);
+        logging.LogErrorAndShowErrorMessage('Error parsing JSON:', parseError as any);
         throw parseError;
       }
-      
-      console.log('Parsed JSON array:', jsonArray); // Check if the parsed content is as expected
   
       // Ensure jsonArray is actually an array
       if (!Array.isArray(jsonArray)) {
@@ -1455,7 +1520,7 @@ export function init(
         if (item && item.id) {
           return item.id !== id;
         } else {
-          console.error('Item does not have an id or is undefined:', item);
+          logging.LogErrorAndShowErrorMessage('Item does not have an id or is undefined:', item);
           return true;
         }
       });
@@ -1466,13 +1531,14 @@ export function init(
       // Write the updated content back to the JSON file
       await fs.writeFile(jsonFilePath, updatedContent, 'utf-8');
   
-      console.log(`Successfully removed the object with id: ${id}`);
-      getOutputFromAnalyzer()
+      logging.LogInfoAndShowInformationMessage("Successfully removed the object with id:", id);
+
+      await getDiagnosticsAfterPatch();
   
       // Return the original file content and JSON file path
       return [fileContent, jsonFilePath];
     } catch (error) {
-      console.error('Error while processing the file:', error);
+      logging.LogErrorAndShowErrorMessage('Error while processing the file:', error as any);
       throw error; // Re-throw the error if needed
     }
   }
@@ -1584,7 +1650,6 @@ function saveFileAndFixesToState(filePath: string) {
         if (leftPath[0] !== "/") leftPath = "/" + leftPath;
       }
       let fixes = await fakeAiFixCode.getFixes(leftPath, patchFilepath);
-      console.log(fixes);
       let nextFixId = currentFixId + step;
       if (!fixes[nextFixId]) {
         nextFixId = nextFixId > 0 ? 0 : fixes.length - 1;
@@ -1652,7 +1717,7 @@ function saveFileAndFixesToState(filePath: string) {
         "utf8"
       );
     } catch (err) {
-      console.log(err);
+      logging.LogError(err as any);
     }
     var sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patch);
     var sourceFile: string;
@@ -1683,7 +1748,7 @@ function saveFileAndFixesToState(filePath: string) {
     try {
       patch = readFileSync(outputFolder + "/" + patchPath, "utf8");
     } catch (err) {
-      console.log(err);
+      logging.LogError(err as any);
     }
     var destinationFileMatch = /\+\+\+ ([^ \n\r\t]+).*/.exec(patch);
     var destinationFile;

@@ -244,7 +244,7 @@ class PatchManager:
                         generated_code.splitlines(keepends=True),
                         fromfile=src_path,
                         tofile=src_path,
-                        n=3
+                        n=0
                     )
                     diff_text = ''.join(diff)
 

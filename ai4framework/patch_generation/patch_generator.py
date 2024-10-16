@@ -160,7 +160,7 @@ class PatchGenerator:
                     generated_code.splitlines(keepends=True),
                     fromfile=file_path,
                     tofile=file_path,
-                    n=3
+                    n=0
                 )
                 diff_text = ''.join(diff)
 

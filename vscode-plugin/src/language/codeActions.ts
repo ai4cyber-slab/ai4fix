@@ -48,106 +48,195 @@ export class Analyzer implements vscode.CodeActionProvider {
   ];
 
   // This function is called whenever the user selects text or places the cursor in an area that contains a Diagnostic:
+  // public async provideCodeActions(document: vscode.TextDocument, range: vscode.Range): Promise<vscode.CodeAction[] | undefined> {
+
+  //   let commandActions: vscode.CodeAction[] = [];
+  //   issueGroups = await getIssues2();
+  //   let hasFixes = false; // Flag to check if fixes are available
+    
+  //   if (issueGroups) {
+  //     Object.values(issueGroups).forEach((issues: any) => {
+  //       issues.forEach((issue: any) => {
+  //         if (issue.textRange.startLine - 1 === range.start.line) {
+  //           const fixRange = issues.textRange;
+  //           const warningId = issue.id; // Capture the warning ID even if there are no patches
+
+  //           issue.patches.sort((a: any, b: any) => b.score - a.score);
+            
+  //           // If there are fixes, set hasFixes to true
+  //           if (issue.patches.length > 0) {
+  //             hasFixes = true;
+  //           }
+
+  //           issue.patches.forEach((fix: IFix) => {
+  //             const fixText = fix.explanation;
+  //             const patchPath = fix.path;
+
+  //             var patch = '';
+  //             var patch_folder = PATCH_FOLDER;
+
+  //             if (process.platform === 'win32') {
+  //               if (patch_folder[0] === '/' || patch_folder[0] === '\\') {
+  //                 patch_folder = patch_folder.substring(1);
+  //               }
+  //             }
+
+  //             try {
+  //               patch = readFileSync(upath.join(patch_folder, patchPath), "utf8");
+  //             } catch (err) {
+  //               console.log(err);
+  //             }
+
+  //             var sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patch);
+  //             var sourceFilePath: string;
+
+  //             if (sourceFileMatch && sourceFileMatch[1]) {
+  //               sourceFilePath = sourceFileMatch[1];
+  //             } else {
+  //               throw Error("Unable to find source file in '" + patch + "'");
+  //             }
+
+  //             let openedFilePath = vscode.window.activeTextEditor?.document.uri.path;
+
+  //             let projectFolder = PROJECT_FOLDER;
+  //             sourceFilePath = upath.normalize(upath.join(PROJECT_FOLDER, vscode.Uri.file(sourceFilePath).fsPath).toLowerCase());
+  //             openedFilePath = upath.normalize(vscode.Uri.file(openedFilePath!).fsPath.toLowerCase());
+  //             if (process.platform === 'linux' || process.platform === 'darwin') {
+  //               if (sourceFilePath![0] !== '/')
+  //                 sourceFilePath = '/' + sourceFilePath;
+  //               if (openedFilePath![0] !== '/')
+  //                 openedFilePath = '/' + openedFilePath;
+  //             }
+
+  //             let editor = vscode.window.activeTextEditor;
+  //             let issuesPath = ISSUES_PATH;
+  //             let cursorPosition = editor?.selection.start;
+
+  //             if (cursorPosition) {
+  //               // Ensure the cursor is on the correct line for this issue
+  //               if (sourceFilePath === openedFilePath && cursorPosition!.line === range.start.line) {
+  //                 // Push the patch command
+  //                 commandActions.push(this.createCommand(fixText, fixRange, patchPath));
+  //               }
+
+  //               let currentFilePath = vscode.window.activeTextEditor?.document.uri.path!;
+  //               if (currentFilePath) {
+  //                 // Check if the Python script command is already added
+  //                 let pythonCommandExists = commandActions.some(action => action.title === "AI: generate new patch");
+  //                 if (!pythonCommandExists) {
+  //                   // Push the Python script command
+  //                   commandActions.push(this.createPythonCommand("AI: generate new patch", range, warningId, currentFilePath, projectFolder, patch_folder, issuesPath));
+  //                 }
+  //               } else {
+  //                 console.log("No open file " + currentFilePath);
+  //               }
+  //             }
+  //           });
+
+  //           // Add the Python script option, even if there are no available patches
+  //           if (!hasFixes) {
+  //             let currentFilePath = vscode.window.activeTextEditor?.document.uri.path!;
+  //             if (currentFilePath) {
+  //               // Push the Python script command
+  //               commandActions.push(this.createPythonCommand("AI: generate new patch", range, warningId, currentFilePath, PROJECT_FOLDER, PATCH_FOLDER, ISSUES_PATH));
+  //             }
+  //           }
+  //         }
+  //       });
+  //     });
+  //   }
+
+  //   return commandActions;
+  // }
+
   public async provideCodeActions(document: vscode.TextDocument, range: vscode.Range): Promise<vscode.CodeAction[] | undefined> {
 
     let commandActions: vscode.CodeAction[] = [];
     issueGroups = await getIssues2();
-    let hasFixes = false; // Flag to check if fixes are available
-    
+    let pythonCommandAdded = false; // Flag to ensure the Python command is added only once
+
     if (issueGroups) {
-      Object.values(issueGroups).forEach((issues: any) => {
-        issues.forEach((issue: any) => {
-          if (issue.textRange.startLine - 1 === range.start.line) {
-            const fixRange = issues.textRange;
-            const warningId = issue.id; // Capture the warning ID even if there are no patches
+        Object.values(issueGroups).forEach((issues: any) => {
+            issues.forEach((issue: any) => {
+                if (issue.textRange.startLine - 1 === range.start.line) {
+                    const fixRange = issue.textRange;
+                    const warningId = issue.id; // Capture the warning ID even if there are no patches
 
-            issue.patches.sort((a: any, b: any) => b.score - a.score);
-            
-            // If there are fixes, set hasFixes to true
-            if (issue.patches.length > 0) {
-              hasFixes = true;
-            }
+                    issue.patches.sort((a: any, b: any) => b.score - a.score);
 
-            issue.patches.forEach((fix: IFix) => {
-              const fixText = fix.explanation;
-              const patchPath = fix.path;
+                    issue.patches.forEach((fix: IFix) => {
+                        const fixText = fix.explanation;
+                        const patchPath = fix.path;
 
-              var patch = '';
-              var patch_folder = PATCH_FOLDER;
+                        var patch = '';
+                        var patch_folder = PATCH_FOLDER;
 
-              if (process.platform === 'win32') {
-                if (patch_folder[0] === '/' || patch_folder[0] === '\\') {
-                  patch_folder = patch_folder.substring(1);
+                        if (process.platform === 'win32') {
+                            if (patch_folder[0] === '/' || patch_folder[0] === '\\') {
+                                patch_folder = patch_folder.substring(1);
+                            }
+                        }
+
+                        try {
+                            patch = readFileSync(upath.join(patch_folder, patchPath), "utf8");
+                        } catch (err) {
+                            console.log(err);
+                        }
+
+                        var sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patch);
+                        var sourceFilePath: string;
+
+                        if (sourceFileMatch && sourceFileMatch[1]) {
+                            sourceFilePath = sourceFileMatch[1];
+                        } else {
+                            throw Error("Unable to find source file in '" + patch + "'");
+                        }
+
+                        let openedFilePath = vscode.window.activeTextEditor?.document.uri.path;
+
+                        let projectFolder = PROJECT_FOLDER;
+                        sourceFilePath = upath.normalize(upath.join(PROJECT_FOLDER, vscode.Uri.file(sourceFilePath).fsPath).toLowerCase());
+                        openedFilePath = upath.normalize(vscode.Uri.file(openedFilePath!).fsPath.toLowerCase());
+
+                        let editor = vscode.window.activeTextEditor;
+                        let issuesPath = ISSUES_PATH;
+                        let cursorPosition = editor?.selection.start;
+
+                        if (cursorPosition) {
+                            // Ensure the cursor is on the correct line for this issue
+                            if (sourceFilePath === openedFilePath && cursorPosition!.line === range.start.line) {
+                                // Push the patch command
+                                commandActions.push(this.createCommand(fixText, fixRange, patchPath));
+                            }
+
+                            // Check if the Python script command is already added
+                            if (!pythonCommandAdded) {
+                                let currentFilePath = vscode.window.activeTextEditor?.document.uri.path!;
+                                if (currentFilePath) {
+                                    // Push the Python script command
+                                    commandActions.push(this.createPythonCommand("AI: generate new patch", range, warningId, currentFilePath, projectFolder, patch_folder, issuesPath));
+                                    pythonCommandAdded = true; // Mark the Python command as added
+                                }
+                            }
+                        }
+                    });
+
+                    // Add the Python script option, even if there are no available patches
+                    if (!pythonCommandAdded) {
+                        let currentFilePath = vscode.window.activeTextEditor?.document.uri.path!;
+                        if (currentFilePath) {
+                            // Push the Python script command
+                            commandActions.push(this.createPythonCommand("AI: generate new patch", range, warningId, currentFilePath, PROJECT_FOLDER, PATCH_FOLDER, ISSUES_PATH));
+                            pythonCommandAdded = true; // Mark the Python command as added
+                        }
+                    }
                 }
-              }
-
-              try {
-                patch = readFileSync(upath.join(patch_folder, patchPath), "utf8");
-              } catch (err) {
-                console.log(err);
-              }
-
-              var sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patch);
-              var sourceFilePath: string;
-
-              if (sourceFileMatch && sourceFileMatch[1]) {
-                sourceFilePath = sourceFileMatch[1];
-              } else {
-                throw Error("Unable to find source file in '" + patch + "'");
-              }
-
-              let openedFilePath = vscode.window.activeTextEditor?.document.uri.path;
-
-              let projectFolder = PROJECT_FOLDER;
-              sourceFilePath = upath.normalize(upath.join(PROJECT_FOLDER, vscode.Uri.file(sourceFilePath).fsPath).toLowerCase());
-              openedFilePath = upath.normalize(vscode.Uri.file(openedFilePath!).fsPath.toLowerCase());
-              if (process.platform === 'linux' || process.platform === 'darwin') {
-                if (sourceFilePath![0] !== '/')
-                  sourceFilePath = '/' + sourceFilePath;
-                if (openedFilePath![0] !== '/')
-                  openedFilePath = '/' + openedFilePath;
-              }
-
-              let editor = vscode.window.activeTextEditor;
-              let issuesPath = ISSUES_PATH;
-              let cursorPosition = editor?.selection.start;
-
-              if (cursorPosition) {
-                // Ensure the cursor is on the correct line for this issue
-                if (sourceFilePath === openedFilePath && cursorPosition!.line === range.start.line) {
-                  // Push the patch command
-                  commandActions.push(this.createCommand(fixText, fixRange, patchPath));
-                }
-
-                let currentFilePath = vscode.window.activeTextEditor?.document.uri.path!;
-                if (currentFilePath) {
-                  // Check if the Python script command is already added
-                  let pythonCommandExists = commandActions.some(action => action.title === "AI: generate new patch");
-                  if (!pythonCommandExists) {
-                    // Push the Python script command
-                    commandActions.push(this.createPythonCommand("AI: generate new patch", range, warningId, currentFilePath, projectFolder, patch_folder, issuesPath));
-                  }
-                } else {
-                  console.log("No open file " + currentFilePath);
-                }
-              }
             });
-
-            // Add the Python script option, even if there are no available patches
-            if (!hasFixes) {
-              let currentFilePath = vscode.window.activeTextEditor?.document.uri.path!;
-              if (currentFilePath) {
-                // Push the Python script command
-                commandActions.push(this.createPythonCommand("AI: generate new patch", range, warningId, currentFilePath, PROJECT_FOLDER, PATCH_FOLDER, ISSUES_PATH));
-              }
-            }
-          }
         });
-      });
     }
 
     return commandActions;
-  }
+}
 
   private createCommand(fixText: string, fixRange: IIssueRange, patchPath: string): vscode.CodeAction {
     const action = new vscode.CodeAction(fixText, vscode.CodeActionKind.QuickFix);
