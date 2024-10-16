@@ -299,17 +299,17 @@ export function init(
 
   function runOrchestratorScript() {
     let issuesPath = ISSUES_PATH;
-    /* try {
+    try {
       writeFileSync(issuesPath, "", "utf8");
       logging.LogInfo(`Cleared content of the file at ${issuesPath}`);
     } catch (error) {
       logging.LogErrorAndShowErrorMessage(`Failed to clear content of the file at ${issuesPath}:`, error as any);
-    } */
+    }
     let generatedPatchesPath = PATCH_FOLDER;
     let subjectProjectPath = PROJECT_FOLDER;
     let jsonFilePaths: string[] = [];
 
-    /* return new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       const scriptPath = upath.normalize(upath.join(SCRIPT_PATH, 'orchestrator.py'));
   
       const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
@@ -346,7 +346,7 @@ export function init(
         logging.LogError(`orchestrator.py error: ${data}`);
       });
     })
-      .then(() => { */
+      .then(() => {
     // var currentFilePath = upath.normalize(vscode.window.activeTextEditor!.document.uri.path);
     // if (process.platform === "win32" && currentFilePath.startsWith("/")) {
     //   currentFilePath = currentFilePath.substring(1);
@@ -400,10 +400,10 @@ export function init(
         "Finished analysis of project!"
       );
     });
-    /* })
+    })
      .catch((err) => {
       logging.LogError(`Error during analysis: ${err}`);
-    }); */
+    });
   }
 
   async function getOutputFromAnalyzerOfAFile() {
