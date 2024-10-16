@@ -1125,7 +1125,7 @@ export function init(
 
   function applyPatch() {
     logging.LogInfo("===== Executing applyPatch command. =====");
-    let issues_path = ISSUES_PATH;
+
     if (ANALYZER_USE_DIFF_MODE == "view Diffs") {
       let patchPath = "";
       const webview = getActiveDiffPanelWebview();
@@ -1136,7 +1136,7 @@ export function init(
           "applied",
           webview.params.patchPath!,
           webview.params.leftPath!
-        ).then(async () => {
+        ).then(() => {
           if ("leftPath" in webview.params && "patchPath" in webview.params) {
             // Saving issues.json and file contents in state,
             // so later the changes can be reverted if user asks for it:
@@ -1144,7 +1144,7 @@ export function init(
               saveFileAndFixesToState(webview.params.leftPath!);
             }
 
-            await webview.api.applyPatch();
+            webview.api.applyPatch();
 
             var openFilePath = vscode.Uri.file(
               upath.normalize(String(webview.params.leftPath))
@@ -1261,7 +1261,6 @@ export function init(
     logging.LogInfo("===== Finished applyPatch command. =====");
   }
 
-
   function updateIssuesAfterPatch(sourceFilePath: string, patchFilePath: string) {
     const patchContent = readFileSync(upath.join(PATCH_FOLDER, patchFilePath), "utf8");
   
@@ -1276,21 +1275,16 @@ export function init(
     const lineShifts: { [lineNumber: number]: number } = {};
     let cumulativeShift = 0;
   
-    parsedPatch.forEach((hunk: { hunks: any[] }) => {
+    parsedPatch.forEach((hunk: { hunks: any[]; }) => {
       hunk.hunks.forEach(chunk => {
         const startLine = chunk.oldStart;
         const oldLines = chunk.oldLines || 0;
         const newLines = chunk.newLines || 0;
         const lineDiff = newLines - oldLines;
   
-        // Apply the cumulative shift to all lines affected by this patch
-        for (let i = 0; i < oldLines; i++) {
-          const currentLine = startLine + i;
-          lineShifts[currentLine] = cumulativeShift;
-        }
-  
-        // Update the cumulative shift
         cumulativeShift += lineDiff;
+  
+        lineShifts[startLine] = cumulativeShift;
       });
     });
   
@@ -1298,6 +1292,7 @@ export function init(
   }
 
   function updateIssuesTextRanges(sourceFilePath: string, lineShifts: { [lineNumber: number]: number }) {
+    // Load the issues for the source file
     const issuesJsonPaths = getIssuesJsonPathsForSourceFile(sourceFilePath);
   
     issuesJsonPaths.forEach(jsonPath => {
@@ -1313,14 +1308,13 @@ export function init(
   
           let shift = 0;
   
-          // Apply shifts cumulatively for the whole text range of the issue
-          Object.keys(lineShifts).forEach(line => {
+          // Determine the shift for the current issue based on the line shifts
+          for (const line in lineShifts) {
             const lineNumber = parseInt(line, 10);
-            
-            if (startLine >= lineNumber) {
-              shift = lineShifts[lineNumber];
+            if (startLine > lineNumber) {
+              shift = lineShifts[line];
             }
-          });
+          }
   
           if (shift !== 0) {
             // Update the text ranges
@@ -1533,7 +1527,7 @@ export function init(
   
       logging.LogInfoAndShowInformationMessage("Successfully removed the object with id:", id);
 
-      await getDiagnosticsAfterPatch();
+      getDiagnosticsAfterPatch();
   
       // Return the original file content and JSON file path
       return [fileContent, jsonFilePath];
