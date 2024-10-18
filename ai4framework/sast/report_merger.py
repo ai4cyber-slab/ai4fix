@@ -20,7 +20,7 @@ class ReportMerger:
         self.config = config
         self.project_path = self.config.get('DEFAULT', 'config.project_path')
 
-    def merge_reports(self, *report_runners):
+    def merge_reports(self, *report_runners, validation=False):
         """
         Merge reports from multiple SAST tools.
 
@@ -30,6 +30,7 @@ class ReportMerger:
         Args:
             *report_runners: Variable number of report runner objects,
                              each with a parse_report() method.
+            validation (bool): If True, use a different output path for validation.
 
         Raises:
             Exception: If there's an error during the merging process.
@@ -42,11 +43,12 @@ class ReportMerger:
             for runner in report_runners:
                 issues.extend(runner.parse_report())
 
-            # Get the output path from config
-            # output_path = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.project_path, 'sast_issues.json'))
-            output_path = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.config.get("ISSUES", "config.issues_path").replace("issues.json", "sast_issues.json")))
+            # Determine the output path based on validation flag
+            if validation:
+                output_path = os.path.join(self.config.get("ISSUES", "config.issues_path").replace("issues.json", "sast_validation_issues.json"))
+            else:
+                output_path = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.config.get("ISSUES", "config.issues_path").replace("issues.json", "sast_issues.json")))
 
-            
             # Ensure the directory exists
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
 

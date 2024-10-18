@@ -24,7 +24,7 @@ class WorkflowFramework:
     of a software project.
     """
 
-    def __init__(self, skip_patches=False):
+    def __init__(self, skip_patches=False, sast_rerun=False):
         self.config = ConfigManager.get_config()
         self.sast = sast.sast_orchestrator.SASTOrchestrator(self.config)
         self.security_classifier = SecurityClassifier(self.config)
@@ -34,20 +34,34 @@ class WorkflowFramework:
         self.issues_merger = JSONCombiner(self.config)
         self.json_converter = JsonPluginConverter(self.config)
         self.skip_patches = skip_patches
+        self.sast_rerun = sast_rerun
 
     def execute_workflow(self):
         logger.info("Starting workflow execution")
         start_time = time.time()
+
+        # Run SAST analysis first
         self.sast.run_all()
-        self.security_classifier.classify()
-        self.symbolic_execution.analyze()
+
+        # If sast_rerun is NOT enabled, run the security classifier and symbolic execution
+        if not self.sast_rerun:
+            self.security_classifier.classify()
+            self.symbolic_execution.analyze()
+
+        # Merge issues regardless of whether sast_rerun or skip_patches is enabled
         self.issues_merger.run()
-        if not self.skip_patches:
+
+
+        if not self.skip_patches and not self.sast_rerun:
             self.patch_generator.main()
+            
+
+        # Process the JSON conversion after all steps
         self.json_converter.process()
 
         elapsed_time = time.time() - start_time
         logger.info(f"Workflow execution completed in {elapsed_time:.2f} seconds")
+
 
 def kill_rg_processes():
     """
@@ -78,14 +92,17 @@ def signal_handler(sig, frame):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Execute the security analysis workflow.')
     parser.add_argument('--skip-patches', action='store_true', help='If provided, the patches part will be skipped.')
+    parser.add_argument('--sast-rerun', action='store_true', help='If provided, issues will be generated for the new java files contents.')
     args, unknown = parser.parse_known_args()
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
+    # Initialize the framework with the parsed arguments
+    framework = WorkflowFramework(skip_patches=args.skip_patches, sast_rerun=args.sast_rerun)
 
-    framework = WorkflowFramework(skip_patches=args.skip_patches)
+    # Execute the workflow
     framework.execute_workflow()
 
-
+    # Kill any remaining rg processes
     kill_rg_processes()

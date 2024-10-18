@@ -53,22 +53,26 @@ class ToolRunner:
             elapsed_time = time.time() - start_time
             logger.error(f"Failed to run {tool_name} after {elapsed_time:.2f} seconds: {e}")
 
-    def run_pmd(self):
+    def run_pmd(self, validation=False, java_file_path=None):
         """
         Run PMD on changed Java files.
 
         Retrieves the list of changed Java files and runs PMD on them.
         """
         changed_java_files = self.repo_manager.get_changed_files()
+        if validation and java_file_path is not None:
+            changed_java_files = [e for e in changed_java_files if os.path.splitext(os.path.basename(e))[0] in java_file_path]
         self.run_tool("PMD", self.pmd_runner.run, changed_java_files)
 
-    def run_spotbugs(self):
+    def run_spotbugs(self, validation=False, java_file_path=None):
         """
         Run SpotBugs on changed class files.
 
         Finds the corresponding class files for changed Java files and runs SpotBugs on them.
         """
         class_changed_files = self.find_class_changed_files()
+        if validation and java_file_path is not None:
+            class_changed_files = [e for e in class_changed_files if os.path.splitext(os.path.basename(e))[0] in java_file_path]
         self.run_tool("SpotBugs", self.spotbugs_runner.run, class_changed_files)
 
     def run_trivy(self):

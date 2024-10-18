@@ -30,7 +30,7 @@ class SASTOrchestrator:
         self.report_merger = ReportMerger(config)
         self.projet_path = config.get('DEFAULT', 'config.project_path')
 
-    def run_all(self):
+    def run_all(self, validation=False, java_file_path=None):
         """
         Run all configured SAST tools and merge their reports.
 
@@ -41,46 +41,29 @@ class SASTOrchestrator:
         - Running SpotBugs
         - Running Trivy
         - Merging reports from all tools
+        
+        Args:
+            validation (bool): If True, perform validation steps in all methods. Default is False.
         """
         try:
-            self.repo_manager.checkout_commit()
-            self.tool_runner.run_pmd()
-            self.run_maven_compile()
-            self.tool_runner.run_spotbugs()
-            # self.tool_runner.run_trivy()
+            if not validation and self.repo_manager.commit_hash:
+                self.repo_manager.checkout_commit()
+            self.tool_runner.run_pmd(validation=validation, java_file_path=java_file_path)
+            if not validation:
+                self.run_maven_compile()
+            self.tool_runner.run_spotbugs(validation=validation)
+            # self.tool_runner.run_trivy(validation=validation)
             self.report_merger.merge_reports(
                 self.tool_runner.pmd_runner,
                 self.tool_runner.spotbugs_runner,
-                self.tool_runner.trivy_runner
+                self.tool_runner.trivy_runner,
+                validation=validation
             )
         finally:
             # self.repo_manager.revert_checkout()
             pass
 
-    # def run_maven_compile(self):
-    #     """
-    #     Run Maven compile command for the project.
-
-    #     This method attempts to compile the project using Maven,
-    #     skipping tests to focus on compilation only.
-    #     """
-    #     try:
-    #         # ["mvn", "compile", "-DskipTests"],
-    #         logger.info("Maven compilation started...")
-    #         # print(self.repo_manager.repo.working_dir)
-    #         result = subprocess.run(
-    #             ['mvn', 'compile', '-Dmaven.compiler.incremental=true', '-DskipTests'],
-    #             cwd=self.projet_path,
-    #             text=True
-    #         )
-    #         if result.returncode == 0:
-    #             logger.info("Maven compile successful")
-    #         else:
-    #             logger.error("Maven compile failed")
-    #             sys.exit(0)
-    #     except Exception as e:
-    #         logger.error(f"An error occurred during Maven compilation: {e}")
-    def run_maven_compile(self):
+    def run_maven_compile(self, validation=False):
         """
         Run Maven compile command for the project.
 
@@ -93,6 +76,7 @@ class SASTOrchestrator:
             # Use 'with' to safely manage the subprocess
             with subprocess.Popen(
                 ['mvn', 'compile', '-Dmaven.compiler.incremental=true', '-DskipTests'],
+                # ['mvn', 'compile', '-T 4C', '-Dmaven.compiler.incremental=true', '-DskipTests', '-B'],
                 cwd=self.projet_path,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
             ) as process:
@@ -110,22 +94,3 @@ class SASTOrchestrator:
         except Exception as e:
             logger.error(f"An error occurred during Maven compilation: {str(e)}")
             sys.exit(1)
-
-
-
-# Helper functions
-def find_script_directory(script_name):
-    """
-    Find the directory containing a specified script.
-
-    Args:
-        script_name (str): The name of the script to find.
-
-    Returns:
-        str or None: The path to the directory containing the script,
-                     or None if not found.
-    """
-    for root, dirs, files in os.walk(os.getcwd()):
-        if script_name in files:
-            return root
-    return None
