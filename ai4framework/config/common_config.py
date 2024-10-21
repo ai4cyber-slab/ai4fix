@@ -77,6 +77,8 @@ def get_project_root():
     parser = argparse.ArgumentParser(description='Process some parameters.')
     parser.add_argument('--project-root', '-p', dest='project_root', type=str, help='Path to the project root directory.')
     parser.add_argument('--openai-key', '-k', dest='openai_key', type=str, help='OpenAI API key.')
+    parser.add_argument('--skip-patches', action='store_true', help='If provided, the patches part will be skipped.')
+    parser.add_argument('--sast-rerun', action='store_true', help='If provided, issues will be generated for the new java files contents')
 
     args, unknown = parser.parse_known_args()
 

@@ -43,6 +43,10 @@ class RepoManager:
         Raises:
             Exception: If the checkout operation fails.
         """
+        current_commit = self.repo.head.commit
+        if current_commit.hexsha == self.commit_hash:
+            logger.info(f"Commit {self.commit_hash} is already checked out.")
+            return
         logger.info(f"Checking out commit {self.commit_hash}...")
         try:
             self.repo.git.checkout('-f', self.commit_hash)

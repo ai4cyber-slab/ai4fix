@@ -10,6 +10,8 @@ import difflib
 import time
 import random
 import sys
+from sast.sast_orchestrator import SASTOrchestrator
+from utils.comparer import IssueComparer
 
 class PatchGenerator:
     def __init__(self, config):
@@ -22,10 +24,10 @@ class PatchGenerator:
         
         # Load configurations from file
         self.config = config
-
+        self.project_root = self.config.get('DEFAULT', 'config.project_path')
+        self.sast = SASTOrchestrator(self.config)
         # Set base directories and configurations dynamically
         self.base_dir = self.config.get('DEFAULT', 'config.project_path', fallback='')
-        self.project_root = self.config.get('DEFAULT', 'config.project_path')
         self.diffs_output_dir = self.config.get('DEFAULT', 'config.results_path', fallback='')
         self.json_file_path = self.config.get('ISSUES', 'config.issues_path', fallback='')
         self.warnings = []
@@ -148,8 +150,21 @@ class PatchGenerator:
                 logger.error(f"Error writing to file {full_file_path}: {e}")
                 continue
 
-            logger.info(f"Running 'mvn clean test' for warning ID {warning['id']}...")
+            logger.info(f"Running 'mvn test' for warning ID {warning['id']}...")
             result = self.run_maven_test()
+            self.sast.run_all(validation=True, java_file_path=file_path)
+            original_json_sast = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.config.get("ISSUES", "config.issues_path").replace("issues.json", "sast_issues.json")))
+            temp_json_sast = os.path.join(self.config.get("ISSUES", "config.issues_path").replace("issues.json", "sast_validation_issues.json"))
+            self.comparer = IssueComparer(original_json_sast, temp_json_sast, file_path)
+            # Perform the comparison
+            self.comparer.compare_issues()
+
+            # Get the results
+            removed_ids = self.comparer.get_removed_issue_ids()
+            existing_ids = self.comparer.get_existing_issue_ids()
+            print(f"Issues removed after applying patch no: {warning['id']} -> {removed_ids}")
+            print(f"Issues still present after applying patch no: {warning['id']} -> {existing_ids}")
+
 
             error_detected, _, _ = self.analyze_maven_output(result)
 
