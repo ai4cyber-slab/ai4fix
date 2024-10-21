@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { IFix } from "../interfaces";
 import * as path from "path";
-import { getIssues } from "../services/fakeAiFixCode";
+import { getIssues,getIssues2 } from "../services/fakeAiFixCode";
 import { objectify } from "tslint/lib/utils";
 import { isObjectLiteralExpression } from "typescript";
 import { writeFileSync } from "fs";
@@ -49,7 +49,7 @@ export class TestView {
 }
 
 async function initTree() {
-  tree = await getIssues();
+  tree = await getIssues2();
   //groupTreeToDistinctGroups(tree);
   console.log(tree);
 }

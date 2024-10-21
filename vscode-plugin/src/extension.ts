@@ -1,4 +1,4 @@
-import { init } from './commands';
+import { init, refreshDiagnosticsWithoutAnalysis } from './commands';
 //import { commands, ExtensionContext, languages, ProgressLocation, window, workspace, StatusBarItem, StatusBarAlignment } from 'vscode';
 import * as vscode from 'vscode';
 import { log } from './logger';
@@ -22,7 +22,7 @@ let analyzeCurrentFileStatusBarItem: vscode.StatusBarItem;
 let undoFixStatusBarItem: vscode.StatusBarItem;
 let generateTestForCurrentFileStatusBarItem: vscode.StatusBarItem;
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
 
   const jsonOutlineProvider = new JsonOutlineProvider(context);
   vscode.window.registerTreeDataProvider('aifix4seccode-vscode_jsonOutline', jsonOutlineProvider);
@@ -88,6 +88,8 @@ export function activate(context: vscode.ExtensionContext) {
       vscode.commands.executeCommand('workbench.action.openSettings', 'AIFix4SecCode');
     });
   logging.ShowInfoMessage("AIFix4SecCode installed. Welcome!");
+  
+  await refreshDiagnosticsWithoutAnalysis(context);
 
   // Handle file save with running a file analysis:
   vscode.workspace.onDidSaveTextDocument((document: vscode.TextDocument) => {

@@ -108,6 +108,54 @@ export async function updateUserDecisions(
   });
 }
 
+export async function refreshDiagnosticsWithoutAnalysis(context: vscode.ExtensionContext,) {
+  let issuesPath = ISSUES_PATH;
+  let generatedPatchesPath = PATCH_FOLDER;
+  let subjectProjectPath = PROJECT_FOLDER;
+  let jsonFilePaths: string[] = [];
+
+  try {
+    const data = readFileSync(issuesPath, "utf8");
+    let lines = data.split("\n");
+
+    jsonFilePaths = lines.filter((line: string) => line.trim().endsWith(".json"));
+
+    if (jsonFilePaths.length === 0) {
+      logging.LogError("No JSON file paths found in the issuesPath file.");
+      return;
+    }
+  } catch (err) {
+    logging.LogError("Error reading the issuesPath file: " + err);
+    return;
+  }
+
+  // Show issues treeView:
+  testView = new TestView(context);
+  groupedTestView = new GroupedTestView(context);
+
+  // Initialize action commands of diagnostics made after analysis:
+  initActionCommands(context);
+
+  // Await the withProgress function
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "Loading Diagnostics...",
+    },
+    async () => {
+      await refreshDiagnostics(vscode.window.activeTextEditor!.document, analysisDiagnostics);
+    }
+  );
+
+  let output = fakeAiFixCode.getIssuesSync();
+  logging.LogInfo("issues got from analyzer output: " + JSON.stringify(output));
+
+  logging.LogInfoAndShowInformationMessage(
+    "===== Finished analysis. =====",
+    "Finished analysis of project!"
+  );
+}
+
 export function init(
   context: vscode.ExtensionContext,
   jsonOutlineProvider: any
@@ -942,15 +990,11 @@ export function init(
           const document = await vscode.workspace.openTextDocument(openFilePath);
           await vscode.window.showTextDocument(document);
 
-          progress.report({ message: "Running diagnostics..." });
           await refreshDiagnostics(document, analysisDiagnostics);
 
           if (textRange) {
             //await highlightIssueInEditor(textRange);
           }
-
-          logging.LogInfo("Diagnostics and highlighting completed.");
-          progress.report({ message: "Finished." });
         }
       );
     } catch (error) {
