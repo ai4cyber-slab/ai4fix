@@ -12,7 +12,6 @@ let disposableAnalyzerInfoProvider: vscode.Disposable;
 
 async function initIssues() {
   issueGroups = await getIssues2();
-  console.log(issueGroups);
 }
 
 export function initActionCommands(context: vscode.ExtensionContext) {

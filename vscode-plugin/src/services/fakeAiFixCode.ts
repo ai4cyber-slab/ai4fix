@@ -227,7 +227,7 @@ export async function getFixes(leftPath: string, patchPath: string) {
             try {
               patch = readFileSync(upath.join(PATCH_FOLDER, fix.path), "utf8");
             } catch (err) {
-              console.log(err);
+              logging.LogError(err as any);
             }
 
             var sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patch);

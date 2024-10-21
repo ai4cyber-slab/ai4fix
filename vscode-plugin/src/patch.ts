@@ -97,10 +97,8 @@ export function applyPatchToFile(leftPath: string, rightContent: string, patchPa
           });
         });
       }
-      console.log(issueGroups);
 
       let issuesStr = stringify(issueGroups);
-      console.log(issuesStr);
 
       // let issuesPath = ISSUES_PATH;
       // writeFileSync(issuesPath!, issuesStr, utf8Stream);

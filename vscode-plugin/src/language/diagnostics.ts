@@ -11,7 +11,6 @@ let issueGroups = {};
 
 async function initIssues() {
   issueGroups = await getIssues2();
-  console.log("Issue Groups (JSON): diagnostics", JSON.stringify(issueGroups));
 }
 
 export async function refreshDiagnostics(

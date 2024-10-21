@@ -50,8 +50,6 @@ export class TestView {
 
 async function initTree() {
   tree = await getIssues2();
-  //groupTreeToDistinctGroups(tree);
-  console.log(tree);
 }
 
 function groupTreeToDistinctGroups(tree: any) {
@@ -296,12 +294,7 @@ function filterTree(patchPath: string) {
       })
     })
     let issuesStr = stringify(tree);
-    // console.log(issuesStr);
-
-    // let issuesPath = ISSUES_PATH;
-    // writeFileSync(issuesPath!, issuesStr, utf8Stream);
   });
-  console.log(tree);
 }
 
 class Key {

@@ -4,6 +4,7 @@ import * as path from "path";
 import { getIssues, getIssues2 } from "../services/fakeAiFixCode";
 import { writeFileSync } from "fs";
 import { ISSUE, utf8Stream, ISSUES_PATH } from "../constants";
+import * as logging from "../services/logging";
 var stringify = require("json-stringify");
 
 let tree: any;
@@ -53,7 +54,7 @@ export class GroupedTestView {
         } catch { }
       })
       .catch((error) => {
-        console.error('Error in constructor after initTree:', error);
+        logging.LogErrorAndShowErrorMessage('Error in constructor after initTree:', error);
       });
   }
 }
@@ -61,19 +62,13 @@ export class GroupedTestView {
 async function initTree() {
   try {
     const issuesObject = await getIssues2();
-    console.log('Issues from getIssues2:', issuesObject);
 
     // Flatten the issues object into a single array
     const issuesArrays = Object.values(issuesObject); // Get arrays of issues
     const flatIssues = Object.values(issuesObject).reduce((acc: any, issuesArray: any) => acc.concat(issuesArray), []);
-
-
-    console.log('Flattened Issues:', flatIssues);
-
     tree = groupIssuesByFile(flatIssues as any);
-    console.log('Grouped Tree:', tree);
   } catch (error) {
-    console.error('Error in initTree:', error);
+    logging.LogErrorAndShowErrorMessage('Error in initTree:', error as any);
   }
 }
 
@@ -311,7 +306,6 @@ function filterTree(patchPath: string) {
       delete tree[key];
     }
   });
-  console.log(tree);
 }
 
 class Key {
