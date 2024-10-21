@@ -259,12 +259,10 @@ function getTreeElement(element: any) {
   let parent = tree;
   parent = parent[element];
   if (!parent) {
-    //
     let issuesArray: any = Object.values(tree);
     let issueIndex = Object.keys(tree).indexOf(element.split('-')[0]);
     let issueItem = issuesArray[issueIndex][element.split('#')[1] - 1];
 
-    // Add sourceFile information extracted from the JSON file name or other means
     let sourceFileName = issueItem["JavaFileName"];
 
     return {

@@ -33,6 +33,7 @@ import {
 } from "./webview/extendedWebview";
 import { refreshDiagnostics } from "./language/diagnostics";
 import { TestView } from "./providers/testView";
+import { GroupedTestView } from "./providers/testViewGrouped";
 import { analysisDiagnostics } from "./extension";
 import * as fakeAiFixCode from "./services/fakeAiFixCode";
 import * as logging from "./services/logging";
@@ -45,6 +46,7 @@ import * as child_process from 'child_process';
 
 import * as cp from "child_process";
 
+
 const parseJson = require("parse-json");
 const parseDiff = require("parse-diff");
 const { applyPatchWithWhitespaceIgnore } = require('../utils/applyPatchWrapper');
@@ -56,6 +58,7 @@ var stringify = require("json-stringify");
 let activeDiffPanelWebviews = getActiveDiffPanelWebviews();
 
 export let testView: TestView;
+export let groupedTestView: GroupedTestView;
 
 let issues: any;
 
@@ -245,18 +248,18 @@ export function init(
     );
   }
 
-  function refreshDiagnosticsWithoutAnalysis() {
+  async function refreshDiagnosticsWithoutAnalysis() {
     let issuesPath = ISSUES_PATH;
     let generatedPatchesPath = PATCH_FOLDER;
     let subjectProjectPath = PROJECT_FOLDER;
     let jsonFilePaths: string[] = [];
-
+  
     try {
       const data = readFileSync(issuesPath, "utf8");
       let lines = data.split("\n");
-
-      jsonFilePaths = lines.filter((line: string) => line.trim().endsWith('.json'));
-
+  
+      jsonFilePaths = lines.filter((line: string) => line.trim().endsWith(".json"));
+  
       if (jsonFilePaths.length === 0) {
         logging.LogError("No JSON file paths found in the issuesPath file.");
         return;
@@ -265,36 +268,32 @@ export function init(
       logging.LogError("Error reading the issuesPath file: " + err);
       return;
     }
-
-    return new Promise<void>((resolve) => {
-      // Show issues treeView:
-      testView = new TestView(context);
-
-      // Initialize action commands of diagnostics made after analysis:
-      initActionCommands(context);
-
-      vscode.window.withProgress(
-        {
-          location: vscode.ProgressLocation.Notification,
-          title: "Loading Diagnostics...",
-        },
-        async () => {
-          await refreshDiagnostics(vscode.window.activeTextEditor!.document, analysisDiagnostics);
-        }
-      );
-
-            
-      let output = fakeAiFixCode.getIssuesSync();
-      logging.LogInfo(
-        "issues got from analyzer output: " + JSON.stringify(output)
+  
+    // Show issues treeView:
+    testView = new TestView(context);
+    groupedTestView = new GroupedTestView(context);
+  
+    // Initialize action commands of diagnostics made after analysis:
+    initActionCommands(context);
+  
+    // Await the withProgress function
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "Loading Diagnostics...",
+      },
+      async () => {
+        await refreshDiagnostics(vscode.window.activeTextEditor!.document, analysisDiagnostics);
+      }
     );
-
-      resolve();
-      logging.LogInfoAndShowInformationMessage(
-        "===== Finished analysis. =====",
-        "Finished analysis of project!"
-      );
-    });
+  
+    let output = fakeAiFixCode.getIssuesSync();
+    logging.LogInfo("issues got from analyzer output: " + JSON.stringify(output));
+  
+    logging.LogInfoAndShowInformationMessage(
+      "===== Finished analysis. =====",
+      "Finished analysis of project!"
+    );
   }
 
   function runOrchestratorScript() {
@@ -374,6 +373,7 @@ export function init(
 
       // Show issues treeView:
       testView = new TestView(context);
+      groupedTestView= new GroupedTestView(context);
 
       // Initialize action commands of diagnostics made after analysis:
       initActionCommands(context);
@@ -422,47 +422,48 @@ export function init(
 
   async function undoLastFix() {
     logging.LogInfo("===== Undo Last Fix started from command. =====");
-    
+  
     // Retrieve the last file path
     let lastFilePath = context.workspaceState.get<string>("lastFilePath")!;
-
+  
     // Correct the file path for Windows systems
     if (process.platform === "win32") {
       // Remove any leading '/c:/' or '\\c:\\'
       lastFilePath = lastFilePath.replace(/^([/\\])?c:[/\\]/i, 'C:\\');
     }
-
+  
     // Normalize the path after the correction
     lastFilePath = path.normalize(lastFilePath);
-
     logging.LogInfo("Corrected file path: " + lastFilePath);
-
+  
     // Get the file content to revert
     const lastFileContent = context.workspaceState.get<string>("lastFileContent")!;
     const lastIssuesPath = path.normalize(context.workspaceState.get<string>("lastIssuesPath")!);
     const lastIssuesContent = JSON.parse(context.workspaceState.get<string>("lastIssuesContent")!);
-
-    // Set content of issues:
+  
     writeFileSync(lastIssuesPath, lastIssuesContent);
-
-    // Set content of edited file and focus on it:
+  
     writeFileSync(lastFilePath, lastFileContent);
-
+  
     vscode.workspace.openTextDocument(lastFilePath).then((document) => {
       vscode.window.showTextDocument(document).then(() => {
         if (ANALYZER_USE_DIFF_MODE == "view Diffs") {
           var webview = getActiveDiffPanelWebview();
           if ("patchPath" in webview.params) {
+            const appliedPatchFilePath = path.normalize(webview.params.patchPath!);
+  
+            // Reverse the header updates for all other diffs in the JSON
+            revertDiffHeaders(lastFilePath, appliedPatchFilePath);
+  
             // Update user decisions of the revert fix:
             updateUserDecisions(
               "Undo was requested by user.",
-              path.normalize(webview.params.patchPath!),
+              appliedPatchFilePath,
               lastFilePath
-            ).then(() => {
-              //getOutputFromAnalyzerOfAFile();
+            ).then(async () => {
+              // Refresh diagnostics after undo
               getDiagnosticsAfterPatch();
               async () => {
-
                 vscode.window.withProgress(
                   {
                     location: vscode.ProgressLocation.Notification,
@@ -476,26 +477,108 @@ export function init(
                   }
                 );
               }
+              await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+              const document = await vscode.workspace.openTextDocument(lastFilePath as any);
+              await vscode.window.showTextDocument(document);
             });
           }
         } else if (ANALYZER_USE_DIFF_MODE == "view Patch files") {
           var patchFilepath = path.normalize(
             JSON.parse(context.workspaceState.get<string>("openedPatchPath")!)
           );
-
           // Update user decisions of the revert fix:
           updateUserDecisions(
             "Undo was requested by user.",
             patchFilepath,
             lastFilePath
-          ).then(() => {
+          ).then(async () => {
             getOutputFromAnalyzerOfAFile();
+            await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+
+            const document = await vscode.workspace.openTextDocument(lastFilePath as any);
+            await vscode.window.showTextDocument(document);
           });
         }
       });
     });
-
+    
     logging.LogInfo("===== Undo Last Fix command finished executing. =====");
+  }
+
+  function revertDiffHeaders(sourceFilePath: string, appliedPatchFilePath: string) {
+    const issuesJsonPaths = getIssuesJsonPathsForSourceFile(sourceFilePath);
+  
+    issuesJsonPaths.forEach(jsonPath => {
+      const jsonContent = readFileSync(jsonPath, 'utf8');
+      const issues = JSON.parse(jsonContent);
+  
+      const appliedPatchContent = readFileSync(upath.join(PATCH_FOLDER, appliedPatchFilePath), 'utf8');
+      const appliedParsedPatch = diff.parsePatch(appliedPatchContent);
+      const appliedLineShifts = computeLineShifts(appliedParsedPatch);
+  
+      issues.forEach((issue: any) => {
+        issue.items.forEach((item: any) => {
+          item.patches.forEach((patch: any) => {
+            const patchFilePath = upath.join(PATCH_FOLDER, patch.path);
+  
+            // Skip the patch that was just undone
+            if (patch.path === appliedPatchFilePath) {
+              return;
+            }
+  
+            // For all other patches, apply the line shifts from the applied patch
+            const patchContent = readFileSync(patchFilePath, 'utf8');
+            const parsedPatch = diff.parsePatch(patchContent);
+            
+            revertDiffHeader(patchFilePath, appliedLineShifts); 
+          });
+        });
+      });
+  
+      writeFileSync(jsonPath, JSON.stringify(issues, null, 2), 'utf8');
+    });
+  }
+  
+  function revertDiffHeader(patchFilePath: string, lineShifts: { [lineNumber: number]: number }) {
+    let patchContent = readFileSync(patchFilePath, 'utf8');
+    const parsedPatch = diff.parsePatch(patchContent);
+  
+    let revertedPatch = "";
+  
+    parsedPatch.forEach((hunk: { hunks: { oldStart: any; newStart: any; oldLines: any; newLines: any; lines: string[]; }[]; }) => {
+      const sourceLines = patchContent.split('\n').slice(0, 2);
+      revertedPatch += sourceLines.join('\n') + "\n";
+  
+      // Iterate through each hunk and revert its header
+      hunk.hunks.forEach((chunk: { oldStart: any; newStart: any; oldLines: any; newLines: any; lines: string[]; }) => {
+        const oldStartLine = chunk.oldStart;
+        const newStartLine = chunk.newStart;
+  
+        let adjustedOldStart = oldStartLine;
+        let adjustedNewStart = newStartLine;
+  
+        // Apply reverse shifts (based on the applied patch)
+        for (const line in lineShifts) {
+          const lineNumber = parseInt(line, 10);
+          if (oldStartLine >= lineNumber) {
+            adjustedOldStart -= lineShifts[lineNumber];
+          }
+          if (newStartLine >= lineNumber) {
+            adjustedNewStart -= lineShifts[lineNumber];
+          }
+        }
+  
+        // Replace the header in the patch content with reverted line numbers
+        const header = `@@ -${adjustedOldStart},${chunk.oldLines} +${adjustedNewStart},${chunk.newLines} @@`;
+  
+        revertedPatch += header + "\n";
+        chunk.lines.forEach((line: string) => {
+          revertedPatch += line + "\n";
+        });
+      });
+    });
+  
+    writeFileSync(patchFilePath, revertedPatch, 'utf8');
   }
 
   function startAnalyzingProjectSync() {
@@ -534,6 +617,7 @@ export function init(
       // Show issues treeView:
       // tslint:disable-next-line: no-unused-expression
       testView = new TestView(context);
+      groupedTestView= new GroupedTestView(context);
 
       // Initialize action commands of diagnostics made after analysis:
       initActionCommands(context);
@@ -761,6 +845,7 @@ export function init(
       // Show issues treeView:
       // tslint:disable-next-line: no-unused-expression
       testView = new TestView(context);
+      groupedTestView= new GroupedTestView(context);
 
       // Initialize action commands of diagnostics made after analysis:
       initActionCommands(context);
@@ -840,7 +925,6 @@ export function init(
           cancellable: false,
         },
         async (progress) => {
-          progress.report({ message: "Searching for the source file..." });
 
           // Find the full path to the source file
           const sourceFilePath = await findFileInProject(sourceFile);
@@ -852,7 +936,6 @@ export function init(
             throw new Error(errorMessage);
           }
 
-          progress.report({ message: "Opening the source file..." });
           const openFilePath = vscode.Uri.file(sourceFilePath);
           logging.LogInfo(`Matched source file path: ${openFilePath.fsPath}`);
 
@@ -863,8 +946,7 @@ export function init(
           await refreshDiagnostics(document, analysisDiagnostics);
 
           if (textRange) {
-            progress.report({ message: "Highlighting the issue..." });
-            await highlightIssueInEditor(textRange);
+            //await highlightIssueInEditor(textRange);
           }
 
           logging.LogInfo("Diagnostics and highlighting completed.");
@@ -1123,73 +1205,85 @@ export function init(
     return patched;
   }
 
-  function applyPatch() {
+  async function applyPatch() {
     logging.LogInfo("===== Executing applyPatch command. =====");
+    let openFilePath
 
     if (ANALYZER_USE_DIFF_MODE == "view Diffs") {
       let patchPath = "";
       const webview = getActiveDiffPanelWebview();
-      //let wasM = getPatchedContent(webview.params.leftContent, webview.params);
-
+    
       if ("leftPath" in webview.params && "patchPath" in webview.params) {
-        updateUserDecisions(
-          "applied",
-          webview.params.patchPath!,
-          webview.params.leftPath!
-        ).then(() => {
-          if ("leftPath" in webview.params && "patchPath" in webview.params) {
-            // Saving issues.json and file contents in state,
-            // so later the changes can be reverted if user asks for it:
-            if ("leftPath" in webview.params) {
-              saveFileAndFixesToState(webview.params.leftPath!);
-            }
+        // Saving issues.json and file contents in state,
+        // so later the changes can be reverted if the user asks for it:
+        if ("leftPath" in webview.params) {
+          logging.LogInfo("saveFileAndFixesToState RUNNING")
+          await saveFileAndFixesToState(webview.params.leftPath!);
+          logging.LogInfo("saveFileAndFixesToState RAN")
+        }
+    
+        // Update user decisions
+        try {
+          await updateUserDecisions(
+            "applied",
+            webview.params.patchPath!,
+            webview.params.leftPath!
+          );
+    
+          // Apply the patch
+          webview.api.applyPatch();
 
-            webview.api.applyPatch();
-
-            var openFilePath = vscode.Uri.file(
-              upath.normalize(String(webview.params.leftPath))
+          
+    
+          openFilePath = vscode.Uri.file(
+            upath.normalize(String(webview.params.leftPath))
+          );
+    
+          let leftPath = upath.normalize(webview.params.leftPath);
+          if (!leftPath.includes(upath.normalize(String(PROJECT_FOLDER)))) {
+            openFilePath = vscode.Uri.file(
+              upath.join(PROJECT_FOLDER, leftPath)
             );
-            let projectFolder = PROJECT_FOLDER;
-            let leftPath = upath.normalize(webview.params.leftPath);
-            if (!leftPath.includes(upath.normalize(String(PROJECT_FOLDER)))) {
-              openFilePath = vscode.Uri.file(
-                upath.join(PROJECT_FOLDER, leftPath)
-              );
-            }
-
-            vscode.workspace.openTextDocument(openFilePath).then((document) => {
-              vscode.window.showTextDocument(document).then(() => {
-                if (
-                  "leftPath" in webview.params &&
-                  "patchPath" in webview.params
-                ) {
-                  filterOutIssues(webview.params.patchPath!).then(() => {
-                    if ("leftPath" in webview.params){
-                      updateIssuesAfterPatch(webview.params.leftPath!, patchPath);
-                    }
-                    //getDiagnosticsAfterPatch();
-                  });
-                }
-              });
-            });
           }
-        });
-      }      
-
-      activeDiffPanelWebviews.splice(
-        activeDiffPanelWebviews.indexOf(webview),
-        1
-      );
-      if (activeDiffPanelWebviews.length < 1) {
-        vscode.commands.executeCommand(
-          "setContext",
-          "patchApplyEnabled",
-          false
-        );
-      }
-
-      if ("patchPath" in webview.params && webview.params.patchPath) {
-        patchPath = webview.params.patchPath;
+    
+          // Open and show the document
+          const document = await vscode.workspace.openTextDocument(openFilePath);
+          await vscode.window.showTextDocument(document);
+    
+          // Filter out issues and update patch headers
+          await filterOutIssues(webview.params.patchPath!);
+          await updateIssuesAfterPatch(webview.params.leftPath!, webview.params.patchPath!);
+    
+          // Refresh diagnostics
+          await vscode.window.withProgress(
+            {
+              location: vscode.ProgressLocation.Notification,
+              title: "Loading Diagnostics...",
+            },
+            async () => {
+              await refreshDiagnosticsWithoutAnalysis();
+            }
+          );
+    
+          // Close the webview and update context
+          activeDiffPanelWebviews.splice(
+            activeDiffPanelWebviews.indexOf(webview),
+            1
+          );
+          if (activeDiffPanelWebviews.length < 1) {
+            vscode.commands.executeCommand(
+              "setContext",
+              "patchApplyEnabled",
+              false
+            );
+          }
+    
+          if ("patchPath" in webview.params && webview.params.patchPath) {
+            patchPath = webview.params.patchPath;
+          }
+        } catch (error) {
+          logging.LogErrorAndShowErrorMessage("Error during patch application:", error as any);
+        }
       }
       
 
@@ -1258,17 +1352,110 @@ export function init(
       getOutputFromAnalyzerOfAFile();
 
     }
+    await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+
+    const document = await vscode.workspace.openTextDocument(openFilePath as any);
+    await vscode.window.showTextDocument(document);
     logging.LogInfo("===== Finished applyPatch command. =====");
   }
 
-  function updateIssuesAfterPatch(sourceFilePath: string, patchFilePath: string) {
+
+  async function updateIssuesAfterPatch(sourceFilePath: string, patchFilePath: string) {
     const patchContent = readFileSync(upath.join(PATCH_FOLDER, patchFilePath), "utf8");
-  
+    
+    // Parse the applied patch and compute line shifts
     const parsedPatch = diff.parsePatch(patchContent);
-  
     const lineShifts = computeLineShifts(parsedPatch);
-  
+    
+    // Update the issues' text ranges in the related JSON file
     updateIssuesTextRanges(sourceFilePath, lineShifts);
+    
+    // Find and update all diffs in the corresponding JSON, except the one applied
+    updateDiffHeadersInJson(sourceFilePath, patchFilePath, lineShifts);
+  }
+  
+  function updateDiffHeadersInJson(sourceFilePath: string, appliedPatchFilePath: string, lineShifts: { [lineNumber: number]: number }) {
+    // Find the matching JSON file in ISSUES_PATH
+    const issuesJsonPaths = getIssuesJsonPathsForSourceFile(sourceFilePath);
+    
+    // Get the Java filename from the sourceFilePath
+    const sourceFileBaseName = path.basename(sourceFilePath, '.java');
+    
+    // Go through each JSON file related to this source file
+    issuesJsonPaths.forEach(jsonPath => {
+      const jsonContent = readFileSync(jsonPath, 'utf8');
+      const issues = JSON.parse(jsonContent);
+
+      let updated = false;
+
+      // Iterate over each issue in the JSON file
+      issues.forEach((issue: any) => {
+        issue.items.forEach((item: any) => {
+          item.patches.forEach((patch: any) => {
+            // Skip updating the patch that was just applied (patchFilePath)
+            if (patch.path === appliedPatchFilePath || appliedPatchFilePath.includes(patch.path)) {
+              return;  // Skip the applied patch
+            }
+
+            // Apply header updates for other patches
+            const patchFilePath = upath.join(PATCH_FOLDER, patch.path);
+            updateDiffHeaders(patchFilePath, lineShifts);  // Update the diff headers
+            updated = true;
+          });
+        });
+      });
+
+      // Write back updated issues if changes were made
+      if (updated) {
+        writeFileSync(jsonPath, JSON.stringify(issues, null, 2), 'utf8');
+      }
+    });
+  }
+
+  function updateDiffHeaders(patchFilePath: string, lineShifts: { [lineNumber: number]: number }) {
+    let patchContent = readFileSync(patchFilePath, 'utf8');
+    const parsedPatch = diff.parsePatch(patchContent);
+
+    let updatedPatch = "";
+
+    parsedPatch.forEach((hunk: { hunks: any[]; }) => {
+      // Preserve the source lines (`---` and `+++`) from the diff file.
+      const sourceLines = patchContent.split('\n').slice(0, 2); // First two lines are `---` and `+++`
+      updatedPatch += sourceLines.join('\n') + "\n"; // Add the source lines back into the patch content
+
+      // Iterate through each hunk and update its header
+      hunk.hunks.forEach(chunk => {
+        // Adjust the old and new line numbers in the diff header based on the shifts
+        const oldStartLine = chunk.oldStart;
+        const newStartLine = chunk.newStart;
+
+        let adjustedOldStart = oldStartLine;
+        let adjustedNewStart = newStartLine;
+
+        // Apply the shifts
+        for (const line in lineShifts) {
+          const lineNumber = parseInt(line, 10);
+          if (oldStartLine >= lineNumber) {
+            adjustedOldStart += lineShifts[lineNumber];
+          }
+          if (newStartLine >= lineNumber) {
+            adjustedNewStart += lineShifts[lineNumber];
+          }
+        }
+
+        // Replace the header in the patch content with updated line numbers
+        const header = `@@ -${adjustedOldStart},${chunk.oldLines} +${adjustedNewStart},${chunk.newLines} @@`;
+
+        // Construct updated patch content by appending the header and chunk lines
+        updatedPatch += header + "\n";
+        chunk.lines.forEach((line: string) => {
+          updatedPatch += line + "\n";  // Add each line in the chunk
+        });
+      });
+    });
+
+    // Write the updated patch back to the file
+    writeFileSync(patchFilePath, updatedPatch, 'utf8');
   }
 
   function computeLineShifts(parsedPatch: any): { [lineNumber: number]: number } {
@@ -1382,6 +1569,7 @@ export function init(
             }
 
             testView.treeDataProvider?.refresh(patchPath);
+            groupedTestView.treeDataProvider?.refresh(patchPath);
 
             vscode.workspace.openTextDocument(openFilePath).then((document) => {
               vscode.window.showTextDocument(document).then(() => {
@@ -1435,6 +1623,7 @@ export function init(
       vscode.commands.executeCommand("setContext", "patchApplyEnabled", false);
 
       testView.treeDataProvider?.refresh(patchFilepath);
+      groupedTestView.treeDataProvider?.refresh(patchFilepath);
 
       vscode.workspace.openTextDocument(sourceFile).then((document) => {
         vscode.window.showTextDocument(document).then(() => {
@@ -1544,7 +1733,7 @@ function createJsonFilePath(currentFilePath: string): string {
   return json_file_path;
 }
 
-function saveFileAndFixesToState(filePath: string) {
+async function saveFileAndFixesToState(filePath: string) {
   // Normalize the path correctly
   let normalizedFilePath = filePath;
 

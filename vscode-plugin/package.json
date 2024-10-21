@@ -78,7 +78,11 @@
         },
         {
           "id": "testView",
-          "name": "ANALYSIS OUTPUT"
+          "name": "ANALYSIS OUTPUT (grouped by warning type)"
+        },
+        {
+          "id": "groupedTestView",
+          "name": "ANALYSIS OUTPUT (grouped by file)"
         }
       ]
     },
@@ -206,6 +210,14 @@
       {
         "command": "testView.changeTitle",
         "title": "Test View: Change Title"
+      },
+      {
+        "command": "groupedTestView.reveal",
+        "title": "Grouped Test View: Reveal"
+      },
+      {
+        "command": "groupedTestView.changeTitle",
+        "title": "Grouped Test View: Change Title"
       },
       {
         "command": "aifix4seccode-vscode.generatePatchForSingleWarning",
