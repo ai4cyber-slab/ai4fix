@@ -31,6 +31,8 @@ class PatchGenerator:
         self.diffs_output_dir = self.config.get('DEFAULT', 'config.results_path', fallback='')
         self.json_file_path = self.config.get('ISSUES', 'config.issues_path', fallback='')
         self.warnings = []
+        self.full_file_path = ""
+        self.initial_content = ""
 
     def run_maven_test(self):
         """Run 'mvn test' command and return the result."""
@@ -94,12 +96,14 @@ class PatchGenerator:
             endLine = textrange['endLine']
             
             full_file_path = os.path.join(self.base_dir, file_path)
+            self.full_file_path = full_file_path
 
             # Read the file content
             try:
                 with open(full_file_path, 'r') as f:
                     file_content = f.readlines()
                     initial_content = ''.join(file_content)
+                    self.initial_content = initial_content
             except Exception as e:
                 logger.error(f"Error reading file {full_file_path}: {e}")
                 continue  # Skip to the next item
@@ -107,129 +111,205 @@ class PatchGenerator:
             problematic_code = ''.join(file_content[startLine-1:endLine])
             full_class_content = ''.join(file_content)
 
-            prompt = f"""Explanation of the issue:
-            {explanation}
+            max_attempts = 2  # We try at most twice
+            attempt = 0
+            patch_applied = False
+            previous_generated_code = None
 
-            Here is the full file code:
-            ```java
-            {full_class_content}
-            ```
+            while attempt < max_attempts:
+                attempt += 1
+                logger.info(f"Attempt {attempt} for warning ID {warning['id']}...")
 
-            The problematic code is from line {startLine} to {endLine}:
-            ```java
-            {problematic_code}
-            ```
+                if attempt == 1:
+                    # Initial prompt
+                    prompt = f"""Explanation of the issue:
+                    {explanation}
 
-            Instructions:
-            - Modify only the code necessary to fix the issue described.
-            - Do not alter comments, whitespace, or formatting.
-            - Provide the complete updated code.
-            """
-            os.makedirs(self.diffs_output_dir, exist_ok=True)
-            response = self.call_openai_with_retries(prompt)
+                    Here is the full file code:
+                    ```java
+                    {full_class_content}
+                    The problematic code is from line {startLine} to {endLine}:
+                    {problematic_code}
+                    Instructions:
 
-            if response is None:
-                logger.error(f"Failed to get response from OpenAI. Creating backup patch.")
-                sample_patch_path = self.create_sample_patch(file_path, warning)
-                
-                # Ensure the 'patches' list exists and append the patch details
-                if 'patches' not in item:
-                    item['patches'] = []
-                item['patches'].append({
-                    "path": sample_patch_path,
-                    "explanation": "Backup patch generated due to failed OpenAI patch generation."
-                })
-                continue
+                    Modify only the code necessary to fix the issue described.
+                    Do not alter comments, whitespace, or formatting.
+                    Provide the complete updated code. """ 
+                else: # Modified prompt for retry, including previous generated code 
+                    initial_lines = initial_content.splitlines(keepends=True) 
+                    generated_lines = previous_generated_code.splitlines(keepends=True) 
+                    diff = difflib.unified_diff( initial_lines, generated_lines, fromfile='Original Code', tofile='Attempted Fix', n=0 ) 
+                    diff_text = ''.join(diff)
+                    # Modified prompt for retry, including diff content
+                    prompt = f"""The previous attempt to fix the issue did not resolve it.
+                    Here is the diff of the changes made in the last attempt:
+                    {diff_text}
+                    Explanation of the issue: {explanation}
+                    Here is the full original file code:
+                    {full_class_content}
+                    Instructions:
 
-            generated_code = self.extract_code_from_response(response.choices[0].message.content)
+                    Analyze the previous attempt and identify why it did not fix the issue.
+                    Modify only the code necessary to fix the issue described.
+                    Do not alter comments, whitespace, or formatting.
+                    Provide the complete updated code only. """
+                    
+                os.makedirs(self.diffs_output_dir, exist_ok=True)
+                response = self.call_openai_with_retries(prompt)
 
-            try:
-                with open(full_file_path, 'w') as f:
-                    f.write(generated_code)
-            except Exception as e:
-                logger.error(f"Error writing to file {full_file_path}: {e}")
-                continue
+                if response is None:
+                    logger.error(f"Failed to get response from OpenAI. Creating backup patch.")
+                    sample_patch_path = self.create_sample_patch(file_path, warning)
+                    
+                    # Ensure the 'patches' list exists and append the patch details
+                    if 'patches' not in item:
+                        item['patches'] = []
+                    item['patches'].append({
+                        "path": sample_patch_path,
+                        "explanation": "Backup patch generated due to failed OpenAI patch generation."
+                    })
+                    break  # Cannot proceed without a response
 
-            logger.info(f"Running 'mvn test' for warning ID {warning['id']}...")
-            result = self.run_maven_test()
-            self.sast.run_all(validation=True, java_file_path=file_path)
-            original_json_sast = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.config.get("ISSUES", "config.issues_path").replace("issues.json", "sast_issues.json")))
-            temp_json_sast = os.path.join(self.config.get("ISSUES", "config.issues_path").replace("issues.json", "sast_validation_issues.json"))
-            self.comparer = IssueComparer(original_json_sast, temp_json_sast, file_path)
-            # Perform the comparison
-            self.comparer.compare_issues()
+                generated_code = self.extract_code_from_response(response.choices[0].message.content)
+                previous_generated_code = generated_code  # Store for next attempt if needed
 
-            # Get the results
-            removed_ids = self.comparer.get_removed_issue_ids()
-            existing_ids = self.comparer.get_existing_issue_ids()
-            print(f"Issues removed after applying patch no: {warning['id']} -> {removed_ids}")
-            print(f"Issues still present after applying patch no: {warning['id']} -> {existing_ids}")
-
-
-            error_detected, _, _ = self.analyze_maven_output(result)
-
-            if not error_detected:
-                logger.info(f"Maven tests passed.")
-                diff = difflib.unified_diff(
-                    initial_content.splitlines(keepends=True),
-                    generated_code.splitlines(keepends=True),
-                    fromfile=file_path,
-                    tofile=file_path,
-                    n=0
-                )
-                diff_text = ''.join(diff)
-
-                diff_file_name = f"{os.path.splitext(os.path.basename(full_file_path))[0]}_patch_{warning['id']}.diff"
-                diff_file_path = os.path.join(self.diffs_output_dir, diff_file_name)
                 try:
-                    with open(diff_file_path, 'w') as diff_file:
-                        diff_file.write(diff_text)
+                    with open(full_file_path, 'w') as f:
+                        f.write(generated_code)
                 except Exception as e:
-                    logger.error(f"Error writing diff to file {diff_file_path}: {e}")
+                    logger.error(f"Error writing to file {full_file_path}: {e}")
+                    continue
 
-                # Ensure the 'patches' list exists and append the patch details
-                if 'patches' not in item:
-                    item['patches'] = []
-                item['patches'].append({
-                    "path": diff_file_name,
-                    "explanation": explanation
-                })
+                logger.info(f"Running 'mvn test' for warning ID {warning['id']}...")
+                result = self.run_maven_test()
+                error_detected, _, _ = self.analyze_maven_output(result)
+                if error_detected:
+                    logger.error(f"Maven tests failed. Retrying...")
+                    # Restore initial content before retrying
+                    try:
+                        with open(full_file_path, 'w') as f:
+                            f.write(initial_content)
+                            logger.info(f"Reverted {full_file_path} to its initial content due to Maven test failure.")
+                    except Exception as e:
+                        logger.error(f"Error restoring original content to {full_file_path}: {e}")
+                    continue  # Retry if mvn test fails
 
+                logger.info(f"Maven tests passed.")
+                
+                sast_passed = self.sast_validation(file_path, warning)
+                if sast_passed:
+                    logger.info(f"SAST validation passed.")
+                    diff = difflib.unified_diff(
+                        initial_content.splitlines(keepends=True),
+                        generated_code.splitlines(keepends=True),
+                        fromfile=file_path,
+                        tofile=file_path,
+                        n=0
+                    )
+                    diff_text = ''.join(diff)
+
+                    diff_file_name = f"{os.path.splitext(os.path.basename(full_file_path))[0]}_patch_{warning['id']}_attempt_{attempt}.diff"
+                    diff_file_path = os.path.join(self.diffs_output_dir, diff_file_name)
+                    try:
+                        with open(diff_file_path, 'w') as diff_file:
+                            diff_file.write(diff_text)
+                    except Exception as e:
+                        logger.error(f"Error writing diff to file {diff_file_path}: {e}")
+
+                    # Ensure the 'patches' list exists and append the patch details
+                    if 'patches' not in item:
+                        item['patches'] = []
+                    item['patches'].append({
+                        "path": diff_file_name,
+                        "explanation": explanation
+                    })
+                    patch_applied = True
+                    break  # Exit the retry loop since we succeeded
+                else:
+                    logger.error(f"SAST validation failed.")
+                    # Restore initial content before retrying
+                    try:
+                        with open(full_file_path, 'w') as f:
+                            f.write(initial_content)
+                            logger.info(f"Reverted {full_file_path} to its initial content due to SAST validation failure.")
+                    except Exception as e:
+                        logger.error(f"Error restoring original content to {full_file_path}: {e}")
+
+                    if attempt >= max_attempts:
+                        logger.error(f"Maximum attempts reached for warning ID {warning['id']}.")
+                    else:
+                        logger.info(f"Retrying for warning ID {warning['id']}...")
+
+            # After all attempts, ensure the initial content is restored
             try:
                 with open(full_file_path, 'w') as f:
                     f.write(initial_content)
-                    logger.info(f"Reverted {full_file_path} to its initial content.")
+                    logger.info(f"Final restoration of {full_file_path} to its initial content.")
             except Exception as e:
                 logger.error(f"Error restoring original content to {full_file_path}: {e}")
 
+            if not patch_applied:
+                logger.error(f"Failed to generate a valid patch for warning ID {warning['id']} after {max_attempts} attempts.")
+                # Optionally, record that no patch was applied
+                if 'patches' not in item:
+                    item['patches'] = []
+            
+
     def create_sample_patch(self, java_file_path, warning):
         """Create a sample patch file with the Java file path and warning ID using coordinates from the warning."""
-        warning_id = warning.get('id', 'unknown_id')  # Get the ID from the warning, fallback to 'unknown_id'
-        sample_patch_name = f"{warning_id}_backup_patch.diff"
+        warning_id = warning.get('id', 'unknown_id') # Get the ID from the warning, fallback to 'unknown_id' 
+        sample_patch_name = f"{warning_id}_backup_patch.diff" 
         sample_patch_path = os.path.join(self.diffs_output_dir, sample_patch_name)
-
-        # Extract the coordinates from the warning's textrange
         textrange = warning['items'][0]['textrange']  # Assuming textrange is in the first item of items
         start_line = textrange.get('startLine', 0)
         end_line = textrange.get('endLine', 1)
         start_column = textrange.get('startColumn', 0)
         end_column = textrange.get('endColumn', 1)
 
-        # Create the patch content using the extracted coordinates
+                # Create the patch content using the extracted coordinates
         with open(sample_patch_path, 'w') as sample_patch:
-            sample_patch.write(f"--- {java_file_path}\n")
-            sample_patch.write(f"+++ {java_file_path}\n")
-            sample_patch.write(f"@@ -{start_line},{start_column} +{end_line},{end_column} @@\n")
-            sample_patch.write(f"+// This is a Backup patch for {java_file_path}\n")
+                sample_patch.write(f"--- {java_file_path}\n")
+                sample_patch.write(f"+++ {java_file_path}\n")
+                sample_patch.write(f"@@ -{start_line},{start_column} +{end_line},{end_column} @@\n")
+                sample_patch.write(f"+// This is a Backup patch for {java_file_path}\n")
 
         return sample_patch_name
+    
 
-    def main(self):
+    def sast_validation(self, file_path, warning):
         try:
-            if not openai.api_key:
-                logger.warning("OPENAI_API_KEY is not set. Skipping patch generation.")
+            self.sast.run_all(validation=True, java_file_path=file_path)
+            original_json_sast = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.config.get("ISSUES", "config.issues_path").replace("issues.json", "sast_issues.json"))) 
+            temp_json_sast = os.path.join(self.config.get("ISSUES", "config.issues_path").replace("issues.json", "sast_validation_issues.json")) 
+            self.comparer = IssueComparer(original_json_sast, temp_json_sast, file_path) 
+            # Perform the comparison 
+            self.comparer.compare_issues()
+            # Get the results
+            removed_ids = self.comparer.get_removed_issue_ids()
+            existing_ids = self.comparer.get_existing_issue_ids()
+            # print(f"Issues removed after applying patch no: {warning['id']} -> {removed_ids}")
+            # print(f"Issues still present after applying patch no: {warning['id']} -> {existing_ids}")
+            if warning['id'] in removed_ids:
+                return True
+            else:
+                if warning['id'] not in existing_ids:
+                    return True
+                return False
+        except Exception as e:
+            logger.error("An error occured during SAST Validation")
+        finally:
+            try:
+                with open(self.full_file_path, 'w') as f:
+                    f.write(self.initial_content)
+            except Exception as e:
+                logger.error(f"Error restoring original content to {self.full_file_path}: {e}")
                 return
-
+        
+    def main(self):
+        try: 
+            if not openai.api_key: 
+                logger.warning("OPENAI_API_KEY is not set. Skipping patch generation.") 
+                return
             # Load the issues JSON file
             try:
                 with open(self.json_file_path, 'r') as f:
@@ -267,7 +347,16 @@ class PatchGenerator:
         except KeyboardInterrupt:
             logger.info("Keyboard interrupt detected. Stopping the script gracefully.")
             return
-
+        finally:
+            # Ensure the initial content is restored
+            try:
+                logger.info(f"Restoring original content to {self.full_file_path}.")
+                with open(self.full_file_path, 'w') as f:
+                    f.write(self.initial_content)
+            except Exception as e:
+                logger.error(f"Error restoring original content to {self.full_file_path}: {e}")
+                return
+        
     def call_openai_with_retries(self, prompt, max_retries=3):
         try:
             """Call OpenAI API with retry logic and handle keyboard interrupt."""

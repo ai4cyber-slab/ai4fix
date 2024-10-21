@@ -35,7 +35,8 @@ class ReportMerger:
         Raises:
             Exception: If there's an error during the merging process.
         """
-        logger.info("Merging reports...")
+        if not validation:
+            logger.info("Merging reports...")
         issues = []
 
         try:
@@ -55,7 +56,7 @@ class ReportMerger:
             # Write the merged issues to a JSON file
             with open(output_path, 'w') as json_file:
                 json.dump(issues, json_file, indent=4)
-
-            logger.info("Reports merged successfully.")
+            if not validation:
+                logger.info("Reports merged successfully.")
         except Exception as e:
             logger.error(f"Failed to merge reports: {e}")

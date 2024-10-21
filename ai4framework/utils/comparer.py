@@ -31,14 +31,15 @@ class IssueComparer:
         issues = []
         for issue in json_data:
             # Extract relevant fields
-            issue_name = issue.get('name', '')
-            issue_explanation = issue.get('explanation', '')
+            issue_name = issue.get('name', '').lower()
+            issue_explanation = issue.get('explanation', '').lower()
+            issue_tag = issue.get('tags', '').lower()
             # Filter issues related to the specific Java file
             for item in issue.get('items', []):
                 textrange = item.get('textrange', {})
                 if textrange.get('file') == self.java_file_path:
-                    # Create a comparison key using 'name' and 'explanation'
-                    comparison_key = (issue_name, issue_explanation)
+                    # Create a comparison key using 'name' and 'explanation' and 'tags'
+                    comparison_key = (issue_name, issue_explanation, issue_tag)
                     issue_id = issue.get('id', '')
                     issues.append((comparison_key, issue_id))
                     break  # No need to check other items in this issue

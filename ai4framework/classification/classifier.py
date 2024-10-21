@@ -227,6 +227,9 @@ def main():
         parent = repo_manager.get_parent_commit()
         if parent:
             error_and_log_handling(f"Successfully retrieved the parent commit: {parent}.", False)
+            filter_path = os.path.join(args.repo_path, 'filter.txt')
+            if os.path.exists(filter_path):
+                os.remove(filter_path)
 
             for file in changed_files:
                 if file.endswith('.java'):

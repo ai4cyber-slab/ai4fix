@@ -59,7 +59,7 @@ class ToolRunner:
 
         Retrieves the list of changed Java files and runs PMD on them.
         """
-        changed_java_files = self.repo_manager.get_changed_files()
+        changed_java_files = self.repo_manager.get_changed_files(validation=validation)
         if validation and java_file_path is not None:
             changed_java_files = [e for e in changed_java_files if os.path.splitext(os.path.basename(e))[0] in java_file_path]
         self.run_tool("PMD", self.pmd_runner.run, changed_java_files)
@@ -70,7 +70,7 @@ class ToolRunner:
 
         Finds the corresponding class files for changed Java files and runs SpotBugs on them.
         """
-        class_changed_files = self.find_class_changed_files()
+        class_changed_files = self.find_class_changed_files(validation=validation)
         if validation and java_file_path is not None:
             class_changed_files = [e for e in class_changed_files if os.path.splitext(os.path.basename(e))[0] in java_file_path]
         self.run_tool("SpotBugs", self.spotbugs_runner.run, class_changed_files)
@@ -83,7 +83,7 @@ class ToolRunner:
         """
         self.run_tool("Trivy", self.trivy_runner.run)
 
-    def find_class_changed_files(self):
+    def find_class_changed_files(self, validation=False):
         """
         Find the corresponding .class files for changed Java files.
 
@@ -94,7 +94,7 @@ class ToolRunner:
         # project_root = self.repo_manager.repo.working_dir
         class_files = []
 
-        for java_file in self.repo_manager.get_changed_files():
+        for java_file in self.repo_manager.get_changed_files(validation=validation):
             if not java_file.endswith('.java'):
                 logger.warning(f"Skipping non-Java file: {java_file}")
                 continue

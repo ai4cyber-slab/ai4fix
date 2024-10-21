@@ -1,26 +1,32 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <ruleset name="PMD.rul" xmlns="http://pmd.sourceforge.net/ruleset/2.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 http://pmd.sourceforge.net/ruleset_2_0_0.xsd">
 
-  <description>This ruleset was created from PMD.rul</description>
+  <description>This ruleset was created from PMD.rul, keeping only essential rules.</description>
 
+  <!-- Excluded redundant error-prone rules covered by SpotBugs -->
   <rule ref="category/java/errorprone.xml">
-        <exclude name="AvoidDuplicateLiterals"/>
+    <exclude name="AvoidDuplicateLiterals"/>
   </rule>
 
+  <!-- Excluded multithreading rules covered by SpotBugs -->
   <rule ref="category/java/multithreading.xml">
     <exclude name="AvoidUsingVolatile"/>
     <exclude name="DoNotUseThreads"/>
     <exclude name="UseConcurrentHashMap"/>
   </rule>
 
+  <!-- Excluded security checks (handled by SpotBugs) -->
   <rule ref="category/java/security.xml"/>
 
+  <!-- Minimal design checks kept -->
   <rule ref="category/java/design.xml">
   </rule>
 
+  <!-- Minimal code style rules retained -->
   <rule ref="category/java/codestyle.xml">
     <exclude name="ShortClassName"/>
     <exclude name="ShortVariable"/>
+    <exclude name="LongVariable"/>
   </rule>
 
 </ruleset>

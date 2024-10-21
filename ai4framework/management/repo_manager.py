@@ -88,7 +88,7 @@ class RepoManager:
     #     except Exception as e:
     #         logger.error(f"An error occurred: {str(e)}")
     #         return []
-    def get_changed_files(self, absolute=True):
+    def get_changed_files(self, absolute=True, validation=False):
         """
         Get a list of files changed in the specified commit, filtered to ensure files are under the repository root.
         
@@ -128,8 +128,8 @@ class RepoManager:
             
             if absolute:
                 changed_files = [os.path.join(str(repo_path), file_path[file_path.find('src'):]) for file_path in changed_files if os.path.exists(os.path.join(str(repo_path), file_path[file_path.find('src'):]))]
-
-            logger.info(f"Total changed files: {len(changed_files)}")
+            if not validation:
+                logger.info(f"Total changed files: {len(changed_files)}")
             return changed_files
         except Exception as e:
             logger.error(f"An error occurred: {str(e)}")

@@ -82,7 +82,8 @@ class SASTOrchestrator:
             ) as process:
                 # Read and log stdout in real-time
                 for line in process.stdout:
-                    print(line.strip())  # Log each line of output as it's printed
+                    if not validation:
+                        print(line.strip())  # Log each line of output as it's printed
                 process.wait()  # Wait for the process to finish
 
             if process.returncode == 0:
