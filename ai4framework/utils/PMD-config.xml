@@ -20,7 +20,8 @@
 
   <!-- Minimal design checks kept -->
   <rule ref="category/java/design.xml">
-  </rule>
+    <exclude name="LoosePackageCoupling"/>
+  </rule>  
 
   <!-- Minimal code style rules retained -->
   <rule ref="category/java/codestyle.xml">
