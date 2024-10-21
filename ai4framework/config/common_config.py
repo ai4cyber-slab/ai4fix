@@ -1,10 +1,8 @@
-import configparser
 import os
-from urllib.parse import urlparse
-import sys
 import openai
-import json
 import argparse
+import configparser
+
 
 class ConfigManager:
     """
@@ -29,26 +27,24 @@ class ConfigManager:
         if cls._config is None:
             cls._config = configparser.ConfigParser()
 
-            # Preprocess the file to remove inline comments and skip comment-only lines
             cleaned_lines = []
             with open(config_file, 'r') as file:
                 for line in file:
                     stripped_line = line.strip()
 
-                    # Ignore lines that are empty or start with a comment
                     if not stripped_line or stripped_line.startswith('#'):
                         continue
 
-                    # Remove inline comments
                     line = stripped_line.split('#', 1)[0].strip()
 
-                    if line:  # Add non-empty lines to the cleaned list
+                    if line:
                         cleaned_lines.append(line)
 
-            # Join the cleaned lines and feed them to configparser
             cls._config.read_string('\n'.join(cleaned_lines))
 
+            cls.adjust_config_paths()
         return cls._config
+
 
     @classmethod
     def get_config(cls):
@@ -65,7 +61,65 @@ class ConfigManager:
             raise Exception("Configuration not loaded. Call load_config() first.")
         return cls._config
 
+
+    @classmethod
+    def adjust_config_paths(cls):
+        """
+        Adjusts paths in the config to include the hidden folder after 'config.project_path'.
+
+        Modifies the config object in place.
+        """
+        config = cls._config
+        project_path = config.get('DEFAULT', 'config.project_path', fallback=None)
+        if not project_path:
+            raise Exception("config.project_path is not set in the configuration.")
+
+        path_keys = [
+            ('DEFAULT', 'config.results_path'),
+            ('DEFAULT', 'config.jsons_listfile'),
+            ('ISSUES', 'config.issues_path'),
+            ('ANALYZER', 'config.analyzer_results_path'),
+        ]
+
+        for section, key in path_keys:
+            if config.has_option(section, key):
+                original_path = config.get(section, key)
+                adjusted_path = cls.insert_hidden_in_path(project_path, original_path)
+                config.set(section, key, adjusted_path)
+
+
+    @staticmethod
+    def insert_hidden_in_path(project_path, path):
+        """
+        Inserts hidden folder into the path after the project_path.
+
+        Args:
+            project_path (str): The project root path.
+            path (str): The original path.
+
+        Returns:
+            str: The adjusted path with hidden folder inserted.
+        """
+        # Handle relative paths
+        if not os.path.isabs(path):
+            # Treat as relative to project_path
+            path = os.path.join(project_path, path)
+
+        # Normalize paths
+        project_path = os.path.normpath(project_path)
+        path = os.path.normpath(path)
+
+        if not path.startswith(project_path):
+            return path
+
+
+        rel_path = os.path.relpath(path, project_path)
+        new_rel_path = os.path.join('.ai4framework', rel_path)
+        new_path = os.path.join(project_path, new_rel_path)
+        new_path = os.path.normpath(new_path)
+        return new_path
     
+
 # Handling command-line arguments or environment variables
 def get_project_root():
     """
@@ -96,6 +150,7 @@ def get_project_root():
         return project_root
     else:
         raise Exception("Project root path must be provided as a command-line argument or set in the PROJECT_PATH environment variable.")
+
 
 def read_config_properties(file_path):
     """
@@ -129,93 +184,6 @@ def read_config_properties(file_path):
     return config
 
 
-def map_config_to_vscode_settings(config):
-    """
-    Maps config.properties keys from the PLUGIN section to VS Code workspace settings keys.
-
-    Args:
-        config (dict): Dictionary of configurations from config.properties.
-
-    Returns:
-        dict: Dictionary mapped to VS Code workspace settings keys.
-    """
-    mappings = {
-        "config.results_path": "aifix4seccode.analyzer.generatedPatchesPath",
-        "config.jsons_listfile": "aifix4seccode.analyzer.issuesPath",
-        "config.project_path": "aifix4seccode.analyzer.subjectProjectPath",
-        "plugin.use_diff_mode": "aifix4seccode.analyzer.useDiffMode",
-        "plugin.executing_parameters": "aifix4seccode.analyzer.executableParameters",
-        "plugin.executable_path": "aifix4seccode.analyzer.executablePath",
-        "plugin.script_path": "aifix4seccode.analyzer.pythonScriptPath",
-        "plugin.test_folder_log": "aifix4seccode.analyzer.testFolderPath"
-    }
-
-    vscode_settings = {}
-    for key, vscode_key in mappings.items():
-        if key in config:
-            vscode_settings[vscode_key] = config[key]
-
-    return vscode_settings
-
-def update_vscode_workspace_settings(configurations, workspace_path='.'):
-    """
-    Updates the VS Code workspace settings with the provided configurations.
-
-    Args:
-        configurations (dict): A dictionary of settings to be added/updated.
-        workspace_path (str): Path to the workspace folder (defaults to current directory).
-
-    Returns:
-        None
-    """
-    # Path to workspace settings file
-    settings_dir = os.path.join(workspace_path, '.vscode')
-    settings_file = os.path.join(settings_dir, 'settings.json')
-
-    # Ensure .vscode directory exists
-    if not os.path.exists(settings_dir):
-        os.makedirs(settings_dir)
-
-    # Load existing settings if they exist
-    if os.path.exists(settings_file):
-        with open(settings_file, 'r') as f:
-            settings_data = json.load(f)
-    else:
-        settings_data = {}
-
-    # Update settings with new configurations
-    settings_data.update(configurations)
-
-    # Write back to the settings.json file
-    with open(settings_file, 'w') as f:
-        json.dump(settings_data, f, indent=4)
-
-def main(config_file, workspace_path='.'):
-    """
-    Main function to read config.properties, map values to VS Code settings, and update the settings.
-
-    Args:
-        config_file (str): Path to the config.properties file.
-        workspace_path (str): Path to the workspace folder (defaults to current directory).
-
-    Returns:
-        None
-    """
-
-    # config = read_config_properties(config_file)
-
-
-    #vscode_settings = map_config_to_vscode_settings(config)
-
-
-    #update_vscode_workspace_settings(vscode_settings, workspace_path)
-
-
-
-
-
 config_file = os.path.join(get_project_root(), 'config.properties')
-
 ConfigManager.load_config(config_file)
-
-main(config_file, get_project_root())
+config = ConfigManager.get_config()
