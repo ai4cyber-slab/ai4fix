@@ -263,15 +263,18 @@ def main():
                                 "security_relevant_lines": line_positions
                             }
                             output_data['security_relevant_files'].append(output_dict)
+
                             # for symbolic execution
                             match = re.match(f'^(.*){os.sep}src', file)
                             if match:
                                 before_src = match.group(1)
-                                filter_path = os.path.join(before_src, 'filter.txt')
-                            with open(filter_path, 'a') as filter_file:
-                                if filter_file.tell() == 0:
-                                    filter_file.write("-.*\n")
-                                filter_file.write(f"+.*{file}\n")
+                                filter_path = os.path.join(before_src, '.ai4framework', 'filter.txt')
+                                
+                                with open(filter_path, 'a') as filter_file:
+                                    if filter_file.tell() == 0:
+                                        filter_file.write("-.*\n")
+                                    filter_file.write(f"+.*{file}\n")
+
                             error_and_log_handling(f"{file} was labeled as security relevant.\n", True)
                         else:
                             error_and_log_handling(f"{file} was labeled as not security relevant.\n", True)
