@@ -51,6 +51,25 @@ function parseConfig(content: string): { [section: string]: { [key: string]: str
   return result;
 }
 
+function insertHiddenFile(projectPath: string, originalPath: string): string {
+  const HIDDEN = '.ai4framework';
+  if(!upath.isAbsolute(originalPath)) {
+    originalPath = upath.join(projectPath, originalPath)
+  }
+
+  const normalizedProjectPath = upath.normalize(projectPath);
+  const normalizedPath = upath.normalize(originalPath);
+
+  if (!normalizedPath.startsWith(normalizedProjectPath)) {
+    return originalPath;
+  }
+
+  const relativePath = upath.relative(normalizedProjectPath, normalizedPath);
+  const adjustedPath = upath.join(normalizedProjectPath, HIDDEN, relativePath);
+
+  return adjustedPath
+}
+
 export var PROJECT_FOLDER = upath.normalize(config['DEFAULT']?.['config.project_path'] || '');
 
 export function SetProjectFolder(path: string) {
@@ -59,8 +78,8 @@ export function SetProjectFolder(path: string) {
 }
 
 // Access values from the parsed config
-export const PATCH_FOLDER = upath.normalize(config['DEFAULT']?.['config.results_path'] || '');
-export const ISSUES_PATH = upath.normalize(config['DEFAULT']?.['config.jsons_listfile'] || '');
+export const PATCH_FOLDER = insertHiddenFile(PROJECT_FOLDER, upath.normalize(config['DEFAULT']?.['config.results_path'] || ''));
+export const ISSUES_PATH = insertHiddenFile(PROJECT_FOLDER, upath.normalize(config['DEFAULT']?.['config.jsons_listfile'] || ''))
 export const ANALYZER_USE_DIFF_MODE = config['PLUGIN']?.['plugin.use_diff_mode'] || '';
 export const TEST_FOLDER = config['PLUGIN']?.['plugin.test_folder_log'] || '';
 export const SCRIPT_PATH = config['PLUGIN']?.['plugin.script_path'] || '';
