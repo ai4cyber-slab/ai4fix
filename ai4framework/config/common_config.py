@@ -102,7 +102,6 @@ class ConfigManager:
         """
         # Handle relative paths
         if not os.path.isabs(path):
-            # Treat as relative to project_path
             path = os.path.join(project_path, path)
 
         # Normalize paths
@@ -112,11 +111,15 @@ class ConfigManager:
         if not path.startswith(project_path):
             return path
 
+        # Getting the top-level root directory
+        root_dir = project_path
+        while os.path.dirname(root_dir) != '/':
+            root_dir = os.path.dirname(root_dir)
 
         rel_path = os.path.relpath(path, project_path)
-        new_rel_path = os.path.join('.ai4framework', rel_path)
-        new_path = os.path.join(project_path, new_rel_path)
+        new_path = os.path.join(root_dir, '.ai4framework', rel_path)
         new_path = os.path.normpath(new_path)
+
         return new_path
     
 

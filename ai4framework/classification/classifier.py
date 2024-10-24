@@ -264,16 +264,18 @@ def main():
                             }
                             output_data['security_relevant_files'].append(output_dict)
 
-                            # for symbolic execution
-                            match = re.match(f'^(.*){os.sep}src', file)
-                            if match:
-                                before_src = match.group(1)
-                                filter_path = os.path.join(before_src, '.ai4framework', 'filter.txt')
-                                
-                                with open(filter_path, 'a') as filter_file:
-                                    if filter_file.tell() == 0:
-                                        filter_file.write("-.*\n")
-                                    filter_file.write(f"+.*{file}\n")
+                            # For Symbolic Execution
+                            # Getting the top-level root directory
+                            root_dir = file
+                            while os.path.dirname(root_dir) != '/':
+                                root_dir = os.path.dirname(root_dir)
+
+                            filter_path = os.path.join(root_dir, '.ai4framework', 'filter.txt')
+                            
+                            with open(filter_path, 'a') as filter_file:
+                                if filter_file.tell() == 0:
+                                    filter_file.write("-.*\n")
+                                filter_file.write(f"+.*{file}\n")
 
                             error_and_log_handling(f"{file} was labeled as security relevant.\n", True)
                         else:
