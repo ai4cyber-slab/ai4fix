@@ -25,7 +25,16 @@ class TestGenerator:
             self.project_root = os.path.join(root_dir, self.project_root)
 
         self.json_file_path = self.config.get('ISSUES', 'config.issues_path', fallback='')
-        self.diffs_path = self.config.get('DEFAULT', 'config.results_path', fallback='')
+        self.diffs_path = self.config.get('DEFAULT', 'config.results_path', fallback=None)
+
+        if not self.diffs_path:
+            # Getting the top-level root directory
+            root_dir = self.project_root
+            while os.path.dirname(root_dir) != '/':
+                root_dir = os.path.dirname(root_dir)
+
+            self.diffs_path = os.path.join(root_dir, '.ai4framework/patches')
+
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
         openai.api_key = os.getenv('OPENAI_API_KEY')

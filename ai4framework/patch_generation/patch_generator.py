@@ -25,9 +25,18 @@ class PatchGenerator:
         # Load configurations from file
         self.config = config
         self.project_root = self.config.get('DEFAULT', 'config.project_path', fallback=None)
+        self.results_path = self.config.get('DEFAULT', 'config.results_path', fallback=None)
 
         if not self.project_root:
             raise Exception("config.project_path is not set in the configuration.")
+        
+        if not self.results_path:
+            # Getting the top-level root directory
+            root_dir = self.project_root
+            while os.path.dirname(root_dir) != '/':
+                root_dir = os.path.dirname(root_dir)
+
+            self.results_path = os.path.join(root_dir, '.ai4framework/patches')
 
         # Handle relative paths
         if not os.path.isabs(self.project_root):
@@ -37,7 +46,7 @@ class PatchGenerator:
         self.sast = SASTOrchestrator(self.config)
         # Set base directories and configurations dynamically
         self.base_dir = self.project_root
-        self.diffs_output_dir = self.config.get('DEFAULT', 'config.results_path', fallback='')
+        self.diffs_output_dir = self.results_path
         self.json_file_path = self.config.get('ISSUES', 'config.issues_path', fallback='')
         self.warnings = []
         self.full_file_path = ""

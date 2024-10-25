@@ -89,7 +89,7 @@ class ConfigManager:
 
         for section, key in path_keys:
             if config.has_option(section, key):
-                original_path = config.get(section, key)
+                original_path = config.get(section, key, fallback=None)
                 adjusted_path = cls.insert_hidden_in_path(project_path, original_path)
                 config.set(section, key, adjusted_path)
 
@@ -106,24 +106,26 @@ class ConfigManager:
         Returns:
             str: The adjusted path with hidden folder inserted.
         """
-        # Handle relative paths
-        if not os.path.isabs(path):
-            path = os.path.join(project_path, path)
-
         # Normalize paths
         project_path = os.path.normpath(project_path)
-        path = os.path.normpath(path)
-
-        if not path.startswith(project_path):
-            return path
 
         # Getting the top-level root directory
         root_dir = project_path
         while os.path.dirname(root_dir) != '/':
             root_dir = os.path.dirname(root_dir)
 
-        rel_path = os.path.relpath(path, project_path)
-        new_path = os.path.join(root_dir, '.ai4framework', rel_path)
+        if path == None:
+            new_path = os.path.join(root_dir, '.ai4framework/patches')
+        else:
+            # Handle relative paths
+            if not os.path.isabs(path):
+                path = os.path.join(project_path, path)
+
+            path = os.path.normpath(path)
+
+            rel_path = os.path.relpath(path, project_path)
+            new_path = os.path.join(root_dir, '.ai4framework', rel_path)
+        
         new_path = os.path.normpath(new_path)
 
         return new_path
