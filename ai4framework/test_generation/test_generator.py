@@ -32,8 +32,12 @@ class TestGenerator:
             root_dir = self.project_root
             while os.path.dirname(root_dir) != '/':
                 root_dir = os.path.dirname(root_dir)
-
             self.diffs_path = os.path.join(root_dir, '.ai4framework/patches')
+
+        # Handle relative paths
+            if not os.path.isabs(self.diffs_path):
+                root_dir = os.path.dirname(self.diffs_path)
+                self.diffs_path = os.path.join(root_dir, self.diffs_path)
 
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)

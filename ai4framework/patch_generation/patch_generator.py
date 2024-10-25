@@ -24,33 +24,33 @@ class PatchGenerator:
         
         # Load configurations from file
         self.config = config
-        self.project_root = self.config.get('DEFAULT', 'config.project_path', fallback=None)
-        self.results_path = self.config.get('DEFAULT', 'config.results_path', fallback=None)
-
-        if not self.project_root:
-            raise Exception("config.project_path is not set in the configuration.")
-        
-        if not self.results_path:
-            # Getting the top-level root directory
-            root_dir = self.project_root
-            while os.path.dirname(root_dir) != '/':
-                root_dir = os.path.dirname(root_dir)
-
-            self.results_path = os.path.join(root_dir, '.ai4framework/patches')
-
-        # Handle relative paths
-        if not os.path.isabs(self.project_root):
-            root_dir = os.path.dirname(self.project_root)
-            self.project_root = os.path.join(root_dir, self.project_root)
-
         self.sast = SASTOrchestrator(self.config)
+
+        """Handling the config paths"""
+        def creating_absolute_path(self, path):
+            if not path:
+                # Getting the top-level root directory
+                root_dir = path
+                while os.path.dirname(root_dir) != '/':
+                    root_dir = os.path.dirname(root_dir)
+
+                path = os.path.join(root_dir, '.ai4framework/patches')
+            
+            # Handle relative paths
+            if not os.path.isabs(path):
+                root_dir = os.path.dirname(path)
+                path = os.path.join(root_dir, path)
+            
+            return path
+
         # Set base directories and configurations dynamically
-        self.base_dir = self.project_root
-        self.diffs_output_dir = self.results_path
-        self.json_file_path = self.config.get('ISSUES', 'config.issues_path', fallback='')
+        self.diffs_output_dir = creating_absolute_path(self.config.get('DEFAULT', 'config.results_path', fallback=None))
+        self.json_file_path = creating_absolute_path(self.config.get('ISSUES', 'config.issues_path', fallback=None))
+        self.base_dir = creating_absolute_path(self.config.get('DEFAULT', 'config.project_path', fallback=None))
         self.warnings = []
         self.full_file_path = ""
         self.initial_content = ""
+
 
     def run_maven_test(self):
         """Run 'mvn test' command and return the result."""

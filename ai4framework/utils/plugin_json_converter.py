@@ -33,8 +33,12 @@ class JsonPluginConverter:
             root_dir = self.project_root
             while os.path.dirname(root_dir) != '/':
                 root_dir = os.path.dirname(root_dir)
-
             self.json_txt_file = os.path.join(root_dir, '.ai4framework/jsons.lists')
+
+        # Handle relative paths
+        if not os.path.isabs(self.json_txt_file):
+            root_dir = os.path.dirname(self.json_txt_file)
+            self.json_txt_file = os.path.join(root_dir, self.json_txt_file)
 
 
     def load_input_json(self):
