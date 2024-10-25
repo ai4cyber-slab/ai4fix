@@ -14,9 +14,27 @@ class JsonPluginConverter:
             json_txt_file (str): Path to the file where the list of output JSON paths will be written.
         """
         self.config = config
+        self.project_root = self.config.get('DEFAULT', 'config.project_path', fallback=None)
+
+        if not self.project_root:
+            raise Exception("config.project_path is not set in the configuration.")
+        
+        # Handle relative paths
+        if not os.path.isabs(self.project_root):
+            root_dir = os.path.dirname(self.project_root)
+            self.project_root = os.path.join(root_dir, self.project_root)
+
         self.input_file = self.config.get('ISSUES', 'config.issues_path', fallback='')
         self.output_directory = os.path.join(self.input_file.replace(os.path.basename(self.input_file), 'validation'), 'jsons')
-        self.json_txt_file = self.config.get('DEFAULT', 'config.jsons_listfile')
+        self.json_txt_file = self.config.get('DEFAULT', 'config.jsons_listfile', fallback=None)
+
+        if not self.json_txt_file:
+            # Getting the top-level root directory
+            root_dir = self.project_root
+            while os.path.dirname(root_dir) != '/':
+                root_dir = os.path.dirname(root_dir)
+
+            self.json_txt_file = os.path.join(root_dir, '.ai4framework/jsons.lists')
 
 
     def load_input_json(self):
