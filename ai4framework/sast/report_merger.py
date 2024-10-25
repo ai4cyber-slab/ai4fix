@@ -18,7 +18,15 @@ class ReportMerger:
             config: Configuration object containing necessary settings.
         """
         self.config = config
-        self.project_path = self.config.get('DEFAULT', 'config.project_path')
+        self.project_path = self.config.get('DEFAULT', 'config.project_path', fallback=None)
+
+        if not self.project_path:
+            raise Exception("config.project_path is not set in the configuration.")
+
+        # Handle relative paths
+        if not os.path.isabs(self.project_path):
+            root_dir = os.path.dirname(self.project_path)
+            self.project_path = os.path.join(root_dir, self.project_path)
 
     def merge_reports(self, *report_runners, validation=False):
         """

@@ -24,6 +24,15 @@ class SpotBugsRunner:
         self.report_path = self.config.get('REPORT', 'config.spotbugs_report_path', fallback=os.path.join(os.sep, 'app','sast','out','spotbugs.xml'))
         self.BASE_SRC_DIR = os.path.join('src', 'main', 'java')
         self.BASE_TEST_DIR = os.path.join('src', 'test', 'java')
+        self.project_path = self.config.get('DEFAULT', 'config.project_path', fallback=None)
+
+        if not self.project_path:
+            raise Exception("config.project_path is not set in the configuration.")
+
+        # Handle relative paths
+        if not os.path.isabs(self.project_path):
+            root_dir = os.path.dirname(self.project_path)
+            self.project_path = os.path.join(root_dir, self.project_path)
 
     # def run(self, changed_files):
     #     """
@@ -65,7 +74,7 @@ class SpotBugsRunner:
         try:
             # Use 'with' to safely manage the subprocess
             with subprocess.Popen(
-                command, cwd=self.config.get('DEFAULT', 'config.project_path'),
+                command, cwd=self.project_path,
                 shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
             ) as process:
                 stdout, stderr = process.communicate()
@@ -123,9 +132,9 @@ class SpotBugsRunner:
                 
                 if relative_path != 'unknown file':
                     normalized_relative_path = os.path.normpath(relative_path)
-                    if os.path.exists(os.path.join(self.config.get("DEFAULT", "config.project_path"), self.BASE_SRC_DIR, normalized_relative_path)):
+                    if os.path.exists(os.path.join(self.project_path, self.BASE_SRC_DIR, normalized_relative_path)):
                         full_path = os.path.join(self.BASE_SRC_DIR, normalized_relative_path)
-                    elif os.path.exists(os.path.join(self.config.get("DEFAULT", "config.project_path"), self.BASE_TEST_DIR, normalized_relative_path)):
+                    elif os.path.exists(os.path.join(self.project_path, self.BASE_TEST_DIR, normalized_relative_path)):
                         full_path = os.path.join(self.BASE_TEST_DIR, normalized_relative_path)
                 else:
                     full_path = 'unknown file'

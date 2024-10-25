@@ -71,8 +71,14 @@ class ConfigManager:
         """
         config = cls._config
         project_path = config.get('DEFAULT', 'config.project_path', fallback=None)
+
         if not project_path:
             raise Exception("config.project_path is not set in the configuration.")
+
+        # Handle relative paths
+        if not os.path.isabs(project_path):
+            root_dir = os.path.dirname(project_path)
+            project_path = os.path.join(root_dir, project_path)
 
         path_keys = [
             ('DEFAULT', 'config.results_path'),

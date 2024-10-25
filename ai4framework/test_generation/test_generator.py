@@ -14,7 +14,16 @@ import time
 class TestGenerator:
     def __init__(self, config):
         self.config = config
-        self.project_root = self.config.get('DEFAULT', 'config.project_path')
+        self.project_root = self.config.get('DEFAULT', 'config.project_path', fallback=None)
+
+        if not self.project_root:
+            raise Exception("config.project_path is not set in the configuration.")
+
+        # Handle relative paths
+        if not os.path.isabs(self.project_root):
+            root_dir = os.path.dirname(self.project_root)
+            self.project_root = os.path.join(root_dir, self.project_root)
+
         self.json_file_path = self.config.get('ISSUES', 'config.issues_path', fallback='')
         self.diffs_path = self.config.get('DEFAULT', 'config.results_path', fallback='')
         dotenv_path = find_dotenv()

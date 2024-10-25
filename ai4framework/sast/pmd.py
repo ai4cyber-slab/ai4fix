@@ -22,6 +22,16 @@ class PMDRunner:
         """
         self.config = config
         self.report_path = self.config.get('REPORT', 'config.pmd_report_path', fallback=os.path.join(os.sep, 'app','sast','out','pmd.xml'))
+        self.project_path = self.config.get('DEFAULT', 'config.project_path', fallback=None)
+
+        if not self.project_path:
+            raise Exception("config.project_path is not set in the configuration.")
+
+        # Handle relative paths
+        if not os.path.isabs(self.project_path):
+            root_dir = os.path.dirname(self.project_path)
+            self.project_path = os.path.join(root_dir, self.project_path)
+
 
     # def run(self, java_files):
     #     """
@@ -80,7 +90,7 @@ class PMDRunner:
 
         try:
             # Use 'with' to safely manage the subprocess
-            with subprocess.Popen(command, cwd=self.config.get('DEFAULT', 'config.project_path'), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as process:
+            with subprocess.Popen(command, cwd=self.project_path, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as process:
                 stdout, stderr = process.communicate()
 
             if process.returncode == 0:
@@ -127,7 +137,7 @@ class PMDRunner:
             # if file_name.find('src') != -1:
             #     file_path = file_name[file_name.find('src'):]
             # elif file_name.find()
-            file_path = file_name.replace(self.config.get('DEFAULT', 'config.project_path'), '')[1:]
+            file_path = file_name.replace(self.project_path, '')[1:]
             for violation in file_element.findall('.//pmd:violation', namespaces):
                 issue = {
                     "id": str(uuid.uuid4().int)[:5],

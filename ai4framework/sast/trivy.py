@@ -22,6 +22,15 @@ class TrivyRunner:
         """
         self.config = config
         self.report_path = self.config.get('REPORT', 'config.trivy_report_path', fallback='/app/sast/out/trivy.json')
+        self.project_path = self.config.get('DEFAULT', 'config.project_path', fallback=None)
+
+        if not self.project_path:
+            raise Exception("config.project_path is not set in the configuration.")
+
+        # Handle relative paths
+        if not os.path.isabs(self.project_path):
+            root_dir = os.path.dirname(self.project_path)
+            self.project_path = os.path.join(root_dir, self.project_path)
 
     # def run(self):
     #     """
@@ -53,7 +62,7 @@ class TrivyRunner:
         """
         command = (
             f"{self.config.get('DEFAULT', 'config.trivy_bin', fallback=os.path.join(os.sep, 'usr','bin','trivy'))} fs "
-            f"{self.config.get('DEFAULT', 'config.project_path')} "
+            f"{self.project_path} "
             f"--format json "
             f"-o {self.config.get('REPORT', 'config.trivy_report_path', fallback=os.path.join(os.sep, 'app','sast','out','trivy.json'))}"
         )

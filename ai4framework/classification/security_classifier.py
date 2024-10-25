@@ -40,7 +40,15 @@ class SecurityClassifier:
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
         openai.api_key = os.getenv('OPENAI_API_KEY')
-        self.repo_path = self.config.get("DEFAULT", "config.project_path")
+        self.repo_path = self.config.get("DEFAULT", "config.project_path", fallback=None)
+
+        if not self.repo_path:
+            raise Exception("config.project_path is not set in the configuration.")
+
+        # Handle relative paths
+        if not os.path.isabs(self.repo_path):
+            root_dir = os.path.dirname(self.repo_path)
+            self.repo_path = os.path.join(root_dir, self.repo_path)
 
 
     def classify(self):

@@ -5,7 +5,16 @@ from utils.logger import logger
 class JSONCombiner:
     def __init__(self, config):
         self.config = config
-        self.project_path = self.config.get("DEFAULT", "config.project_path")
+        self.project_path = self.config.get("DEFAULT", "config.project_path", fallback=None)
+
+        if not self.project_path:
+            raise Exception("config.project_path is not set in the configuration.")
+
+        # Handle relative paths
+        if not os.path.isabs(self.project_path):
+            root_dir = os.path.dirname(self.project_path)
+            self.project_path = os.path.join(root_dir, self.project_path)
+
         self.project_name = self.config.get("DEFAULT", "config.project_name")
         # self.sast_issues_path = os.path.join(self.project_path, 'sast_issues.json')
         self.sast_issues_path = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.config.get("ISSUES", "config.issues_path").replace("issues.json", "sast_issues.json")))
