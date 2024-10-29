@@ -60,6 +60,10 @@ class SpotBugsRunner:
         Raises:
             SystemExit: If the SpotBugs check fails.
         """
+        if changed_files == []:
+            print('There are no modified files in the directory to be analyzed on the given commit.')
+            sys.exit(1)
+
         spotbugs_bin = self.config.get('DEFAULT', 'config.spotbugs_bin', fallback=os.path.join(os.sep, 'opt','spotbugs-4.8.6','bin','spotbugs'))
         command = (
             f"{spotbugs_bin} -textui "
