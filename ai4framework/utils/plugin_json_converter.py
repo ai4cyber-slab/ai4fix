@@ -1,7 +1,10 @@
-import json
 import os
+import json
+
 from collections import defaultdict
 from utils.logger import logger
+from config.config_path_handler import *
+
 
 class JsonPluginConverter:
     def __init__(self, config):
@@ -14,33 +17,12 @@ class JsonPluginConverter:
             json_txt_file (str): Path to the file where the list of output JSON paths will be written.
         """
         self.config = config
-        self.project_root = self.config.get('DEFAULT', 'config.project_path', fallback=None)
-
-        if not self.project_root:
-            raise Exception("config.project_path is not set in the configuration.")
-        
-        # Handle relative paths
-        if not os.path.isabs(self.project_root):
-            root_dir = os.path.dirname(self.project_root)
-            self.project_root = os.path.join(root_dir, self.project_root)
-
-        self.input_file = self.config.get('ISSUES', 'config.issues_path', fallback='')
+        self.project_path = path_handler(self.config)
+        self.input_file = self.config.get('ISSUES', 'config.issues_path', fallback='issues.json')
         self.output_directory = os.path.join(self.input_file.replace(os.path.basename(self.input_file), 'validation'), 'jsons')
-        self.json_txt_file = self.config.get('DEFAULT', 'config.jsons_listfile', fallback=None)
+        self.json_txt_file = self.config.get('DEFAULT', 'config.jsons_listfile', fallback='jsons.lists')
 
-        if not self.json_txt_file:
-            # Getting the top-level root directory
-            root_dir = self.project_root
-            while os.path.dirname(root_dir) != '/':
-                root_dir = os.path.dirname(root_dir)
-            self.json_txt_file = os.path.join(root_dir, '.ai4framework/jsons.lists')
-
-        # Handle relative paths
-        if not os.path.isabs(self.json_txt_file):
-            root_dir = os.path.dirname(self.json_txt_file)
-            self.json_txt_file = os.path.join(root_dir, self.json_txt_file)
-
-
+        
     def load_input_json(self):
         """
         Load JSON data from a file.

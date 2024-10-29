@@ -3,6 +3,8 @@ import openai
 import argparse
 import configparser
 
+from config.config_path_handler import *
+
 
 class ConfigManager:
     """
@@ -65,37 +67,34 @@ class ConfigManager:
     @classmethod
     def adjust_config_paths(cls):
         """
-        Adjusts paths in the config to include the hidden folder after 'config.project_path'.
+        Adjusts paths in the config to include the hidden folder after 'config.project_root'.
 
         Modifies the config object in place.
         """
         config = cls._config
-        project_path = config.get('DEFAULT', 'config.project_path', fallback=None)
+        project_root = config.get('DEFAULT', 'config.project_root', fallback='')
 
-        if not project_path:
-            raise Exception("config.project_path is not set in the configuration.")
-
-        # Handle relative paths
-        if not os.path.isabs(project_path):
-            root_dir = os.path.dirname(project_path)
-            project_path = os.path.join(root_dir, project_path)
+        if project_root == '':
+            print('CONFIG.PROJECT_ROOT is not set in the configuration!')
+            sys.exit(1)
 
         path_keys = [
-            ('DEFAULT', 'config.results_path'),
-            ('DEFAULT', 'config.jsons_listfile'),
-            ('ISSUES', 'config.issues_path'),
-            ('ANALYZER', 'config.analyzer_results_path'),
+            {'DEFAULT': 'config.results_path', 'fallback': 'patches'},
+            {'DEFAULT': 'config.jsons_listfile', 'fallback': 'jsons.lists'},
+            {'ISSUES': 'config.issues_path', 'fallback': 'issues.json'},
+            {'ANALYZER': 'config.analyzer_results_path', 'fallback': 'results'},
         ]
 
-        for section, key in path_keys:
-            if config.has_option(section, key):
-                original_path = config.get(section, key, fallback=None)
-                adjusted_path = cls.insert_hidden_in_path(project_path, original_path)
-                config.set(section, key, adjusted_path)
+        for path in path_keys:
+            for key, value in path.items():
+                if config.has_option(key, value):
+                    original_path = config.get(key, value, fallback=path['fallback'])
+                    adjusted_path = cls.insert_hidden_in_path(project_root, original_path)
+                    config.set(key, value, adjusted_path)
 
 
     @staticmethod
-    def insert_hidden_in_path(project_path, path):
+    def insert_hidden_in_path(project_root, original_path):
         """
         Inserts hidden folder into the path after the project_path.
 
@@ -107,25 +106,14 @@ class ConfigManager:
             str: The adjusted path with hidden folder inserted.
         """
         # Normalize paths
-        project_path = os.path.normpath(project_path)
+        project_root = os.path.normpath(project_root)
+        original_path = os.path.normpath(original_path)
 
-        # Getting the top-level root directory
-        root_dir = project_path
-        while os.path.dirname(root_dir) != '/':
-            root_dir = os.path.dirname(root_dir)
+        # Handle absolute paths
+        if os.path.isabs(original_path):
+            original_path = os.path.relpath(original_path, project_root)
 
-        if path == None:
-            new_path = os.path.join(root_dir, '.ai4framework/patches')
-        else:
-            # Handle relative paths
-            if not os.path.isabs(path):
-                path = os.path.join(project_path, path)
-
-            path = os.path.normpath(path)
-
-            rel_path = os.path.relpath(path, project_path)
-            new_path = os.path.join(root_dir, '.ai4framework', rel_path)
-        
+        new_path = os.path.join(project_root, '.ai4framework', original_path)
         new_path = os.path.normpath(new_path)
 
         return new_path

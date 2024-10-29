@@ -21,14 +21,6 @@ class RepoManager:
             repo_path (str): The path to the local Git repository.
             commit_hash (str): The hash of the commit to work with.
         """
-        if not repo_path:
-            raise Exception("config.project_path is not set in the configuration.")
-        
-        # Handle relative paths
-        if not os.path.isabs(repo_path):
-            root_dir = os.path.dirname(repo_path)
-            repo_path = os.path.join(root_dir, repo_path)
-
         self.repo_path = repo_path
         self.commit_hash = commit_hash
 

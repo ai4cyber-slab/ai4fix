@@ -1,9 +1,12 @@
-import subprocess
 import os
 import sys
-import xml.etree.ElementTree as ET
 import uuid
+import subprocess
+import xml.etree.ElementTree as ET
+
 from utils.logger import logger
+from config.config_path_handler import *
+
 
 class PMDRunner:
     """
@@ -22,15 +25,7 @@ class PMDRunner:
         """
         self.config = config
         self.report_path = self.config.get('REPORT', 'config.pmd_report_path', fallback=os.path.join(os.sep, 'app','sast','out','pmd.xml'))
-        self.project_path = self.config.get('DEFAULT', 'config.project_path', fallback=None)
-
-        if not self.project_path:
-            raise Exception("config.project_path is not set in the configuration.")
-
-        # Handle relative paths
-        if not os.path.isabs(self.project_path):
-            root_dir = os.path.dirname(self.project_path)
-            self.project_path = os.path.join(root_dir, self.project_path)
+        self.project_path = path_handler(self.config)
 
 
     # def run(self, java_files):
@@ -58,7 +53,7 @@ class PMDRunner:
     #         "--no-fail-on-violation"
     #     )
 
-    #     result = subprocess.run(command, cwd=self.config.get('DEFAULT', 'config.project_path'), shell=True, capture_output=True, text=True)
+    #     result = subprocess.run(command, cwd=path_handler(self.config), shell=True, capture_output=True, text=True)
         
     #     if result.returncode != 0:
     #         logger.error(f"PMD check failed: {result.stderr}")
@@ -73,6 +68,10 @@ class PMDRunner:
         Raises:
             SystemExit: If the PMD check fails.
         """
+        if java_files == []:
+            print('There are no modified files in the directory to be analyzed on the given commit.')
+            sys.exit(1)
+
         report_dir = os.path.dirname(self.report_path)
         
         # Ensure the directory for the report exists

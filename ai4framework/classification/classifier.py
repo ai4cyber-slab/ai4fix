@@ -19,19 +19,22 @@ The script outputs results to both a text log file and a JSON file in the 'out' 
 """
 
 import os
-import re
 import sys
 import git
 import json
 import argparse
-import subprocess
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+import config.common_config as cfg
+
 from pydantic import BaseModel, Field
 from diff_filtering import remove_unnecessary_diff
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
-from langchain.output_parsers import PydanticOutputParser
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from management.repo_manager import RepoManager
+from langchain.output_parsers import PydanticOutputParser
+from config.config_path_handler import *
+
 
 # Creating the parser
 parser = argparse.ArgumentParser(description="Classifier script with arguments",
@@ -243,6 +246,7 @@ def main():
                     unnecessary_diff = remove_unnecessary_diff(args.repo_path, diff_content)
                     if unnecessary_diff:
                         error_and_log_handling(f"The diff of {file} is unnecessary, it has been removed.\n", True)
+                        os.remove(git_diff_file)
                         continue
 
                     try:
@@ -265,12 +269,13 @@ def main():
                             output_data['security_relevant_files'].append(output_dict)
 
                             # For Symbolic Execution
-                            # Getting the top-level root directory
-                            root_dir = file
-                            while os.path.dirname(root_dir) != '/':
-                                root_dir = os.path.dirname(root_dir)
+                            project_root = cfg.config.get('DEFAULT', 'config.project_root', fallback='')
 
-                            filter_path = os.path.join(root_dir, '.ai4framework', 'filter.txt')
+                            if project_root == '':
+                                print('CONFIG.PROJECT_ROOT is not set in the configuration!')
+                                sys.exit(1)
+
+                            filter_path = os.path.join(project_root, '.ai4framework', 'filter.txt')
                             
                             with open(filter_path, 'a') as filter_file:
                                 if filter_file.tell() == 0:

@@ -1,9 +1,12 @@
+import os
+import re
+import subprocess
+
+from utils.logger import logger
+from config.config_path_handler import *
 from symbolic_execution.analyzer import Analyzer
 from symbolic_execution.json_processor import JSONProcessor
-from utils.logger import logger
-import os
-import subprocess
-import re
+
 
 class SymbolicExecution:
     """
@@ -22,17 +25,8 @@ class SymbolicExecution:
         """
         self.config = config
         self.project_name = self.config.get("DEFAULT", "config.project_name")
-        self.project_path = self.config.get("DEFAULT", "config.project_path", fallback=None)
-
-        if not self.project_path:
-            raise Exception("config.project_path is not set in the configuration.")
-        
-        # Handle relative paths
-        if not os.path.isabs(self.project_path):
-            root_dir = os.path.dirname(self.project_path)
-            self.project_path = os.path.join(root_dir, self.project_path)
-
-        self.results_path = self.config.get("ANALYZER", "config.analyzer_results_path")
+        self.project_path = path_handler(self.config)
+        self.results_path = self.config.get("ANALYZER", "config.analyzer_results_path", fallback='results')
         self.analyzer_path = self.config.get("ANALYZER", "config.analyzer", fallback=os.path.join(os.sep, 'opt','AI4VULN','Java','AnalyzerJava'))
     
     def analyze(self):

@@ -1,6 +1,9 @@
-from utils.logger import logger
-import json
 import os
+import json
+
+from utils.logger import logger
+from config.config_path_handler import *
+
 
 class ReportMerger:
     """
@@ -18,15 +21,8 @@ class ReportMerger:
             config: Configuration object containing necessary settings.
         """
         self.config = config
-        self.project_path = self.config.get('DEFAULT', 'config.project_path', fallback=None)
-
-        if not self.project_path:
-            raise Exception("config.project_path is not set in the configuration.")
-
-        # Handle relative paths
-        if not os.path.isabs(self.project_path):
-            root_dir = os.path.dirname(self.project_path)
-            self.project_path = os.path.join(root_dir, self.project_path)
+        self.project_path = path_handler(self.config)
+        self.issues_path = self.config.get("ISSUES", "config.issues_path", fallback='issues.json')
 
     def merge_reports(self, *report_runners, validation=False):
         """
@@ -54,9 +50,9 @@ class ReportMerger:
 
             # Determine the output path based on validation flag
             if validation:
-                output_path = os.path.join(self.config.get("ISSUES", "config.issues_path").replace("issues.json", "sast_validation_issues.json"))
+                output_path = os.path.join(self.config.get("ISSUES", "config.issues_path", fallback='issues.json').replace("issues.json", "sast_validation_issues.json"))
             else:
-                output_path = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.config.get("ISSUES", "config.issues_path").replace("issues.json", "sast_issues.json")))
+                output_path = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.config.get("ISSUES", "config.issues_path", fallback='issues.json').replace("issues.json", "sast_issues.json")))
 
             # Ensure the directory exists
             os.makedirs(os.path.dirname(output_path), exist_ok=True)

@@ -1,17 +1,18 @@
 import os
+import re
 import json
-import subprocess
+import time
 import openai
+import random
+import difflib
+import subprocess
+
 from dotenv import load_dotenv, find_dotenv
 from collections import defaultdict
 from utils.logger import logger
-import re
-import difflib
-import time
-import random
-import sys
-from sast.sast_orchestrator import SASTOrchestrator
 from utils.comparer import IssueComparer
+from sast.sast_orchestrator import SASTOrchestrator
+from config.config_path_handler import *
 
 class PatchGenerator:
     def __init__(self, config):
@@ -21,32 +22,16 @@ class PatchGenerator:
         load_dotenv(dotenv_path)
         openai.api_key = os.getenv('OPENAI_API_KEY')
         self.client = openai.OpenAI()
+        self.project_path = path_handler(config)
         
         # Load configurations from file
         self.config = config
         self.sast = SASTOrchestrator(self.config)
 
-        """Handling the config paths"""
-        def creating_absolute_path(self, path):
-            if not path:
-                # Getting the top-level root directory
-                root_dir = path
-                while os.path.dirname(root_dir) != '/':
-                    root_dir = os.path.dirname(root_dir)
-
-                path = os.path.join(root_dir, '.ai4framework/patches')
-            
-            # Handle relative paths
-            if not os.path.isabs(path):
-                root_dir = os.path.dirname(path)
-                path = os.path.join(root_dir, path)
-            
-            return path
-
         # Set base directories and configurations dynamically
-        self.diffs_output_dir = creating_absolute_path(self.config.get('DEFAULT', 'config.results_path', fallback=None))
-        self.json_file_path = creating_absolute_path(self.config.get('ISSUES', 'config.issues_path', fallback=None))
-        self.base_dir = creating_absolute_path(self.config.get('DEFAULT', 'config.project_path', fallback=None))
+        self.diffs_output_dir = self.config.get('DEFAULT', 'config.results_path', fallback='patches')
+        self.json_file_path = self.config.get('ISSUES', 'config.issues_path', fallback='issues.json')
+        self.base_dir = path_handler(self.config)
         self.warnings = []
         self.full_file_path = ""
         self.initial_content = ""
@@ -56,7 +41,7 @@ class PatchGenerator:
         """Run 'mvn test' command and return the result."""
         with subprocess.Popen(
             ['mvn', 'test'],
-            cwd=self.project_root,
+            cwd=self.project_path,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
@@ -297,8 +282,8 @@ class PatchGenerator:
     def sast_validation(self, file_path, warning):
         try:
             self.sast.run_all(validation=True, java_file_path=file_path)
-            original_json_sast = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.config.get("ISSUES", "config.issues_path").replace("issues.json", "sast_issues.json"))) 
-            temp_json_sast = os.path.join(self.config.get("ISSUES", "config.issues_path").replace("issues.json", "sast_validation_issues.json")) 
+            original_json_sast = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.config.get("ISSUES", "config.issues_path", fallback='issues.json').replace("issues.json", "sast_issues.json"))) 
+            temp_json_sast = os.path.join(self.config.get("ISSUES", "config.issues_path", fallback='issues.json').replace("issues.json", "sast_validation_issues.json")) 
             self.comparer = IssueComparer(original_json_sast, temp_json_sast, file_path) 
             # Perform the comparison 
             self.comparer.compare_issues()

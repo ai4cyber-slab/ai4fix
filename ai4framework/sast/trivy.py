@@ -1,9 +1,12 @@
-import subprocess
 import os
 import sys
 import json
 import uuid
+import subprocess
+
 from utils.logger import logger
+from config.config_path_handler import *
+
 
 class TrivyRunner:
     """
@@ -22,15 +25,8 @@ class TrivyRunner:
         """
         self.config = config
         self.report_path = self.config.get('REPORT', 'config.trivy_report_path', fallback='/app/sast/out/trivy.json')
-        self.project_path = self.config.get('DEFAULT', 'config.project_path', fallback=None)
+        self.project_path = path_handler(self.config)
 
-        if not self.project_path:
-            raise Exception("config.project_path is not set in the configuration.")
-
-        # Handle relative paths
-        if not os.path.isabs(self.project_path):
-            root_dir = os.path.dirname(self.project_path)
-            self.project_path = os.path.join(root_dir, self.project_path)
 
     # def run(self):
     #     """
@@ -42,7 +38,7 @@ class TrivyRunner:
     #     """
     #     command = (
     #         f"{self.config.get('DEFAULT', 'config.trivy_bin')} fs "
-    #         f"{self.config.get('DEFAULT', 'config.project_path')} "
+    #         f"{self.config.get('DEFAULT', 'config.project_dir')} "
     #         f"--format json "
     #         f"-o {self.report_path}"
     #     )     

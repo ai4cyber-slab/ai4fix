@@ -1,43 +1,24 @@
-import json
-import openai
-from openai import OpenAI
-import difflib
 import os
 import re
-import subprocess
-from dotenv import load_dotenv, find_dotenv
-from collections import defaultdict
-import javalang
-from utils.logger import logger
+import json
 import time
+import openai
+import difflib
+import javalang
+import subprocess
+
+from openai import OpenAI
+from dotenv import load_dotenv, find_dotenv
+from utils.logger import logger
+from config.config_path_handler import *
+
 
 class TestGenerator:
     def __init__(self, config):
         self.config = config
-        self.project_root = self.config.get('DEFAULT', 'config.project_path', fallback=None)
-
-        if not self.project_root:
-            raise Exception("config.project_path is not set in the configuration.")
-
-        # Handle relative paths
-        if not os.path.isabs(self.project_root):
-            root_dir = os.path.dirname(self.project_root)
-            self.project_root = os.path.join(root_dir, self.project_root)
-
-        self.json_file_path = self.config.get('ISSUES', 'config.issues_path', fallback='')
-        self.diffs_path = self.config.get('DEFAULT', 'config.results_path', fallback=None)
-
-        if not self.diffs_path:
-            # Getting the top-level root directory
-            root_dir = self.project_root
-            while os.path.dirname(root_dir) != '/':
-                root_dir = os.path.dirname(root_dir)
-            self.diffs_path = os.path.join(root_dir, '.ai4framework/patches')
-
-        # Handle relative paths
-            if not os.path.isabs(self.diffs_path):
-                root_dir = os.path.dirname(self.diffs_path)
-                self.diffs_path = os.path.join(root_dir, self.diffs_path)
+        self.project_path = path_handler(self.config)
+        self.json_file_path = self.config.get('ISSUES', 'config.issues_path', fallback='issues.json')
+        self.diffs_path = self.config.get('DEFAULT', 'config.results_path', fallback='patches')
 
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
@@ -275,7 +256,7 @@ class TestGenerator:
             return
 
         # Construct full paths
-        file_path = os.path.join(self.project_root, file_relative_path.replace('/', os.sep))
+        file_path = os.path.join(self.project_path, file_relative_path.replace('/', os.sep))
         diff_path = os.path.join(self.diffs_path, diff_relative_path.replace('/', os.sep))
 
         # Check if source file exists
@@ -306,7 +287,7 @@ class TestGenerator:
 
         # Determine the test file path
         test_file_relative_path = file_relative_path.replace('/main/', '/test/').replace('.java', 'Test.java')
-        test_file_path = os.path.join(self.project_root, test_file_relative_path.replace('/', os.sep))
+        test_file_path = os.path.join(self.project_path, test_file_relative_path.replace('/', os.sep))
 
         # Load the old test file code
         if os.path.exists(test_file_path):
@@ -390,7 +371,7 @@ class TestGenerator:
         """Run 'mvn clean test' command and return the result."""
         result = subprocess.run(
             ['mvn', 'clean', 'test'],
-            cwd=self.project_root,
+            cwd=self.project_path,
             capture_output=True,
             text=True
         )
