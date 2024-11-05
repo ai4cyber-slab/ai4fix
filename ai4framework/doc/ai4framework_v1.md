@@ -194,7 +194,7 @@ Below is a sample `config.properties` file. Update the paths according to your s
 [DEFAULT]
 config.project_name=user_project # change to specified project name directory in container
 config.project_root=/user_project # the root directory of your project
-config.project_dir=/user_project # change to specified directory that should be analyzed
+config.project_dir=/user_project # the directory that should be analyzed, if empty, the root will be used
 config.results_path=patches # do not change
 config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # do not change
 config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # do not change
@@ -334,7 +334,7 @@ Before running the Python script in VS Code for the project you want to analyze,
 [DEFAULT]
 config.project_name=user_project # change to specified project name directory in container
 config.project_root=/user_project # the root directory of your project
-config.project_dir=/user_project # change to specified directory that should be analyzed
+config.project_dir=/user_project # the directory that should be analyzed, if empty, the root will be used
 config.results_path=patches # do not change
 config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # do not change
 config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # do not change
@@ -390,7 +390,7 @@ Let's consider a big project like Apache Struts, which is hosted on GitHub. Here
 [DEFAULT]
 config.project_name=core # change to specified project name directory in container
 config.project_root=/user_project # the root directory of your project
-config.project_dir=core # change to specified directory that should be analyzed
+config.project_dir=core # the directory that should be analyzed, if empty, the root will be used
 config.results_path=patches # do not change
 config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # do not change
 config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # do not change
