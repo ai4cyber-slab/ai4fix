@@ -24,7 +24,7 @@ class TrivyRunner:
             config: A configuration object containing necessary settings for Trivy.
         """
         self.config = config
-        self.report_path = self.config.get('REPORT', 'config.trivy_report_path', fallback='/app/sast/out/trivy.json')
+        self.report_path = self.config.get('REPORT', 'config.trivy_report_path', fallback=os.path.join(os.sep, 'app','sast','out','trivy.json'))
         self.project_path = path_handler(self.config)
 
 
