@@ -4,6 +4,7 @@ import { getRootPath } from './path';
 import * as fs from 'fs';
 import * as upath from 'upath';
 import * as vscode from 'vscode';
+import * as logging from "./services/logging";
 
 var path = require("path");
 var os = require('os');
@@ -53,33 +54,40 @@ function parseConfig(content: string): { [section: string]: { [key: string]: str
 
 function insertHiddenFile(projectPath: string, originalPath: string): string {
   const HIDDEN = '.ai4framework';
-  if(!upath.isAbsolute(originalPath)) {
-    originalPath = upath.join(projectPath, originalPath)
+
+  if(upath.isAbsolute(originalPath)) {
+    originalPath = upath.relative(projectPath, originalPath);
   }
 
   const normalizedProjectPath = upath.normalize(projectPath);
   const normalizedPath = upath.normalize(originalPath);
-
-  if (!normalizedPath.startsWith(normalizedProjectPath)) {
-    return originalPath;
-  }
-
-  const relativePath = upath.relative(normalizedProjectPath, normalizedPath);
-  const adjustedPath = upath.join(normalizedProjectPath, HIDDEN, relativePath);
+  const adjustedPath = upath.join(normalizedProjectPath, HIDDEN, normalizedPath);
 
   return adjustedPath
 }
 
-export var PROJECT_FOLDER = upath.normalize(config['DEFAULT']?.['config.project_path'] || '');
+export var PROJECT_ROOT = upath.normalize(config['DEFAULT']?.['config.project_root'] || '');
+export var PROJECT_DIR = upath.normalize(config['DEFAULT']?.['config.project_dir'] || '');
+
+if (PROJECT_ROOT === '') {
+  logging.LogErrorAndShowErrorMessage(
+    "CONFIG.PROJECT_ROOT is not set in the configuration!",
+    "CONFIG.PROJECT_ROOT is not set in the configuration!"
+  );
+}
+
+if (PROJECT_DIR === '') {
+  PROJECT_DIR = PROJECT_ROOT;
+}
 
 export function SetProjectFolder(path: string) {
-  PROJECT_FOLDER = upath.normalize(path);
-  PROJECT_FOLDER_LOG = 'plugin.subject_project_path' + '=' + PROJECT_FOLDER + os.EOL;
+  PROJECT_DIR = upath.normalize(path);
+  PROJECT_FOLDER_LOG = 'plugin.subject_project_path' + '=' + PROJECT_DIR + os.EOL;
 }
 
 // Access values from the parsed config
-export const PATCH_FOLDER = insertHiddenFile(PROJECT_FOLDER, upath.normalize(config['DEFAULT']?.['config.results_path'] || ''));
-export const ISSUES_PATH = insertHiddenFile(PROJECT_FOLDER, upath.normalize(config['DEFAULT']?.['config.jsons_listfile'] || ''))
+export const PATCH_FOLDER = insertHiddenFile(PROJECT_ROOT, upath.normalize(config['DEFAULT']?.['config.results_path'] || 'symbolic_results'));
+export const ISSUES_PATH = insertHiddenFile(PROJECT_ROOT, upath.normalize(config['DEFAULT']?.['config.jsons_listfile'] || 'jsons.lists'))
 export const ANALYZER_USE_DIFF_MODE = config['PLUGIN']?.['plugin.use_diff_mode'] || '';
 export const TEST_FOLDER = config['PLUGIN']?.['plugin.test_folder_log'] || '';
 export const SCRIPT_PATH = config['PLUGIN']?.['plugin.script_path'] || '';
@@ -91,7 +99,7 @@ export const ISSUE = 'issue';
 export const LOG_HEADING = '# Vscode-Plugin settings' + os.EOL + os.EOL;
 export const PATCH_FOLDER_LOG = 'plugin.generated_patches_path' + '=' + PATCH_FOLDER + os.EOL;
 export const ISSUES_PATH_LOG = 'plugin.jsons_listfile' + '=' + ISSUES_PATH + os.EOL;
-export var PROJECT_FOLDER_LOG = 'plugin.subject_project_path' + '=' + PROJECT_FOLDER + os.EOL;
+export var PROJECT_FOLDER_LOG = 'plugin.subject_project_path' + '=' + PROJECT_DIR + os.EOL;
 export const ANALYZER_USE_DIFF_MODE_LOG = 'plugin.use_diff_mode' + '=' + ANALYZER_USE_DIFF_MODE + os.EOL;
 
 

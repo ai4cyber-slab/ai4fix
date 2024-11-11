@@ -22,7 +22,7 @@ class ReportMerger:
         """
         self.config = config
         self.project_path = path_handler(self.config)
-        self.issues_path = self.config.get("ISSUES", "config.issues_path", fallback='issues.json')
+        self.issues_path = self.config.get("DEFAULT", "config.issues_path")
 
     def merge_reports(self, *report_runners, validation=False):
         """
@@ -50,9 +50,9 @@ class ReportMerger:
 
             # Determine the output path based on validation flag
             if validation:
-                output_path = os.path.join(self.config.get("ISSUES", "config.issues_path", fallback='issues.json').replace("issues.json", "sast_validation_issues.json"))
+                output_path = os.path.join(self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "sast_validation_issues.json"))
             else:
-                output_path = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.config.get("ISSUES", "config.issues_path", fallback='issues.json').replace("issues.json", "sast_issues.json")))
+                output_path = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "sast_issues.json")))
 
             # Ensure the directory exists
             os.makedirs(os.path.dirname(output_path), exist_ok=True)

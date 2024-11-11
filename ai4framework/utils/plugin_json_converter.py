@@ -18,9 +18,9 @@ class JsonPluginConverter:
         """
         self.config = config
         self.project_path = path_handler(self.config)
-        self.input_file = self.config.get('ISSUES', 'config.issues_path', fallback='issues.json')
+        self.input_file = self.config.get('DEFAULT', 'config.issues_path')
         self.output_directory = os.path.join(self.input_file.replace(os.path.basename(self.input_file), 'validation'), 'jsons')
-        self.json_txt_file = self.config.get('DEFAULT', 'config.jsons_listfile', fallback='jsons.lists')
+        self.json_txt_file = self.config.get('DEFAULT', 'config.jsons_listfile')
 
         
     def load_input_json(self):

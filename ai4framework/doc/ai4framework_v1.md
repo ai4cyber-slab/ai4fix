@@ -180,8 +180,6 @@ Set the analyzer paths and results path:
 
 ```properties
 config.analyzer=/path/to/AI4VULN-analyzer
-config.analyzer_path=/path/to/AI4VULN
-config.analyzer_results_path=/path/to/results/
 ```
 
 ---
@@ -195,33 +193,24 @@ Below is a sample `config.properties` file. Update the paths according to your s
 config.project_name=user_project # change to specified project name directory in container
 config.project_root=/user_project # the root directory of your project
 config.project_dir=/user_project # the directory that should be analyzed, if empty, the root will be used
-config.results_path=patches # do not change
-config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # do not change
-config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # do not change
-config.pmd_ruleset=/app/utils/PMD-config.xml # change or leave the default
-config.trivy_bin=/usr/bin/trivy # do not change
-config.jsons_listfile=jsons.lists # do not change
+[SAST]
+config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # change to where it's located
+config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # change to where it's located
+config.pmd_ruleset=/app/utils/PMD-config.xml # change to where it's located or leave the default
+config.trivy_bin=/usr/bin/trivy # change to where it's located
 [CLASSIFIER]
 commit_sha=2f7bb20317500db89c1bc2c0d96275e09f3c62a1 # change to desired commit hash
 gpt_model=gpt-4o # change to desired model
 temperature=0 # change to desired temperature
-[ISSUES]
-config.issues_path=issues.json # do not change
-[REPORT]
-config.pmd_report_path=/app/sast/out/pmd.xml # do not change 
-config.spotbugs_report_path=/app/sast/out/spotbugs.xml # do not change
-config.trivy_report_path=/app/sast/out/trivy.json # do not change
 [ANALYZER]
-config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # do not change
-config.analyzer_path=/opt/AI4VULN # do not change
-config.analyzer_results_path=results # do not change
+config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # change to where it's located
 # Vscode-Plugin settings
 [PLUGIN]
 plugin.use_diff_mode=view Diffs
-plugin.executing_parameters=ls # do not change
+plugin.executing_parameters=ls # makes the connection with the extension - do not change
 plugin.executable_path=target # change to specified project directory in container
-plugin.script_path=/app # do not change
-plugin.test_folder_log=src/test # change if needed
+plugin.script_path=/app # makes the connection with the extension - do not change
+plugin.test_folder_log=src/test # path of the test folder in the directory to be analyzed - makes the connection with the extension
 ```
 
 ---
@@ -335,33 +324,24 @@ Before running the Python script in VS Code for the project you want to analyze,
 config.project_name=user_project # change to specified project name directory in container
 config.project_root=/user_project # the root directory of your project
 config.project_dir=/user_project # the directory that should be analyzed, if empty, the root will be used
-config.results_path=patches # do not change
-config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # do not change
-config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # do not change
-config.pmd_ruleset=/app/utils/PMD-config.xml # change or leave the default
-config.trivy_bin=/usr/bin/trivy # do not change
-config.jsons_listfile=jsons.lists # do not change
+[SAST]
+config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # change to where it's located
+config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # change to where it's located
+config.pmd_ruleset=/app/utils/PMD-config.xml # change to where it's located or leave the default
+config.trivy_bin=/usr/bin/trivy # change to where it's located
 [CLASSIFIER]
 commit_sha=2f7bb20317500db89c1bc2c0d96275e09f3c62a1 # change to desired commit hash
 gpt_model=gpt-4o # change to desired model
-temperature=0 # change to desired temperature
-[ISSUES]
-config.issues_path=issues.json # do not change
-[REPORT]
-config.pmd_report_path=/app/sast/out/pmd.xml # do not change 
-config.spotbugs_report_path=/app/sast/out/spotbugs.xml # do not change
-config.trivy_report_path=/app/sast/out/trivy.json # do not change
+temperature=0 # change to desired temperature
 [ANALYZER]
-config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # do not change
-config.analyzer_path=/opt/AI4VULN # do not change
-config.analyzer_results_path=results # do not change
+config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # change to where it's located
 # Vscode-Plugin settings
 [PLUGIN]
 plugin.use_diff_mode=view Diffs
-plugin.executing_parameters=ls # do not change
+plugin.executing_parameters=ls # makes the connection with the extension - do not change
 plugin.executable_path=target # change to specified project directory in container
-plugin.script_path=/app # do not change
-plugin.test_folder_log=src/test # change if needed
+plugin.script_path=/app # makes the connection with the extension - do not change
+plugin.test_folder_log=src/test # path of the test folder in the directory to be analyzed - makes the connection with the extension
 ```
 
 
@@ -391,33 +371,24 @@ Let's consider a big project like Apache Struts, which is hosted on GitHub. Here
 config.project_name=core # change to specified project name directory in container
 config.project_root=/user_project # the root directory of your project
 config.project_dir=core # the directory that should be analyzed, if empty, the root will be used
-config.results_path=patches # do not change
-config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # do not change
-config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # do not change
-config.pmd_ruleset=/app/utils/PMD-config.xml # change or leave the default
-config.trivy_bin=/usr/bin/trivy # do not change
-config.jsons_listfile=jsons.lists # do not change
+[SAST]
+config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # change to where it's located
+config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # change to where it's located
+config.pmd_ruleset=/app/utils/PMD-config.xml # change to where it's located or leave the default
+config.trivy_bin=/usr/bin/trivy # change to where it's located
 [CLASSIFIER]
 commit_sha=735d1bc88d9beceb18558d12f565a466f96a5b2a # change to desired commit hash
 gpt_model=gpt-4o # change to desired model
 temperature=0 # change to desired temperature
-[ISSUES]
-config.issues_path=issues.json # do not change
-[REPORT]
-config.pmd_report_path=/app/sast/out/pmd.xml # do not change 
-config.spotbugs_report_path=/app/sast/out/spotbugs.xml # do not change
-config.trivy_report_path=/app/sast/out/trivy.json # do not change
 [ANALYZER]
-config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # do not change
-config.analyzer_path=/opt/AI4VULN # do not change
-config.analyzer_results_path=results # do not change
+config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # change to where it's located
 # Vscode-Plugin settings
 [PLUGIN]
 plugin.use_diff_mode=view Diffs
-plugin.executing_parameters=ls # do not change
+plugin.executing_parameters=ls # makes the connection with the extension - do not change
 plugin.executable_path=core/target # change to specified project directory in container
-plugin.script_path=/app # do not change
-plugin.test_folder_log=core/src/test # change if needed
+plugin.script_path=/app # makes the connection with the extension - do not change
+plugin.test_folder_log=core/src/test # path of the test folder in the directory to be analyzed - makes the connection with the extension
 ```
 
 #### Docker Commands

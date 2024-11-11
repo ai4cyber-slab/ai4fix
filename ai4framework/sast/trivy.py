@@ -24,7 +24,7 @@ class TrivyRunner:
             config: A configuration object containing necessary settings for Trivy.
         """
         self.config = config
-        self.report_path = self.config.get('REPORT', 'config.trivy_report_path', fallback=os.path.join(os.sep, 'app','sast','out','trivy.json'))
+        self.report_path = os.path.join(os.sep, 'app','sast','out','trivy.json')
         self.project_path = path_handler(self.config)
 
 
@@ -37,7 +37,7 @@ class TrivyRunner:
     #     it logs an error and exits the program.
     #     """
     #     command = (
-    #         f"{self.config.get('DEFAULT', 'config.trivy_bin')} fs "
+    #         f"{self.config.get('SAST', 'config.trivy_bin')} fs "
     #         f"{self.config.get('DEFAULT', 'config.project_dir')} "
     #         f"--format json "
     #         f"-o {self.report_path}"
@@ -57,10 +57,10 @@ class TrivyRunner:
         it logs an error and exits the program.
         """
         command = (
-            f"{self.config.get('DEFAULT', 'config.trivy_bin', fallback=os.path.join(os.sep, 'usr','bin','trivy'))} fs "
+            f"{self.config.get('SAST', 'config.trivy_bin', fallback=os.path.join(os.sep, 'usr','bin','trivy'))} fs "
             f"{self.project_path} "
             f"--format json "
-            f"-o {self.config.get('REPORT', 'config.trivy_report_path', fallback=os.path.join(os.sep, 'app','sast','out','trivy.json'))}"
+            f"-o {os.path.join(os.sep, 'app','sast','out','trivy.json')}"
         )
 
         try:

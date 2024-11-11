@@ -29,8 +29,8 @@ class PatchGenerator:
         self.sast = SASTOrchestrator(self.config)
 
         # Set base directories and configurations dynamically
-        self.diffs_output_dir = self.config.get('DEFAULT', 'config.results_path', fallback='patches')
-        self.json_file_path = self.config.get('ISSUES', 'config.issues_path', fallback='issues.json')
+        self.diffs_output_dir = self.config.get('DEFAULT', 'config.results_path')
+        self.json_file_path = self.config.get('DEFAULT', 'config.issues_path')
         self.base_dir = path_handler(self.config)
         self.warnings = []
         self.full_file_path = ""
@@ -282,8 +282,8 @@ class PatchGenerator:
     def sast_validation(self, file_path, warning):
         try:
             self.sast.run_all(validation=True, java_file_path=file_path)
-            original_json_sast = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.config.get("ISSUES", "config.issues_path", fallback='issues.json').replace("issues.json", "sast_issues.json"))) 
-            temp_json_sast = os.path.join(self.config.get("ISSUES", "config.issues_path", fallback='issues.json').replace("issues.json", "sast_validation_issues.json")) 
+            original_json_sast = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "sast_issues.json"))) 
+            temp_json_sast = os.path.join(self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "sast_validation_issues.json")) 
             self.comparer = IssueComparer(original_json_sast, temp_json_sast, file_path) 
             # Perform the comparison 
             self.comparer.compare_issues()

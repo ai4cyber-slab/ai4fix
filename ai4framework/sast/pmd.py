@@ -24,7 +24,7 @@ class PMDRunner:
             config: Configuration object containing necessary settings for PMD execution.
         """
         self.config = config
-        self.report_path = self.config.get('REPORT', 'config.pmd_report_path', fallback=os.path.join(os.sep, 'app','sast','out','pmd.xml'))
+        self.report_path = os.path.join(os.sep, 'app','sast','out','pmd.xml')
         self.project_path = path_handler(self.config)
 
 
@@ -45,9 +45,9 @@ class PMDRunner:
     #         os.makedirs(report_dir)
 
     #     command = (
-    #         f"{self.config.get('DEFAULT', 'config.pmd_bin')} check "  # Path to PMD binary
+    #         f"{self.config.get('SAST', 'config.pmd_bin')} check "  # Path to PMD binary
     #         f"-d {','.join(java_files)} "  # Java files with the /user_project path prepended
-    #         f"-R {self.config.get('DEFAULT', 'config.pmd_ruleset', fallback='/app/utils/PMD-config.xml')} "  # Path to PMD ruleset
+    #         f"-R {self.config.get('SAST', 'config.pmd_ruleset', fallback='/app/utils/PMD-config.xml')} "  # Path to PMD ruleset
     #         f"-f xml "  # Output format
     #         f"-r {self.report_path} "  # Output report path
     #         "--no-fail-on-violation"
@@ -79,9 +79,9 @@ class PMDRunner:
             os.makedirs(report_dir)
 
         command = (
-            f"{self.config.get('DEFAULT', 'config.pmd_bin', fallback=os.path.join(os.sep, 'opt','pmd-bin-7.4.0','bin','pmd'))} check "  # Path to PMD binary with fallback
+            f"{self.config.get('SAST', 'config.pmd_bin', fallback=os.path.join(os.sep, 'opt','pmd-bin-7.4.0','bin','pmd'))} check "  # Path to PMD binary with fallback
             f"-d {','.join(java_files)} "  # Java files with the /user_project path prepended
-            f"-R {self.config.get('DEFAULT', 'config.pmd_ruleset', fallback=os.path.join(os.sep, 'app', 'utils', 'PMD_config.xml'))} "  # Path to PMD ruleset
+            f"-R {self.config.get('SAST', 'config.pmd_ruleset', fallback=os.path.join(os.sep, 'app', 'utils', 'PMD_config.xml'))} "  # Path to PMD ruleset
             f"-f xml "  # Output format
             f"-r {self.report_path} "  # Output report path
             "--no-fail-on-violation"

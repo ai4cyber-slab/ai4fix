@@ -26,7 +26,7 @@ class SymbolicExecution:
         self.config = config
         self.project_name = self.config.get("DEFAULT", "config.project_name", fallback='user_project')
         self.project_path = path_handler(self.config)
-        self.results_path = self.config.get("ANALYZER", "config.analyzer_results_path", fallback='results')
+        self.results_path = self.config.get("ANALYZER", "config.analyzer_results_path")
         self.analyzer_path = self.config.get("ANALYZER", "config.analyzer", fallback=os.path.join(os.sep, 'opt','AI4VULN','Java','AnalyzerJava'))
     
     def analyze(self):

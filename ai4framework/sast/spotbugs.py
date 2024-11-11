@@ -24,7 +24,7 @@ class SpotBugsRunner:
             config: Configuration object containing necessary settings for SpotBugs execution.
         """
         self.config = config
-        self.report_path = self.config.get('REPORT', 'config.spotbugs_report_path', fallback=os.path.join(os.sep, 'app','sast','out','spotbugs.xml'))
+        self.report_path = os.path.join(os.sep, 'app','sast','out','spotbugs.xml')
         self.BASE_SRC_DIR = os.path.join('src', 'main', 'java')
         self.BASE_TEST_DIR = os.path.join('src', 'test', 'java')
         self.project_path = path_handler(self.config)
@@ -41,7 +41,7 @@ class SpotBugsRunner:
     #         SystemExit: If the SpotBugs check fails.
     #     """
     #     command = (
-    #         f"{self.config.get('DEFAULT', 'config.spotbugs_bin')} -textui "
+    #         f"{self.config.get('SAST', 'config.spotbugs_bin')} -textui "
     #         f"-xml:withMessages={self.report_path} "
     #         f"{' '.join(changed_files)}"
     #     )
@@ -64,7 +64,7 @@ class SpotBugsRunner:
             print('There are no modified files in the directory to be analyzed on the given commit.')
             sys.exit(1)
 
-        spotbugs_bin = self.config.get('DEFAULT', 'config.spotbugs_bin', fallback=os.path.join(os.sep, 'opt','spotbugs-4.8.6','bin','spotbugs'))
+        spotbugs_bin = self.config.get('SAST', 'config.spotbugs_bin', fallback=os.path.join(os.sep, 'opt','spotbugs-4.8.6','bin','spotbugs'))
         command = (
             f"{spotbugs_bin} -textui "
             f"-xml:withMessages={self.report_path} "

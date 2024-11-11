@@ -1,9 +1,8 @@
 import os
+import sys
 import openai
 import argparse
 import configparser
-
-from config.config_path_handler import *
 
 
 class ConfigManager:
@@ -78,16 +77,28 @@ class ConfigManager:
             print('CONFIG.PROJECT_ROOT is not set in the configuration!')
             sys.exit(1)
 
+        # Loading default configurations
+        default_configs = configparser.ConfigParser()
+
+        default_dir = os.getcwd()
+        os.chdir('/app')
+
+        with open('config/default_configs.properties', 'r') as f:
+            file_content = f.read()
+            default_configs.read_string(file_content)
+
+        os.chdir(default_dir)
+
         path_keys = [
             {'DEFAULT': 'config.results_path', 'fallback': 'patches'},
             {'DEFAULT': 'config.jsons_listfile', 'fallback': 'jsons.lists'},
-            {'ISSUES': 'config.issues_path', 'fallback': 'issues.json'},
-            {'ANALYZER': 'config.analyzer_results_path', 'fallback': 'results'},
+            {'DEFAULT': 'config.issues_path', 'fallback': 'issues.json'},
+            {'DEFAULT': 'config.analyzer_results_path', 'fallback': 'symbolic_results'},
         ]
 
         for path in path_keys:
             for key, value in path.items():
-                if config.has_option(key, value):
+                if default_configs.has_option(key, value):
                     original_path = config.get(key, value, fallback=path['fallback'])
                     adjusted_path = cls.insert_hidden_in_path(project_root, original_path)
                     config.set(key, value, adjusted_path)

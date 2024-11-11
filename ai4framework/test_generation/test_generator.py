@@ -17,8 +17,8 @@ class TestGenerator:
     def __init__(self, config):
         self.config = config
         self.project_path = path_handler(self.config)
-        self.json_file_path = self.config.get('ISSUES', 'config.issues_path', fallback='issues.json')
-        self.diffs_path = self.config.get('DEFAULT', 'config.results_path', fallback='patches')
+        self.json_file_path = self.config.get('DEFAULT', 'config.issues_path')
+        self.diffs_path = self.config.get('DEFAULT', 'config.results_path')
 
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
