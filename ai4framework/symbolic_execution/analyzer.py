@@ -1,8 +1,10 @@
-import subprocess
 import re
 import os
+import sys
 import time
+import subprocess
 from utils.logger import logger
+
 
 class Analyzer:
     """
@@ -25,6 +27,7 @@ class Analyzer:
         self.results_path = results_path
         self.filter = os.path.join(self.project_path, 'filter.txt')
 
+
     def run_analysis(self):
         """
         Run the analysis on the specified project.
@@ -38,6 +41,10 @@ class Analyzer:
         Raises:
             Exception: If an error occurs during the analysis process.
         """
+        if not self.project_name:
+            print("Project root path must be provided as a command-line argument or set in the PROJECT_PATH environment variable.")
+            sys.exit(1)
+            
         logger.info(f"Analyzing project: {self.project_name}")
 
         command = (

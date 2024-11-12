@@ -4,7 +4,7 @@ from config.common_config import ConfigManager
 from pathlib import Path
 
 # Get configuration
-config = ConfigManager.get_config()
+# config = ConfigManager.get_config()
 
 # Define default log file path
 AI4FRAMEWORK_DIR = Path(__file__).resolve().parent.parent

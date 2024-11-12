@@ -15,20 +15,35 @@ class ConfigManager:
 
     _config = None
     @classmethod
-    def load_config(cls, config_file):
+    def get_config(cls, project_name, project_root, dir_to_analyze):
         """
         Load configuration settings from a specified file, ignoring comments and comment-only lines.
 
         Args:
-            config_file (str): Path to the configuration file.
+            project_name (str): The name of the project.
+            project_root (str): Path to the root of the project.
+            dir_to_analyze (str): Path to the directory that will be analyzed.
 
         Returns:
             configparser.ConfigParser: The loaded configuration object.
         """
+        if project_root == None:
+            project_root = get_project_root()
+
         if cls._config is None:
             cls._config = configparser.ConfigParser()
 
+            project_config = [
+                '[DEFAULT]',
+                f'config.project_name={project_name}',
+                f'config.project_root={project_root}',
+                f'config.dir_to_analyze={dir_to_analyze}',
+            ]
+
+            cls._config.read_string('\n'.join(project_config))
+
             cleaned_lines = []
+            config_file = os.path.join(project_root, 'config.properties')
             with open(config_file, 'r') as file:
                 for line in file:
                     stripped_line = line.strip()
@@ -44,11 +59,12 @@ class ConfigManager:
             cls._config.read_string('\n'.join(cleaned_lines))
 
             cls.adjust_config_paths()
+
         return cls._config
 
 
     @classmethod
-    def get_config(cls):
+    def old_get_config(cls):
         """
         Get the loaded configuration object.
 
@@ -138,28 +154,13 @@ def get_project_root():
     Returns:
         str: The path to the project root directory.
     """
-    parser = argparse.ArgumentParser(description='Process some parameters.')
-    parser.add_argument('--project-root', '-p', dest='project_root', type=str, help='Path to the project root directory.')
-    parser.add_argument('--openai-key', '-k', dest='openai_key', type=str, help='OpenAI API key.')
-    parser.add_argument('--skip-patches', action='store_true', help='If provided, the patches part will be skipped.')
-    parser.add_argument('--sast-rerun', action='store_true', help='If provided, issues will be generated for the new java files contents')
-
-    args, unknown = parser.parse_known_args()
-
-    # Set OpenAI API key if provided
-    if args.openai_key:
-        openai.api_key = args.openai_key
-
-    if args.project_root:
-        return args.project_root
-
-    # If not passed as an argument, try an environment variable
     project_root = os.getenv("PROJECT_PATH")
 
     if project_root:
         return project_root
     else:
-        raise Exception("Project root path must be provided as a command-line argument or set in the PROJECT_PATH environment variable.")
+        print("Project root path must be provided as a command-line argument or set in the PROJECT_PATH environment variable.")
+        sys.exit(1)
 
 
 def read_config_properties(file_path):
@@ -194,6 +195,6 @@ def read_config_properties(file_path):
     return config
 
 
-config_file = os.path.join(get_project_root(), 'config.properties')
-ConfigManager.load_config(config_file)
-config = ConfigManager.get_config()
+# config_file = os.path.join(get_project_root(), 'config.properties')
+# ConfigManager.load_config(config_file)
+# config = ConfigManager.get_config()

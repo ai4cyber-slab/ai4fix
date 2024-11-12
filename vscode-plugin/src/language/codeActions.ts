@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import * as vscode from 'vscode';
-import { ISSUES_PATH, PATCH_FOLDER, PROJECT_FOLDER } from '../constants';
+import { ISSUES_PATH, PATCH_FOLDER, PROJECT_FOLDER, PROJECT_FOLDER_LOG } from '../constants';
 import { IFix, Iissue, IIssueRange } from '../interfaces';
 import { getIssues2 } from '../services/fakeAiFixCode';
 var path = require('path');

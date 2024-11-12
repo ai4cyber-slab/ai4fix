@@ -189,10 +189,6 @@ config.analyzer=/path/to/AI4VULN-analyzer
 Below is a sample `config.properties` file. Update the paths according to your system setup.
 
 ```properties
-[DEFAULT]
-config.project_name=user_project # change to specified project name directory in container
-config.project_root=/user_project # the root directory of your project
-config.project_dir=/user_project # the directory that should be analyzed, if empty, the root will be used
 [SAST]
 config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # change to where it's located
 config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # change to where it's located
@@ -285,6 +281,13 @@ If you prefer to interact with the container directly via Bash without needing c
 docker run -it -e OPENAI_API_KEY='sk-proj-....' -e PROJECT_PATH=/user_project -v C:/Users/HP/Music/Demo:/user_project code-analyzer-vs-version bash
 ```
 
+#### Help:
+- `-p 8080:8080`: Exposes port 8080 for code-server access via a browser.
+- `-e OPENAI_API_KEY=''`: You can leave this blank if you don't want to provide an OpenAI API key, or provide it if necessary.
+- `-v C:/Users/HP/Music/Demo:/user_project`: Mounts the root directory of your project (e.g., a Maven project with multiple sub-projects) that contains the `.git` directory to the `/user_project` directory inside the container. For example, if you have a project like the Struts GitHub repository with multiple sub-projects, you would mount the Struts root directory.
+- `-e PROJECT_PATH=/user_project`: Specifies the project directory within the container, which should point to the mounted root directory of your project.
+
+
 Once inside the container, navigate to the project directory:
 
 ```bash
@@ -293,14 +296,15 @@ cd /user_project
 
 Then run the analysis script:
 ```bash
-python /app/orchestrator.py
+python /app/orchestrator.py --p_name user_project --p_root /user_project --dir /user_project --skip-patches --sast-rerun
 ```
 
-#### Key Flags:
-- `-p 8080:8080`: Exposes port 8080 for code-server access via a browser.
-- `-e OPENAI_API_KEY=''`: You can leave this blank if you don't want to provide an OpenAI API key, or provide it if necessary.
-- `-v C:/Users/HP/Music/Demo:/user_project`: Mounts the root directory of your project (e.g., a Maven project with multiple sub-projects) that contains the `.git` directory to the `/user_project` directory inside the container. For example, if you have a project like the Struts GitHub repository with multiple sub-projects, you would mount the Struts root directory. You can then specify the path to the desired subdirectory in the `config.properties` file.
-- `-e PROJECT_PATH=/user_project`: Specifies the project directory within the container, which should point to the mounted root directory of your project. You will configure the specific subdirectory path in the `config.properties` file.
+#### Help:
+- `--p_name user_project`: The name of your project.
+- `--p_root /user_project`: The root directory of your project. This field is required.
+- `--dir /user_project`: The directory that should be analyzed. If empty, the root will be used.
+- `--skip-patches`: If provided, the patches part will be skipped.
+- `--sast-rerun`: If provided, issues will be generated for the new java files contents.
 
 
 #### Important:
@@ -320,10 +324,6 @@ Make sure to replace `/user_project` with the correct project path inside the co
 
 Before running the Python script in VS Code for the project you want to analyze, you must create a config.properties file inside the project directory that contains the `.git` with the following content:
 ```properties
-[DEFAULT]
-config.project_name=user_project # change to specified project name directory in container
-config.project_root=/user_project # the root directory of your project
-config.project_dir=/user_project # the directory that should be analyzed, if empty, the root will be used
 [SAST]
 config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # change to where it's located
 config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # change to where it's located
@@ -350,7 +350,7 @@ plugin.test_folder_log=src/test # path of the test folder in the directory to be
 Now, open the VSCode terminal in code-server and run the Python script for analysis.
 
 ```bash
-python /app/orchestrator.py
+python /app/orchestrator.py --p_name user_project --p_root /user_project --dir /user_project --skip-patches --sast-rerun
 ```
 
 This will start the analysis process on your project.
@@ -367,10 +367,6 @@ Let's consider a big project like Apache Struts, which is hosted on GitHub. Here
 #### `config.properties` Example
 
 ```properties
-[DEFAULT]
-config.project_name=core # change to specified project name directory in container
-config.project_root=/user_project # the root directory of your project
-config.project_dir=core # the directory that should be analyzed, if empty, the root will be used
 [SAST]
 config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # change to where it's located
 config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # change to where it's located
@@ -403,7 +399,6 @@ To run the Docker container for Apache Struts, use the following command: in our
 
 ```bash
 docker run -it -p 8080:8080 -e OPENAI_API_KEY='your_openapi_key' -e PROJECT_PATH=/user_project -v C:/Users/HP/Music/struts:/user_project code-analyzer-vs-version
-
 ```
 
 These commands will build the Docker image and run the container for Apache Struts, allowing you to analyze the project with AI4Framework.

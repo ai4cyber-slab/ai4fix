@@ -66,7 +66,28 @@ function insertHiddenFile(projectPath: string, originalPath: string): string {
   return adjustedPath
 }
 
-export var PROJECT_ROOT = upath.normalize(config['DEFAULT']?.['config.project_root'] || '');
+
+export let PROJECT_NAME = "/user_project"
+export let PROJECT_ROOT = vscode.workspace.workspaceFolders[0].uri.fsPath;
+async function selectFolderForAnalysis() {
+  const selectedFolders = await vscode.window.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, openLabel: 'Select Folder for Analysis' });
+
+  let selectedFolderPath;
+  
+  if (!selectedFolders || selectedFolders.length === 0) {
+      // No folder selected, use the root of the opened project
+      selectedFolderPath = PROJECT_ROOT;
+  } else {
+      // Folder selected, use the first selected folder
+      selectedFolderPath = selectedFolders[0].fsPath;
+  }
+
+  logging.LogInfo(selectedFolderPath); // Outputs the selected folders after the dialog completes
+
+  return selectedFolderPath;
+}
+export let PROJECT_FOLDER = upath.normalize(selectFolderForAnalysis());
+/* export var PROJECT_ROOT = upath.normalize(config['DEFAULT']?.['config.project_root'] || '');
 export var PROJECT_DIR = upath.normalize(config['DEFAULT']?.['config.project_dir'] || '');
 
 if (PROJECT_ROOT === '') {
@@ -78,18 +99,24 @@ if (PROJECT_ROOT === '') {
 
 if (PROJECT_DIR === '') {
   PROJECT_DIR = PROJECT_ROOT;
-}
+} */
 
 export function SetProjectFolder(path: string) {
-  PROJECT_DIR = upath.normalize(path);
-  PROJECT_FOLDER_LOG = 'plugin.subject_project_path' + '=' + PROJECT_DIR + os.EOL;
+  PROJECT_FOLDER = upath.normalize(path);
+  PROJECT_FOLDER_LOG = 'plugin.subject_project_path' + '=' + PROJECT_FOLDER + os.EOL;
 }
 
 // Access values from the parsed config
 export const PATCH_FOLDER = insertHiddenFile(PROJECT_ROOT, upath.normalize(config['DEFAULT']?.['config.results_path'] || 'symbolic_results'));
 export const ISSUES_PATH = insertHiddenFile(PROJECT_ROOT, upath.normalize(config['DEFAULT']?.['config.jsons_listfile'] || 'jsons.lists'))
 export const ANALYZER_USE_DIFF_MODE = config['PLUGIN']?.['plugin.use_diff_mode'] || '';
-export const TEST_FOLDER = config['PLUGIN']?.['plugin.test_folder_log'] || '';
+
+let test_folder_path = config['PLUGIN']?.['plugin.test_folder_log'] || '';
+if(upath.isAbsolute(test_folder_path)) {
+  test_folder_path = upath.relative(PROJECT_ROOT, test_folder_path);
+}
+export const TEST_FOLDER = test_folder_path;
+
 export const SCRIPT_PATH = config['PLUGIN']?.['plugin.script_path'] || '';
 export const ANALYZER_MENTION = 'analyzer_mention';
 export const ISSUE = 'issue';
@@ -99,7 +126,7 @@ export const ISSUE = 'issue';
 export const LOG_HEADING = '# Vscode-Plugin settings' + os.EOL + os.EOL;
 export const PATCH_FOLDER_LOG = 'plugin.generated_patches_path' + '=' + PATCH_FOLDER + os.EOL;
 export const ISSUES_PATH_LOG = 'plugin.jsons_listfile' + '=' + ISSUES_PATH + os.EOL;
-export var PROJECT_FOLDER_LOG = 'plugin.subject_project_path' + '=' + PROJECT_DIR + os.EOL;
+export var PROJECT_FOLDER_LOG = 'plugin.subject_project_path' + '=' + PROJECT_FOLDER + os.EOL;
 export const ANALYZER_USE_DIFF_MODE_LOG = 'plugin.use_diff_mode' + '=' + ANALYZER_USE_DIFF_MODE + os.EOL;
 
 
