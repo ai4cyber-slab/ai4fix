@@ -5,7 +5,6 @@ import subprocess
 
 from dotenv import load_dotenv, find_dotenv
 from utils.logger import logger
-from config.config_path_handler import *
 
 
 def find_script(starting_directory):
@@ -42,7 +41,7 @@ class SecurityClassifier:
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
         openai.api_key = os.getenv('OPENAI_API_KEY')
-        self.repo_path = path_handler(self.config)
+        self.repo_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
 
 
     def classify(self):
@@ -61,6 +60,7 @@ class SecurityClassifier:
         os.chdir(current_dir)
         command = [
             "python", "classifier.py",
+            "-p", self.config.get('DEFAULT', 'config.project_root'),
             "-r", self.repo_path,
             "-c", self.config.get('CLASSIFIER', 'commit_sha'),
             "-m", self.config.get('CLASSIFIER', 'gpt_model'),

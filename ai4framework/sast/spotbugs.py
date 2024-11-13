@@ -5,7 +5,6 @@ import subprocess
 import xml.etree.ElementTree as ET
 
 from utils.logger import logger
-from config.config_path_handler import *
 
 
 class SpotBugsRunner:
@@ -27,7 +26,7 @@ class SpotBugsRunner:
         self.report_path = os.path.join(os.sep, 'app','sast','out','spotbugs.xml')
         self.BASE_SRC_DIR = os.path.join('src', 'main', 'java')
         self.BASE_TEST_DIR = os.path.join('src', 'test', 'java')
-        self.project_path = path_handler(self.config)
+        self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
 
 
     # def run(self, changed_files):

@@ -3,7 +3,6 @@ import re
 import subprocess
 
 from utils.logger import logger
-from config.config_path_handler import *
 from symbolic_execution.analyzer import Analyzer
 from symbolic_execution.json_processor import JSONProcessor
 
@@ -24,8 +23,8 @@ class SymbolicExecution:
             config (ConfigParser): Configuration object containing project settings.
         """
         self.config = config
-        self.project_name = os.getenv("PROJECT_PATH")
-        self.project_path = path_handler(self.config)
+        self.project_name = self.config.get('DEFAULT', 'config.project_name')
+        self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
         self.results_path = self.config.get("ANALYZER", "config.analyzer_results_path")
         self.analyzer_path = self.config.get("ANALYZER", "config.analyzer", fallback=os.path.join(os.sep, 'opt','AI4VULN','Java','AnalyzerJava'))
     

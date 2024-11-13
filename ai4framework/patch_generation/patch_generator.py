@@ -12,7 +12,6 @@ from collections import defaultdict
 from utils.logger import logger
 from utils.comparer import IssueComparer
 from sast.sast_orchestrator import SASTOrchestrator
-from config.config_path_handler import *
 
 class PatchGenerator:
     def __init__(self, config):
@@ -22,16 +21,16 @@ class PatchGenerator:
         load_dotenv(dotenv_path)
         openai.api_key = os.getenv('OPENAI_API_KEY')
         self.client = openai.OpenAI()
-        self.project_path = path_handler(config)
         
         # Load configurations from file
         self.config = config
         self.sast = SASTOrchestrator(self.config)
 
         # Set base directories and configurations dynamically
+        self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
         self.diffs_output_dir = self.config.get('DEFAULT', 'config.results_path')
         self.json_file_path = self.config.get('DEFAULT', 'config.issues_path')
-        self.base_dir = path_handler(self.config)
+        self.base_dir = self.project_path
         self.warnings = []
         self.full_file_path = ""
         self.initial_content = ""

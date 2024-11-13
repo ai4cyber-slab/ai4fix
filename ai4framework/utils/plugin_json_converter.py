@@ -3,7 +3,6 @@ import json
 
 from collections import defaultdict
 from utils.logger import logger
-from config.config_path_handler import *
 
 
 class JsonPluginConverter:
@@ -17,7 +16,7 @@ class JsonPluginConverter:
             json_txt_file (str): Path to the file where the list of output JSON paths will be written.
         """
         self.config = config
-        self.project_path = path_handler(self.config)
+        self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
         self.input_file = self.config.get('DEFAULT', 'config.issues_path')
         self.output_directory = os.path.join(self.input_file.replace(os.path.basename(self.input_file), 'validation'), 'jsons')
         self.json_txt_file = self.config.get('DEFAULT', 'config.jsons_listfile')

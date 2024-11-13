@@ -9,6 +9,7 @@ Usage:
     python classifier.py -r <repo_path> -c <commit_sha> -k <openai_api_key> [-m <model>] [-t <temperature>]
 
 Arguments:
+    -p, --project_root: Path to the root of the project that is under analysis
     -r, --repo_path: Path to the Git repository (required)
     -c, --commit_sha: Commit hash to analyze (required)
     -m, --model: GPT model to use (default: "gpt-4o")
@@ -25,7 +26,6 @@ import json
 import argparse
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-import config.common_config as cfg
 
 from pydantic import BaseModel, Field
 from diff_filtering import remove_unnecessary_diff
@@ -33,7 +33,6 @@ from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from management.repo_manager import RepoManager
 from langchain.output_parsers import PydanticOutputParser
-from config.config_path_handler import *
 
 
 # Creating the parser
@@ -41,6 +40,7 @@ parser = argparse.ArgumentParser(description="Classifier script with arguments",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 # Adding the arguments
+parser.add_argument("-p", "--project_root", type=str, help="Path to the root of the project that is under analysis", required=True)
 parser.add_argument("-r", "--repo_path", type=str, help="The path of your repository", required=True)
 parser.add_argument("-c", "--commit_sha", type=str, help="The hash of the commit", required=True)
 parser.add_argument("-m", "--model", type=str, help="The name of the GPT-model", default="gpt-4o")
@@ -269,13 +269,7 @@ def main():
                             output_data['security_relevant_files'].append(output_dict)
 
                             # For Symbolic Execution
-                            project_root = cfg.config.get('DEFAULT', 'config.project_root', fallback='')
-
-                            if project_root == '':
-                                print('CONFIG.PROJECT_ROOT is not set in the configuration!')
-                                sys.exit(1)
-
-                            filter_path = os.path.join(project_root, '.ai4framework', 'filter.txt')
+                            filter_path = os.path.join(args.project_root, '.ai4framework', 'filter.txt')
                             
                             with open(filter_path, 'a') as filter_file:
                                 if filter_file.tell() == 0:

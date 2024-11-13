@@ -296,13 +296,12 @@ cd /user_project
 
 Then run the analysis script:
 ```bash
-python /app/orchestrator.py --p_name user_project --p_root /user_project --dir /user_project --skip-patches --sast-rerun
+python /app/orchestrator.py -r /user_project -d /user_project --skip-patches --sast-rerun
 ```
 
 #### Help:
-- `--p_name user_project`: The name of your project.
-- `--p_root /user_project`: The root directory of your project. This field is required.
-- `--dir /user_project`: The directory that should be analyzed. If empty, the root will be used.
+- `--r /user_project`: Path to the root directory of your project. This field is required unless you provided the PROJECT_PATH enviroment variable.
+- `-d /user_project`: Path to the directory that should be analyzed. If empty, the root will be used.
 - `--skip-patches`: If provided, the patches part will be skipped.
 - `--sast-rerun`: If provided, issues will be generated for the new java files contents.
 
@@ -350,7 +349,7 @@ plugin.test_folder_log=src/test # path of the test folder in the directory to be
 Now, open the VSCode terminal in code-server and run the Python script for analysis.
 
 ```bash
-python /app/orchestrator.py --p_name user_project --p_root /user_project --dir /user_project --skip-patches --sast-rerun
+python /app/orchestrator.py -r /user_project -d /user_project --skip-patches --sast-rerun
 ```
 
 This will start the analysis process on your project.

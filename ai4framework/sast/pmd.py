@@ -5,7 +5,6 @@ import subprocess
 import xml.etree.ElementTree as ET
 
 from utils.logger import logger
-from config.config_path_handler import *
 
 
 class PMDRunner:
@@ -25,7 +24,7 @@ class PMDRunner:
         """
         self.config = config
         self.report_path = os.path.join(os.sep, 'app','sast','out','pmd.xml')
-        self.project_path = path_handler(self.config)
+        self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
 
 
     # def run(self, java_files):

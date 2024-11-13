@@ -6,7 +6,6 @@ from utils.logger import logger
 from .tool_runner import ToolRunner
 from .report_merger import ReportMerger
 from management.repo_manager import RepoManager
-from config.config_path_handler import *
 
 
 class SASTOrchestrator:
@@ -25,12 +24,12 @@ class SASTOrchestrator:
             config: Configuration object containing necessary settings.
         """
         self.repo_manager = RepoManager(
-            path_handler(config),
+            config.get('DEFAULT', 'config.dir_to_analyze'),
             config.get('CLASSIFIER', 'commit_sha')
         )
         self.tool_runner = ToolRunner(config, self.repo_manager)
         self.report_merger = ReportMerger(config)
-        self.project_path = path_handler(config)
+        self.project_path = config.get('DEFAULT', 'config.dir_to_analyze')
 
     def run_all(self, validation=False, java_file_path=None):
         """

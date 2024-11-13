@@ -2,7 +2,6 @@ import os
 import json
 
 from utils.logger import logger
-from config.config_path_handler import *
 
 
 class ReportMerger:
@@ -21,7 +20,7 @@ class ReportMerger:
             config: Configuration object containing necessary settings.
         """
         self.config = config
-        self.project_path = path_handler(self.config)
+        self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
         self.issues_path = self.config.get("DEFAULT", "config.issues_path")
 
     def merge_reports(self, *report_runners, validation=False):

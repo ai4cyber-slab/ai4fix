@@ -3,13 +3,12 @@ import time
 import subprocess
 
 from utils.logger import logger
-from config.config_path_handler import *
 
 
 def reload_vscode_window(config):
     flag = 0
     try:
-        project_path = path_handler(config)
+        project_path = config.get('DEFAULT', 'config.dir_to_analyze')
         logger.warning('Please note that you should use the newly opened vscode window for the settings to take effect.')
         time.sleep(2)
         subprocess.run(["code-server", project_path, "--reload-window"], check=True)

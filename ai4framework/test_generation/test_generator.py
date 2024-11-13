@@ -10,13 +10,12 @@ import subprocess
 from openai import OpenAI
 from dotenv import load_dotenv, find_dotenv
 from utils.logger import logger
-from config.config_path_handler import *
 
 
 class TestGenerator:
     def __init__(self, config):
         self.config = config
-        self.project_path = path_handler(self.config)
+        self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
         self.json_file_path = self.config.get('DEFAULT', 'config.issues_path')
         self.diffs_path = self.config.get('DEFAULT', 'config.results_path')
 

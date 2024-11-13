@@ -1,7 +1,5 @@
 import os
 import sys
-import openai
-import argparse
 import configparser
 
 
@@ -15,12 +13,11 @@ class ConfigManager:
 
     _config = None
     @classmethod
-    def get_config(cls, project_name, project_root, dir_to_analyze):
+    def get_config(cls, project_root, dir_to_analyze):
         """
         Load configuration settings from a specified file, ignoring comments and comment-only lines.
 
         Args:
-            project_name (str): The name of the project.
             project_root (str): Path to the root of the project.
             dir_to_analyze (str): Path to the directory that will be analyzed.
 
@@ -28,7 +25,20 @@ class ConfigManager:
             configparser.ConfigParser: The loaded configuration object.
         """
         if project_root == None:
-            project_root = get_project_root()
+            project_root = os.getenv("PROJECT_PATH")
+
+            if not project_root:
+                print("Project root path must be provided as a command-line argument (-r/--project_root), or set in the PROJECT_PATH environment variable.")
+                sys.exit(1)
+
+        if dir_to_analyze == None:
+            dir_to_analyze = project_root
+
+        # Handle relative paths
+        if not os.path.isabs(dir_to_analyze):
+            dir_to_analyze = os.path.join(project_root, dir_to_analyze)
+
+        project_name = project_root.replace('/', '')
 
         if cls._config is None:
             cls._config = configparser.ConfigParser()
@@ -58,13 +68,13 @@ class ConfigManager:
 
             cls._config.read_string('\n'.join(cleaned_lines))
 
-            cls.adjust_config_paths()
+            cls.adjust_config_paths(project_root)
 
         return cls._config
 
 
-    @classmethod
-    def old_get_config(cls):
+    # @classmethod
+    # def old_get_config(cls):
         """
         Get the loaded configuration object.
 
@@ -80,18 +90,13 @@ class ConfigManager:
 
 
     @classmethod
-    def adjust_config_paths(cls):
+    def adjust_config_paths(cls, project_root):
         """
         Adjusts paths in the config to include the hidden folder after 'config.project_root'.
 
         Modifies the config object in place.
         """
         config = cls._config
-        project_root = config.get('DEFAULT', 'config.project_root', fallback='')
-
-        if project_root == '':
-            print('CONFIG.PROJECT_ROOT is not set in the configuration!')
-            sys.exit(1)
 
         # Loading default configurations
         default_configs = configparser.ConfigParser()
@@ -146,53 +151,50 @@ class ConfigManager:
         return new_path
     
 
-# Handling command-line arguments or environment variables
-def get_project_root():
-    """
-    Get the project root path from command-line arguments or environment variables.
+    @classmethod
+    def get_project_root(cls):
+        """
+        Gets the project root path from configurations.
 
-    Returns:
-        str: The path to the project root directory.
-    """
-    project_root = os.getenv("PROJECT_PATH")
+        Returns:
+            str: The path to the project root directory.
+        """
+        config = cls._config
+        project_root = config.get('DEFAULT', 'config.project_root')
 
-    if project_root:
         return project_root
-    else:
-        print("Project root path must be provided as a command-line argument or set in the PROJECT_PATH environment variable.")
-        sys.exit(1)
 
 
-def read_config_properties(file_path):
-    """
-    Reads the config.properties file and extracts all configurations, ignoring section headers and inline comments.
+# def read_config_properties(file_path):
+#     """
+#     Reads the config.properties file and extracts all configurations, ignoring section headers and inline comments.
 
-    Args:
-        file_path (str): Path to the config.properties file.
+#     Args:
+#         file_path (str): Path to the config.properties file.
 
-    Returns:
-        dict: A dictionary of key-value pairs from the properties file, excluding section headers and comments.
-    """
-    config = {}
+#     Returns:
+#         dict: A dictionary of key-value pairs from the properties file, excluding section headers and comments.
+#     """
+#     config = {}
 
-    with open(file_path, 'r') as file:
-        for line in file:
-            line = line.strip()
+#     with open(file_path, 'r') as file:
+#         for line in file:
+#             line = line.strip()
 
-            # Skip comments, empty lines, and section headers
-            if not line or line.startswith("#") or (line.startswith("[") and line.endswith("]")):
-                continue
+#             # Skip comments, empty lines, and section headers
+#             if not line or line.startswith("#") or (line.startswith("[") and line.endswith("]")):
+#                 continue
 
-            # Process key-value pairs
-            if '=' in line:
-                key, value = line.split('=', 1)
+#             # Process key-value pairs
+#             if '=' in line:
+#                 key, value = line.split('=', 1)
 
-                # Remove inline comments if present
-                value = value.split('#', 1)[0].strip()
+#                 # Remove inline comments if present
+#                 value = value.split('#', 1)[0].strip()
 
-                config[key.strip()] = value
+#                 config[key.strip()] = value
 
-    return config
+#     return config
 
 
 # config_file = os.path.join(get_project_root(), 'config.properties')

@@ -1,19 +1,19 @@
-import signal
-import sys
 import os
-import subprocess
-from symbolic_execution.execution import SymbolicExecution
-from config.common_config import ConfigManager
-from utils.logger import logger
-from classification.security_classifier import SecurityClassifier
-import sast.sast_orchestrator
-from patch_generation.patch_generator import PatchGenerator
-from test_generation.test_generator import TestGenerator
-from utils.issues_merger import JSONCombiner
-from utils.plugin_json_converter import JsonPluginConverter
+import sys
 import time
-import re
+import signal
 import argparse
+import subprocess
+import sast.sast_orchestrator
+
+from utils.logger import logger
+from utils.issues_merger import JSONCombiner
+from config.common_config import ConfigManager
+from utils.plugin_json_converter import JsonPluginConverter
+from symbolic_execution.execution import SymbolicExecution
+from test_generation.test_generator import TestGenerator
+from patch_generation.patch_generator import PatchGenerator
+from classification.security_classifier import SecurityClassifier
 
 
 class WorkflowFramework:
@@ -24,8 +24,8 @@ class WorkflowFramework:
     of a software project.
     """
 
-    def __init__(self, skip_patches=False, sast_rerun=False):
-        self.config = ConfigManager.get_config()
+    def __init__(self, project_root, dir_to_analyze, skip_patches=False, sast_rerun=False):
+        self.config = ConfigManager.get_config(project_root, dir_to_analyze)
         self.sast = sast.sast_orchestrator.SASTOrchestrator(self.config)
         self.security_classifier = SecurityClassifier(self.config)
         self.symbolic_execution = SymbolicExecution(self.config)
@@ -91,15 +91,22 @@ def signal_handler(sig, frame):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Execute the security analysis workflow.')
+
+    parser.add_argument('-r', '--project_root', help='Path to the root directory of your project.')
+    parser.add_argument('-d', '--dir_to_analyze', help='Path to the directory that should be analyzed. If empty, the root will be used.')
     parser.add_argument('--skip-patches', action='store_true', help='If provided, the patches part will be skipped.')
     parser.add_argument('--sast-rerun', action='store_true', help='If provided, issues will be generated for the new java files contents.')
+
     args, unknown = parser.parse_known_args()
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
     # Initialize the framework with the parsed arguments
-    framework = WorkflowFramework(skip_patches=args.skip_patches, sast_rerun=args.sast_rerun)
+    framework = WorkflowFramework(
+        project_root=args.project_root, dir_to_analyze=args.dir_to_analyze, 
+        skip_patches=args.skip_patches, sast_rerun=args.sast_rerun
+    )
 
     # Execute the workflow
     framework.execute_workflow()

@@ -5,7 +5,6 @@ import uuid
 import subprocess
 
 from utils.logger import logger
-from config.config_path_handler import *
 
 
 class TrivyRunner:
@@ -25,7 +24,7 @@ class TrivyRunner:
         """
         self.config = config
         self.report_path = os.path.join(os.sep, 'app','sast','out','trivy.json')
-        self.project_path = path_handler(self.config)
+        self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
 
 
     # def run(self):
