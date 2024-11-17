@@ -28,27 +28,6 @@ class SpotBugsRunner:
         self.BASE_TEST_DIR = os.path.join('src', 'test', 'java')
         self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
 
-
-    # def run(self, changed_files):
-    #     """
-    #     Run SpotBugs on the specified Java files.
-
-    #     Args:
-    #         changed_files (list): List of Java file paths to analyze.
-
-    #     Raises:
-    #         SystemExit: If the SpotBugs check fails.
-    #     """
-    #     command = (
-    #         f"{self.config.get('SAST', 'config.spotbugs_bin')} -textui "
-    #         f"-xml:withMessages={self.report_path} "
-    #         f"{' '.join(changed_files)}"
-    #     )
-    #     result = subprocess.run(command, cwd=path_handler(self.config), shell=True, capture_output=True, text=True)
-
-    #     if result.returncode != 0:
-    #         logger.error(f"SpotBugs check failed: {result.stderr}")
-    #         sys.exit(result.returncode)
     def run(self, changed_files):
         """
         Run SpotBugs on the specified Java files.
@@ -89,28 +68,39 @@ class SpotBugsRunner:
             sys.exit(1)
 
 
-    def get_report(self):
+    def get_report(self, validation=False):
         """
         Retrieve the SpotBugs report content.
 
         Returns:
             str or None: The content of the SpotBugs report if it exists, None otherwise.
         """
-        if os.path.exists(self.report_path):
-            with open(self.report_path, 'r') as file:
+        # if validation:
+        #     report = self.report_path.replace('spotbugs.xml', 'spotbugs_temp.xml')
+        # else:
+        report = self.report_path
+        if os.path.exists(report):
+            with open(report, 'r') as file:
                 return file.read()
         return None
 
-    def parse_report(self):
+
+    def parse_report(self, limit=100, validation=False):
         """
         Parse the SpotBugs report XML and extract issues.
 
         Returns:
             list: A list of dictionaries, each representing an issue found by SpotBugs.
         """
-        report_content = self.get_report()
+        report_content = self.get_report(validation=validation)
+        # if validate:
+        #     json_path = temp_validate_path
+        #     report = report_temp_validate
+        # else:
+        #     json_path = json_repot_path
+        #     report = report_path
         if not report_content:
-            logger.debug("No report found to parse.")
+            print("No report found to parse.")
             return []
 
         issues = []
@@ -124,11 +114,13 @@ class SpotBugsRunner:
                 "tags": ("CWE-" + bug_instance.get('cweid')) if bug_instance.get('cweid') is not None else "CWE-XXXX",
                 "items": []
             }
-            
+                
             first_source_line = bug_instance.find('SourceLine')
+            class_end_value = bug_instance.find('Class').find('SourceLine').get('end') if bug_instance.find('Class') is not None else None
+            class_start_value = bug_instance.find('Class').find('SourceLine').get('start') if bug_instance.find('Class') is not None else None
             if first_source_line is not None:
                 relative_path = first_source_line.get('sourcepath', 'unknown file')
-                
+                    
                 if relative_path != 'unknown file':
                     normalized_relative_path = os.path.normpath(relative_path)
                     if os.path.exists(os.path.join(self.project_path, self.BASE_SRC_DIR, normalized_relative_path)):
@@ -139,13 +131,13 @@ class SpotBugsRunner:
                     full_path = 'unknown file'
                 textrange = {
                     "file": full_path,
-                    "startLine": int(first_source_line.get('start', '1')),
-                    "endLine": int(first_source_line.get('end', first_source_line.get('start', '1'))),
+                    "startLine": int(first_source_line.get('start', class_start_value)),
+                    "endLine": int(first_source_line.get('end', class_end_value)),
                     "startColumn": int(first_source_line.get('startBytecode', '0')),
                     "endColumn": int(first_source_line.get('endBytecode', first_source_line.get('startBytecode', '0')))
                 }
                 issue["items"].append({"patches": [], "textrange": textrange})
-            
+                
             issues.append(issue)
 
-        return issues
+            return issues

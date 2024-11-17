@@ -28,7 +28,7 @@ class SymbolicExecution:
         self.results_path = self.config.get("ANALYZER", "config.analyzer_results_path")
         self.analyzer_path = self.config.get("ANALYZER", "config.analyzer", fallback=os.path.join(os.sep, 'opt','AI4VULN','Java','AnalyzerJava'))
     
-    def analyze(self):
+    def analyze(self, validation=False):
         """
         Perform symbolic execution analysis on the project.
 
@@ -43,7 +43,7 @@ class SymbolicExecution:
         the analysis process and log the results.
         """
         with subprocess.Popen(["java", "-version"], stderr=subprocess.PIPE, stdout=subprocess.PIPE, text=True) as process:
-            java_version = process.communicate()[1]  # Capture the stderr output where the version info is
+            java_version = process.communicate()[1]
             pattern = r'version "(\d+\.\d+\.\d+)"'
             match = re.search(pattern, java_version)
             if match:
@@ -54,7 +54,7 @@ class SymbolicExecution:
         analyzer = Analyzer(self.analyzer_path, self.project_name, self.project_path, self.results_path)
         logger.info("Symbolic Execution Started ...")
         json_file = analyzer.run_analysis()
-        cleaned_json_file = os.path.join(self.results_path, self.project_name, 'java', 'now', 'ai4vuln_issues.json')
-        JSONProcessor.extract_and_clean_json(json_file, cleaned_json_file, self.project_path)
+        cleaned_json_file = os.path.join(self.results_path, self.project_name, 'java', 'now', 'ai4vuln_issues.json') if not validation else os.path.join(self.results_path, self.project_name, 'java', 'now', 'ai4vuln_issues_temp.json')
+        return JSONProcessor.extract_and_clean_json(json_file, cleaned_json_file, self.project_path)
 
-        logger.info("Analysis and JSON processing complete.")
+        # logger.info("Analysis and JSON processing complete.")

@@ -1,5 +1,5 @@
 # Use the official Python 3.9 image as the base
-FROM python:3.9
+FROM python:3.9-slim
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -13,7 +13,8 @@ RUN apt-get update && \
         unzip \
         curl \
         apt-transport-https \
-        software-properties-common && \
+        software-properties-common \
+        patch && \
     # Determine the architecture and set the appropriate JDK download URL
     ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ] || [ "$ARCH" = "amd64" ]; then \
@@ -102,5 +103,7 @@ ENV OPENAI_API_KEY=''
 
 ENV PROJECT_PATH=''
 
+ENV USER=user
+ENV USERNAME=user
 # Start code-server on container launch and set workspace
 CMD ["sh", "-c", "code-server --bind-addr 0.0.0.0:8080 --auth none /"]

@@ -11,7 +11,7 @@ class JSONCombiner:
         self.project_name = config.get('DEFAULT', 'config.project_name')
         # self.sast_issues_path = os.path.join(self.project_path, 'sast_issues.json')
         self.sast_issues_path = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "sast_issues.json")))
-        self.results_path = self.config.get("ANALYZER", "config.analyzer_results_path")
+        self.results_path = self.config.get("DEFAULT", "config.analyzer_results_path")
         self.combined_output_path = self.config.get('DEFAULT', 'config.issues_path')
         self.ai4vuln_issues_path = os.path.join(self.results_path, self.project_name, 'java', 'now', 'ai4vuln_issues.json')
 
@@ -43,3 +43,18 @@ class JSONCombiner:
         """Executes the process of loading, combining, and saving JSON files."""
         combined_data = self.combine_json_files()
         self.save_combined_json(combined_data)
+        return self.extract_issue_counts(combined_data)
+    
+
+    def extract_issue_counts(self, data):
+        issue_counts = {}
+        
+        for issue in data:
+            name = issue.get("name")
+            if name:
+                if name in issue_counts:
+                    issue_counts[name] += 1
+                else:
+                    issue_counts[name] = 1
+        
+        return issue_counts

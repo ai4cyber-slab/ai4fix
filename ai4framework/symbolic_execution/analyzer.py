@@ -25,7 +25,7 @@ class Analyzer:
         self.project_name = project_name
         self.project_path = project_path
         self.results_path = results_path
-        self.filter = os.path.join(self.project_path, 'filter.txt')
+        self.filter = os.path.join(self.project_path, '.ai4framework', 'filter.txt')
 
 
     def run_analysis(self):
@@ -52,7 +52,7 @@ class Analyzer:
             f'-projectName={self.project_name} '
             f'-projectBaseDir={self.project_path} '
             f'-resultsDir={self.results_path} '
-            f'-externalHardFilter={self.filter} '
+            # f'-externalHardFilter={self.filter} '
             f'-currentDate=now '
             f'-runFB=false '
             f'-runAndroidHunter=false '

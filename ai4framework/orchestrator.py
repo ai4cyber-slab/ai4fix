@@ -1,19 +1,18 @@
 import os
 import sys
+import subprocess
+from symbolic_execution.execution import SymbolicExecution
+from config.common_config import ConfigManager
+from utils.logger import logger
+from classification.security_classifier import SecurityClassifier
+from sast.sast_orchestrator import SASTOrchestrator
+from patch_generation.patch_generator import PatchGenerator
+from test_generation.test_generator import TestGenerator
+from utils.issues_merger import JSONCombiner
+from utils.plugin_json_converter import JsonPluginConverter
 import time
 import signal
 import argparse
-import subprocess
-import sast.sast_orchestrator
-
-from utils.logger import logger
-from utils.issues_merger import JSONCombiner
-from config.common_config import ConfigManager
-from utils.plugin_json_converter import JsonPluginConverter
-from symbolic_execution.execution import SymbolicExecution
-from test_generation.test_generator import TestGenerator
-from patch_generation.patch_generator import PatchGenerator
-from classification.security_classifier import SecurityClassifier
 
 
 class WorkflowFramework:
@@ -26,13 +25,13 @@ class WorkflowFramework:
 
     def __init__(self, project_root, dir_to_analyze, skip_patches=False, sast_rerun=False):
         self.config = ConfigManager.get_config(project_root, dir_to_analyze)
-        self.sast = sast.sast_orchestrator.SASTOrchestrator(self.config)
+        self.sast = SASTOrchestrator(self.config)
         self.security_classifier = SecurityClassifier(self.config)
         self.symbolic_execution = SymbolicExecution(self.config)
         self.patch_generator = PatchGenerator(self.config)
         # self.test_generator = TestGenerator(self.config)
-        self.issues_merger = JSONCombiner(self.config)
-        self.json_converter = JsonPluginConverter(self.config)
+        # self.issues_merger = JSONCombiner(self.config)
+        # self.json_converter = JsonPluginConverter(self.config)
         self.skip_patches = skip_patches
         self.sast_rerun = sast_rerun
 
@@ -41,23 +40,23 @@ class WorkflowFramework:
         start_time = time.time()
 
         # Run SAST analysis first
-        self.sast.run_all()
+        warnings_dict = SASTOrchestrator(self.config).run_all()
 
         # If sast_rerun is NOT enabled, run the security classifier and symbolic execution
         if not self.sast_rerun:
-            self.security_classifier.classify()
-            self.symbolic_execution.analyze()
+            # SecurityClassifier(self.config).classify()
+            SymbolicExecution(self.config).analyze()
 
         # Merge issues regardless of whether sast_rerun or skip_patches is enabled
-        self.issues_merger.run()
+        warnings_dict_original = JSONCombiner(self.config).run()
 
 
         if not self.skip_patches and not self.sast_rerun:
-            self.patch_generator.main()
+            PatchGenerator(self.config, warnings_dict_original).main()
             
 
         # Process the JSON conversion after all steps
-        self.json_converter.process()
+        JsonPluginConverter(self.config).process()
 
         elapsed_time = time.time() - start_time
         logger.info(f"Workflow execution completed in {elapsed_time:.2f} seconds")

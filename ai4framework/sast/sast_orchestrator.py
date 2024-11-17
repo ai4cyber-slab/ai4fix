@@ -31,7 +31,7 @@ class SASTOrchestrator:
         self.report_merger = ReportMerger(config)
         self.project_path = config.get('DEFAULT', 'config.dir_to_analyze')
 
-    def run_all(self, validation=False, java_file_path=None):
+    def run_all(self, validation=False):
         """
         Run all configured SAST tools and merge their reports.
 
@@ -49,19 +49,19 @@ class SASTOrchestrator:
         try:
             if not validation and self.repo_manager.commit_hash:
                 self.repo_manager.checkout_commit()
-            self.tool_runner.run_pmd(validation=validation, java_file_path=java_file_path)
+            self.tool_runner.run_pmd()
             if not validation:
-                self.run_maven_compile()
-            self.tool_runner.run_spotbugs(validation=validation)
-            # self.tool_runner.run_trivy(validation=validation)
-            self.report_merger.merge_reports(
+                self.run_maven_compile(validation=validation)
+            self.tool_runner.run_spotbugs()
+            return self.report_merger.merge_reports(
                 self.tool_runner.pmd_runner,
                 self.tool_runner.spotbugs_runner,
                 self.tool_runner.trivy_runner,
                 validation=validation
             )
+        except Exception as e:
+            logger.error("An error occured while running sast tools")
         finally:
-            # self.repo_manager.revert_checkout()
             pass
 
     def run_maven_compile(self, validation=False):

@@ -80,7 +80,7 @@ class PMDRunner:
         command = (
             f"{self.config.get('SAST', 'config.pmd_bin', fallback=os.path.join(os.sep, 'opt','pmd-bin-7.4.0','bin','pmd'))} check "  # Path to PMD binary with fallback
             f"-d {','.join(java_files)} "  # Java files with the /user_project path prepended
-            f"-R {self.config.get('SAST', 'config.pmd_ruleset', fallback=os.path.join(os.sep, 'app', 'utils', 'PMD_config.xml'))} "  # Path to PMD ruleset
+            f"-R {self.config.get('SAST', 'config.pmd_ruleset', fallback=os.path.join(os.sep, 'app', 'utils', 'PMD-config.xml'))} "  # Path to PMD ruleset
             f"-f xml "  # Output format
             f"-r {self.report_path} "  # Output report path
             "--no-fail-on-violation"
