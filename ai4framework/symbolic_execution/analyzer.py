@@ -25,7 +25,7 @@ class Analyzer:
         self.project_name = project_name
         self.project_path = project_path
         self.results_path = results_path
-        self.filter = os.path.join(self.project_path, '.ai4framework', 'filter.txt')
+        self.filter = os.path.join(os.path.dirname(self.results_path), 'filter.txt')
 
 
     def run_analysis(self):
@@ -42,7 +42,7 @@ class Analyzer:
             Exception: If an error occurs during the analysis process.
         """
         if not self.project_name:
-            print("Project root path must be provided as a command-line argument or set in the PROJECT_PATH environment variable.")
+            logger.warning("Project root path must be provided as a command-line argument or set in the PROJECT_PATH environment variable.")
             sys.exit(1)
             
         logger.info(f"Analyzing project: {self.project_name}")
@@ -52,7 +52,7 @@ class Analyzer:
             f'-projectName={self.project_name} '
             f'-projectBaseDir={self.project_path} '
             f'-resultsDir={self.results_path} '
-            # f'-externalHardFilter={self.filter} '
+            f'-externalHardFilter={self.filter} '
             f'-currentDate=now '
             f'-runFB=false '
             f'-runAndroidHunter=false '
@@ -67,7 +67,6 @@ class Analyzer:
         start_time = time.time()
 
         try:
-            # Use 'with' to safely manage the subprocess
             with subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,

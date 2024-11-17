@@ -25,7 +25,7 @@ class SymbolicExecution:
         self.config = config
         self.project_name = self.config.get('DEFAULT', 'config.project_name')
         self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
-        self.results_path = self.config.get("ANALYZER", "config.analyzer_results_path")
+        self.results_path = self.config.get("DEFAULT", "config.analyzer_results_path")
         self.analyzer_path = self.config.get("ANALYZER", "config.analyzer", fallback=os.path.join(os.sep, 'opt','AI4VULN','Java','AnalyzerJava'))
     
     def analyze(self, validation=False):
@@ -56,5 +56,3 @@ class SymbolicExecution:
         json_file = analyzer.run_analysis()
         cleaned_json_file = os.path.join(self.results_path, self.project_name, 'java', 'now', 'ai4vuln_issues.json') if not validation else os.path.join(self.results_path, self.project_name, 'java', 'now', 'ai4vuln_issues_temp.json')
         return JSONProcessor.extract_and_clean_json(json_file, cleaned_json_file, self.project_path)
-
-        # logger.info("Analysis and JSON processing complete.")

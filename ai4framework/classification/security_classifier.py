@@ -72,7 +72,6 @@ class SecurityClassifier:
             logger.info("Classification started ...")
             start_time = time.time()
 
-            # Use 'with' to ensure proper handling of subprocess resources
             with subprocess.Popen(
                 command, cwd=find_script(os.curdir),
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True

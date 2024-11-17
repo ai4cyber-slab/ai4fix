@@ -53,12 +53,6 @@ RUN wget https://github.com/spotbugs/spotbugs/releases/download/4.8.6/spotbugs-4
     tar -xzf /tmp/spotbugs.tgz -C /opt/ && \
     rm /tmp/spotbugs.tgz
 
-# Install Trivy 0.54.1
-# Uncomment the following lines if you wish to install Trivy
-# RUN wget https://github.com/aquasecurity/trivy/releases/download/v0.54.1/trivy_0.54.1_Linux-64bit.deb -O /tmp/trivy.deb && \
-#     dpkg -i /tmp/trivy.deb && \
-#     rm /tmp/trivy.deb
-
 # Install code-server
 RUN curl -fsSL https://code-server.dev/install.sh | sh
 
@@ -74,7 +68,6 @@ RUN tar -xvzf /opt/slab-9.19-d45fdf7b5.tgz -C /opt/ && \
 # Set environment variables for tool paths
 ENV PMD_BIN=/opt/pmd-bin-7.4.0/bin/pmd
 ENV SPOTBUGS_BIN=/opt/spotbugs-4.8.6/bin/spotbugs
-# ENV TRIVY_BIN=/usr/bin/trivy
 ENV ANALYZER_PATH=/opt/AI4VULN
 ENV ANALYZER_BIN=/opt/AI4VULN/Java/AnalyzerJava
 ENV ANALYZER_RESULTS_PATH=/app/results

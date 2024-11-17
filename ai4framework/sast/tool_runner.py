@@ -1,6 +1,5 @@
 from .pmd import PMDRunner
 from .spotbugs import SpotBugsRunner
-from .trivy import TrivyRunner
 from utils.logger import logger
 import os
 import time
@@ -9,7 +8,7 @@ class ToolRunner:
     """
     A class to manage and run various static analysis security testing (SAST) tools.
 
-    This class provides methods to run PMD, SpotBugs, and Trivy on a given codebase,
+    This class provides methods to run PMD and SpotBugs on a given codebase,
     and handles the execution and logging of these tools.
     """
 
@@ -25,7 +24,6 @@ class ToolRunner:
         self.repo_manager = repo_manager
         self.pmd_runner = PMDRunner(config)
         self.spotbugs_runner = SpotBugsRunner(config)
-        self.trivy_runner = TrivyRunner(config)
 
     def run_tool(self, tool_name, runner_method, changed_files=None):
         """
@@ -71,14 +69,6 @@ class ToolRunner:
         class_changed_files = self.find_class_changed_files()
         self.run_tool("SpotBugs", self.spotbugs_runner.run, class_changed_files)
 
-    def run_trivy(self):
-        """
-        Run Trivy on the project.
-
-        Executes Trivy without specifying changed files, as it typically scans the entire project.
-        """
-        self.run_tool("Trivy", self.trivy_runner.run)
-
     def find_class_changed_files(self):
         """
         Find the corresponding .class files for changed Java files.
@@ -116,18 +106,13 @@ def find_class_file_from_java(java_file_path):
     start_time = time.time()
     java_file = os.path.normpath(java_file_path)
     
-    # Determine if it's a test file or main file
     if os.path.sep + 'src' + os.path.sep + 'test' + os.path.sep in java_file:
-        # Test class files are usually in target/test-classes
         class_path = java_file.replace(os.path.sep + 'src' + os.path.sep + 'test' + os.path.sep + 'java' + os.path.sep, os.path.sep + 'target' + os.path.sep + 'test-classes' + os.path.sep)
     elif os.path.sep + 'src' + os.path.sep + 'main' + os.path.sep in java_file:
-        # Main class files are usually in target/classes
         class_path = java_file.replace(os.path.sep + 'src' + os.path.sep + 'main' + os.path.sep + 'java' + os.path.sep, os.path.sep + 'target' + os.path.sep + 'classes' + os.path.sep)
     else:
-        # If it's neither a test file nor a main file, return None
         return None
     
-    # Replace .java with .class
     class_path = class_path.replace('.java', '.class')
     elapsed_time = time.time() - start_time
     logger.debug(f"Time taken to search for class file: {elapsed_time:.2f} seconds")

@@ -30,47 +30,6 @@ class JsonPluginConverter:
             data = json.load(f)
         return data
 
-    # def group_entries_by_file(self, entries):
-    #     """
-    #     Group entries by the 'file' attribute in 'textrange'.
-    #     Within each file, group by 'name' (issue type) and prepare the structure with 'name' and 'items'.
-    #     """
-    #     grouped = defaultdict(lambda: defaultdict(list))
-    #     for entry in entries:
-    #         items = entry.get('items', [])
-    #         name = entry.get('name')
-    #         entry_id = entry.get('id')  # Get the ID from the entry
-    #         explanation = entry.get('explanation')  # Get the explanation from the entry
-    #         if not name:
-    #             continue
-
-    #         for item in items:
-    #             textrange = item.get('textrange', {})
-    #             file_path = textrange.get('file')
-    #             if not file_path:
-    #                 continue
-
-    #             text_range = {
-    #                 "startLine": textrange.get('startLine'),
-    #                 "endLine": textrange.get('endLine'),
-    #                 "startColumn": textrange.get('startColumn'),
-    #                 "endColumn": textrange.get('endColumn')
-    #             }
-
-    #             patches = item.get('patches', [])
-
-    #             # grouped[file_path][name].append({
-    #             #     "patches": patches,
-    #             #     "textRange": text_range
-    #             # })
-    #             grouped[file_path][name].append({
-    #                 "id": entry_id,
-    #                 "explanation": explanation,
-    #                 "patches": patches,
-    #                 "textRange": text_range
-    #             })
-    #     return grouped
-
     def group_entries_by_file(self, entries):
         """
         Group entries by the 'file' attribute in 'textrange'.
@@ -80,8 +39,8 @@ class JsonPluginConverter:
         for entry in entries:
             items = entry.get('items', [])
             name = entry.get('name')
-            entry_id = entry.get('id')  # Get the ID from the entry
-            explanation = entry.get('explanation')  # Get the explanation from the entry
+            entry_id = entry.get('id')
+            explanation = entry.get('explanation')
 
             if not name:
                 continue
@@ -101,7 +60,6 @@ class JsonPluginConverter:
 
                 patches = item.get('patches', [])
 
-                # Append a dictionary with id, name, explanation, and items containing patches and textrange
                 grouped[file_path].append({
                     "id": entry_id,
                     "name": name,
@@ -115,57 +73,6 @@ class JsonPluginConverter:
                 })
         return grouped
 
-
-    # def write_grouped_json(self, grouped_data):
-    #     """
-    #     Write each group's data to a separate JSON file and collect their paths.
-    #     Each JSON file corresponds to a single Java file and contains issues grouped by issue type.
-    #     The output directory structure mirrors the original file paths.
-    #     """
-    #     json_file_paths = []
-
-    #     for file_path, issues_by_type in grouped_data.items():
-    #         normalized_file_path = os.path.normpath(file_path)
-
-    #         # Create the output file path by appending .json to the normalized file path
-    #         output_file_path = os.path.join(self.output_directory, normalized_file_path + '.json')
-
-    #         # Ensure the directory exists
-    #         os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
-
-    #         # Convert the grouped data into the new structure with "name" and "items"
-    #         # output_json = []
-    #         # for issue_type, issues in issues_by_type.items():
-    #         #     output_json.append({
-    #         #         "name": issue_type,
-    #         #         "items": issues  # The issues themselves are the "items" under the "name"
-    #         #     })
-    #         output_json = []
-    #         for issue_type, issues in issues_by_type.items():
-    #             # Here, include the "id" and "explanation" from the grouped data
-    #             output_json.append({
-    #                 "name": issue_type,
-    #                 "items": [
-    #                     {
-    #                         "id": issue.get("id"),  # Add ID
-    #                         "explanation": issue.get("explanation"),  # Add Explanation
-    #                         "patches": issue.get("patches"),
-    #                         "textRange": issue.get("textRange")
-    #                     } for issue in issues
-    #                 ]
-    #             })
-
-    #         # Write the new structured JSON to a file
-    #         with open(output_file_path, 'w') as f:
-    #             json.dump(output_json, f, indent=2)
-
-    #         # Collect the absolute path of the JSON file
-    #         # json_file_paths.append(os.path.abspath(output_file_path))
-    #         json_file_paths.append(output_file_path)
-
-
-    #     return json_file_paths
-
     def write_grouped_json(self, grouped_data):
         """
         Write each group's data to a separate JSON file and collect their paths.
@@ -176,18 +83,13 @@ class JsonPluginConverter:
 
         for file_path, entries in grouped_data.items():
             normalized_file_path = os.path.normpath(file_path)
-
-            # Create the output file path by appending .json to the normalized file path
             output_file_path = os.path.join(self.output_directory, normalized_file_path + '.json')
 
-            # Ensure the directory exists
             os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
 
-            # Write the new structured JSON to a file
             with open(output_file_path, 'w') as f:
                 json.dump(entries, f, indent=2)
 
-            # Collect the absolute path of the JSON file
             json_file_paths.append(output_file_path)
 
         return json_file_paths
@@ -214,14 +116,9 @@ class JsonPluginConverter:
             logger.error(f"Error decoding JSON: {e}")
             return
 
-        # Group the entries by file path and issue type
         grouped_data = self.group_entries_by_file(input_data)
 
-        # Write the grouped JSON data to files
         json_paths = self.write_grouped_json(grouped_data)
-
-        # Write the paths of the created JSON files to the specified text file
         self.write_json_paths(json_paths)
-
         logger.info(f"Processed {len(json_paths)} JSON files.")
         logger.info(f"Paths have been written to '{self.json_txt_file}'.")

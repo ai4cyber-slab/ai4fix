@@ -27,36 +27,6 @@ class PMDRunner:
         self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
 
 
-    # def run(self, java_files):
-    #     """
-    #     Run PMD on the specified Java files.
-
-    #     Args:
-    #         java_files (list): List of Java file paths to analyze.
-
-    #     Raises:
-    #         SystemExit: If the PMD check fails.
-    #     """
-    #     report_dir = os.path.dirname(self.report_path)
-    
-    #     # Ensure the directory for the report exists
-    #     if not os.path.exists(report_dir):
-    #         os.makedirs(report_dir)
-
-    #     command = (
-    #         f"{self.config.get('SAST', 'config.pmd_bin')} check "  # Path to PMD binary
-    #         f"-d {','.join(java_files)} "  # Java files with the /user_project path prepended
-    #         f"-R {self.config.get('SAST', 'config.pmd_ruleset', fallback='/app/utils/PMD-config.xml')} "  # Path to PMD ruleset
-    #         f"-f xml "  # Output format
-    #         f"-r {self.report_path} "  # Output report path
-    #         "--no-fail-on-violation"
-    #     )
-
-    #     result = subprocess.run(command, cwd=path_handler(self.config), shell=True, capture_output=True, text=True)
-        
-    #     if result.returncode != 0:
-    #         logger.error(f"PMD check failed: {result.stderr}")
-    #         sys.exit(result.returncode)
     def run(self, java_files):
         """
         Run PMD on the specified Java files.
@@ -68,26 +38,24 @@ class PMDRunner:
             SystemExit: If the PMD check fails.
         """
         if java_files == []:
-            print('There are no modified files in the directory to be analyzed on the given commit.')
+            logger.warning('There are no modified files in the directory to be analyzed on the given commit.')
             sys.exit(1)
 
         report_dir = os.path.dirname(self.report_path)
         
-        # Ensure the directory for the report exists
         if not os.path.exists(report_dir):
             os.makedirs(report_dir)
 
         command = (
-            f"{self.config.get('SAST', 'config.pmd_bin', fallback=os.path.join(os.sep, 'opt','pmd-bin-7.4.0','bin','pmd'))} check "  # Path to PMD binary with fallback
-            f"-d {','.join(java_files)} "  # Java files with the /user_project path prepended
-            f"-R {self.config.get('SAST', 'config.pmd_ruleset', fallback=os.path.join(os.sep, 'app', 'utils', 'PMD-config.xml'))} "  # Path to PMD ruleset
-            f"-f xml "  # Output format
-            f"-r {self.report_path} "  # Output report path
+            f"{self.config.get('SAST', 'config.pmd_bin', fallback=os.path.join(os.sep, 'opt','pmd-bin-7.4.0','bin','pmd'))} check "
+            f"-d {','.join(java_files)} "
+            f"-R {self.config.get('SAST', 'config.pmd_ruleset', fallback=os.path.join(os.sep, 'app', 'utils', 'PMD-config.xml'))} "
+            f"-f xml "
+            f"-r {self.report_path} "
             "--no-fail-on-violation"
         )
 
         try:
-            # Use 'with' to safely manage the subprocess
             with subprocess.Popen(command, cwd=self.project_path, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as process:
                 stdout, stderr = process.communicate()
 
@@ -132,16 +100,13 @@ class PMDRunner:
 
         for file_element in pmd_root.findall('.//pmd:file', namespaces):
             file_name = file_element.get('name')
-            # if file_name.find('src') != -1:
-            #     file_path = file_name[file_name.find('src'):]
-            # elif file_name.find()
             file_path = file_name.replace(self.project_path, '')[1:]
             for violation in file_element.findall('.//pmd:violation', namespaces):
                 issue = {
                     "id": str(uuid.uuid4().int)[:5],
                     "name": violation.get('rule'),
                     "explanation": violation.text.strip(),
-                    "tags": violation.get('ruleset'),
+                    "tags": "PMD",
                     "items": [
                         {
                             "patches": [],

@@ -1,6 +1,7 @@
 import os
 import sys
 import configparser
+from utils.logger import logger
 
 
 class ConfigManager:
@@ -28,13 +29,12 @@ class ConfigManager:
             project_root = os.getenv("PROJECT_PATH")
 
             if not project_root:
-                print("Project root path must be provided as a command-line argument (-r/--project_root), or set in the PROJECT_PATH environment variable.")
+                logger.warning("Project root path must be provided as a command-line argument (-r/--project_root), or set in the PROJECT_PATH environment variable.")
                 sys.exit(1)
 
         if dir_to_analyze == None:
             dir_to_analyze = project_root
 
-        # Handle relative paths
         if not os.path.isabs(dir_to_analyze):
             dir_to_analyze = os.path.join(project_root, dir_to_analyze)
 
@@ -73,22 +73,6 @@ class ConfigManager:
         return cls._config
 
 
-    # @classmethod
-    # def old_get_config(cls):
-        """
-        Get the loaded configuration object.
-
-        Raises:
-            Exception: If configuration has not been loaded yet.
-
-        Returns:
-            configparser.ConfigParser: The loaded configuration object.
-        """
-        if cls._config is None:
-            raise Exception("Configuration not loaded. Call load_config() first.")
-        return cls._config
-
-
     @classmethod
     def adjust_config_paths(cls, project_root):
         """
@@ -98,7 +82,6 @@ class ConfigManager:
         """
         config = cls._config
 
-        # Loading default configurations
         default_configs = configparser.ConfigParser()
 
         default_dir = os.getcwd()
@@ -137,11 +120,9 @@ class ConfigManager:
         Returns:
             str: The adjusted path with hidden folder inserted.
         """
-        # Normalize paths
         project_root = os.path.normpath(project_root)
         original_path = os.path.normpath(original_path)
 
-        # Handle absolute paths
         if os.path.isabs(original_path):
             original_path = os.path.relpath(original_path, project_root)
 
@@ -149,54 +130,3 @@ class ConfigManager:
         new_path = os.path.normpath(new_path)
 
         return new_path
-    
-
-    @classmethod
-    def get_project_root(cls):
-        """
-        Gets the project root path from configurations.
-
-        Returns:
-            str: The path to the project root directory.
-        """
-        config = cls._config
-        project_root = config.get('DEFAULT', 'config.project_root')
-
-        return project_root
-
-
-# def read_config_properties(file_path):
-#     """
-#     Reads the config.properties file and extracts all configurations, ignoring section headers and inline comments.
-
-#     Args:
-#         file_path (str): Path to the config.properties file.
-
-#     Returns:
-#         dict: A dictionary of key-value pairs from the properties file, excluding section headers and comments.
-#     """
-#     config = {}
-
-#     with open(file_path, 'r') as file:
-#         for line in file:
-#             line = line.strip()
-
-#             # Skip comments, empty lines, and section headers
-#             if not line or line.startswith("#") or (line.startswith("[") and line.endswith("]")):
-#                 continue
-
-#             # Process key-value pairs
-#             if '=' in line:
-#                 key, value = line.split('=', 1)
-
-#                 # Remove inline comments if present
-#                 value = value.split('#', 1)[0].strip()
-
-#                 config[key.strip()] = value
-
-#     return config
-
-
-# config_file = os.path.join(get_project_root(), 'config.properties')
-# ConfigManager.load_config(config_file)
-# config = ConfigManager.get_config()

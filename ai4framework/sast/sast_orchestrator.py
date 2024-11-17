@@ -31,36 +31,39 @@ class SASTOrchestrator:
         self.report_merger = ReportMerger(config)
         self.project_path = config.get('DEFAULT', 'config.dir_to_analyze')
 
-    def run_all(self, validation=False):
+    def run_all(self, validation=False, tool=None):
         """
-        Run all configured SAST tools and merge their reports.
+        Run all configured SAST tools or specific ones based on the provided tool argument.
 
-        This method orchestrates the entire SAST process, including:
+        This method orchestrates the SAST process, including:
         - Checking out the specified commit
-        - Running PMD
-        - Running Maven compile
-        - Running SpotBugs
-        - Running Trivy
+        - Running the specified tools (PMD, SpotBugs)
         - Merging reports from all tools
         
         Args:
             validation (bool): If True, perform validation steps in all methods. Default is False.
+            tool (str): Specify the tool to run ("PMD" for PMD, "SB" for SpotBugs, or None for all). Default is None.
         """
         try:
             if not validation and self.repo_manager.commit_hash:
                 self.repo_manager.checkout_commit()
-            self.tool_runner.run_pmd()
-            if not validation:
+
+            if tool is None or tool.upper() == "PMD":
+                self.tool_runner.run_pmd()
+
+            if not validation and (tool is None or tool.upper() == "SB"):
                 self.run_maven_compile(validation=validation)
-            self.tool_runner.run_spotbugs()
+
+            if tool is None or tool.upper() == "SB":
+                self.tool_runner.run_spotbugs()
+
             return self.report_merger.merge_reports(
-                self.tool_runner.pmd_runner,
-                self.tool_runner.spotbugs_runner,
-                self.tool_runner.trivy_runner,
+                self.tool_runner.pmd_runner if tool is None or tool.upper() == "PMD" else None,
+                self.tool_runner.spotbugs_runner if tool is None or tool.upper() == "SB" else None,
                 validation=validation
             )
         except Exception as e:
-            logger.error("An error occured while running sast tools")
+            logger.error("An error occurred while running SAST tools: %s", e)
         finally:
             pass
 
@@ -74,18 +77,15 @@ class SASTOrchestrator:
         try:
             logger.info("Maven compilation started...")
 
-            # Use 'with' to safely manage the subprocess
             with subprocess.Popen(
                 ['mvn', 'compile', '-Dmaven.compiler.incremental=true', '-DskipTests'],
-                # ['mvn', 'compile', '-T 4C', '-Dmaven.compiler.incremental=true', '-DskipTests', '-B'],
                 cwd=self.project_path,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
             ) as process:
-                # Read and log stdout in real-time
                 for line in process.stdout:
                     if not validation:
-                        print(line.strip())  # Log each line of output as it's printed
-                process.wait()  # Wait for the process to finish
+                        print(line.strip()) 
+                process.wait()
 
             if process.returncode == 0:
                 logger.info("Maven compile successful")

@@ -3,7 +3,6 @@ import json
 import subprocess
 import openai
 from dotenv import load_dotenv, find_dotenv
-from collections import defaultdict
 from utils.logger import logger
 import re
 import time
@@ -14,31 +13,24 @@ from patch_generation.sast_mapping import SAST_WARNINGS
 from utils.findMethod import get_method_info_if_any
 from groq import Groq
 from patch_generation.mesure import BenchmarkVisualizer
-import sys
 import statistics
 
 class PatchGenerator:
     def __init__(self, config, warning_dict):
         """Initialize PatchGenerator with configuration."""
-        self.client2 = Groq(
-            api_key="your_key"
-        )
-        # Load environment variables
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
         openai.api_key = os.getenv('OPENAI_API_KEY')
         self.client = openai.OpenAI()
         self.config = config
-        # self.project_root = path_handler(self.config)
         self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
         self.sast = SASTOrchestrator(self.config)
         self.symbolic = SymbolicExecution(self.config)
         self.visualize_path = os.path.join(self.project_path, '.ai4framework', 'visualizations')
         self.base_dir = self.project_path
-        # self.diffs_output_dir = os.path.join(self.project_root, '.ai4framework', self.config.get('DEFAULT', 'config.results_path', fallback=''))
         self.diffs_output_dir = self.config.get('DEFAULT', 'config.results_path')
-        # self.json_file_path = os.path.join(self.project_root, '.ai4framework', self.config.get('ISSUES', 'config.issues_path', fallback=''))
         self.json_file_path = self.config.get('DEFAULT', 'config.issues_path')
+        self.model_name = self.config.get("CLASSIFIER", "gpt_model")
         self.warnings = []
         self.full_file_path = ""
         self.initial_content = ""
@@ -117,7 +109,6 @@ class PatchGenerator:
         """Apply a patch to a file using the `patch` command with patch content provided as text."""
         try:
             patch_text_ = self.update_json_with_diff(extractedJson, patch_text)
-            print(patch_text_)
             result = subprocess.run(
                 ['patch', '-f', '--fuzz=3', '--ignore-whitespace', '--no-backup-if-mismatch', '--reject-file=/dev/null', file_path],
                 input=patch_text,
@@ -126,11 +117,10 @@ class PatchGenerator:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
             )
-            print("Patch applied successfully.")
+            logger.info("Patch applied successfully.")
             return True
         except subprocess.CalledProcessError as e:
-            print("Failed to apply patch.")
-            print(e.stderr)
+            logger.error("Failed to apply patch.")
             return False
         
     def adjust_patch_content(self, patch_content):
@@ -223,7 +213,7 @@ class PatchGenerator:
                     initial_content = ''.join(file_content)
                     self.initial_content = initial_content
             except Exception as e:
-                print(f"Error reading file {full_file_path}: {e}")
+                logger.error(f"Error reading file {full_file_path}: {e}")
                 continue
 
             max_attempts = 2
@@ -232,14 +222,19 @@ class PatchGenerator:
             previous_generated_patch = None
             SOLVE_COMMAND = SAST_WARNINGS.get(name, explanation)
             METHOD_INFO, METHOD_START, METHOD_END = get_method_info_if_any(code_in_json_format, startLine, endLine)
-            extract_json_section = self.extract_json_section(code_in_json_format, f"Line:{startLine}", f"Line:{endLine+1}")
+            adjusted_start_line = int(startLine) - 1
+            adjusted_end_line = int(endLine) + 1
+            if f"Line:{adjusted_start_line}" in code_in_json_format and f"Line:{adjusted_end_line}" in code_in_json_format:
+                extract_json_section = self.extract_json_section(code_in_json_format, f"Line:{adjusted_start_line}", f"Line:{adjusted_end_line}")
+            else:
+                extract_json_section = self.extract_json_section(code_in_json_format, f"Line:{startLine}", f"Line:{endLine}")
 
             if METHOD_START and METHOD_END:
                 extract_json_section = self.extract_json_section(code_in_json_format, f"Line:{METHOD_START}", f"Line:{METHOD_END}")
 
             while attempt < max_attempts:
                 attempt += 1
-                print(f"Attempt {attempt} for warning ID {warning['id']}...")
+                logger.info(f"Attempt {attempt} for warning ID {warning['id']}...")
                 if attempt == 1:
                     prompt = f"""
                     Please follow these instructions:
@@ -276,20 +271,11 @@ class PatchGenerator:
                     """
                     
                 os.makedirs(self.diffs_output_dir, exist_ok=True)
-                # response = self.call_openai_with_retries(prompt)
-                response = self.call_llama3_with_retries(prompt)
+                response = self.call_openai_with_retries(prompt)
 
 
                 if response is None:
-                    print(f"Failed to get response from OpenAI. Creating backup patch.")
-                    sample_patch_path = self.create_sample_patch(file_path, warning)
-                    
-                    if 'patches' not in item:
-                        item['patches'] = []
-                    item['patches'].append({
-                        "path": sample_patch_path,
-                        "explanation": "Backup patch generated due to failed OpenAI patch generation."
-                    })
+                    logger.error(f"Failed to get response.")
                     break
                 generated_patch = self.extract_patch_from_response(response.choices[0].message.content)
                 previous_generated_patch = generated_patch
@@ -302,38 +288,37 @@ class PatchGenerator:
                             with open(full_file_path, 'w') as f:
                                 f.write(initial_content)
                         except Exception as e:
-                            print(f"Error restoring original content to {full_file_path}: {e}")
+                            logger.error(f"Error while restoring original content to {full_file_path}: {e}")
                         continue
                 except Exception as e:
-                    print(e)
+                    logger.error(e)
                     continue
 
 
 
-                print(f"Running 'mvn test' for warning ID {warning['id']}...")
+                logger.info(f"Running 'mvn test' for warning ID {warning['id']}...")
                 result = self.run_maven_test()
                 error_detected = self.analyze_maven_output(result)
                 if error_detected:
                     self.applicable_patch = True
                     self.validation_passed = True
                     self.mvn_test_passed = False
-                    print(f"Maven tests failed. Retrying...")
+                    logger.warning(f"Maven tests failed. Retrying...")
                     try:
                         with open(full_file_path, 'w') as f:
                             f.write(initial_content)
-                            print(f"Reverted {full_file_path} to its initial content due to Maven test failure.")
+                            logger.info(f"Reverted {full_file_path} to its initial content due to Maven test failure.")
                     except Exception as e:
-                        print(f"Error restoring original content to {full_file_path}: {e}")
+                        logger.error(f"Error restoring original content to {full_file_path}: {e}")
                     continue
 
-                print(f"Maven tests passed.")
+                logger.info(f"Maven tests passed.")
                 
-                self.validation_passed = self.tools_validation(file_path, name, tag)
+                self.validation_passed = self.tools_validation(name, tag)
                 if self.validation_passed:
                     self.applicable_patch = True
                     self.validation_passed = True
                     self.mvn_test_passed = True
-                    print(f"validation passed.")
                     self.input_tokens.append(response.usage.prompt_tokens)
                     self.response_tokens.append(response.usage.completion_tokens)
                     diff_file_name = f"{os.path.splitext(os.path.basename(full_file_path))[0]}_patch_{warning['id']}_attempt_{attempt}.diff"
@@ -342,7 +327,7 @@ class PatchGenerator:
                         with open(diff_file_path, 'w') as diff_file:
                             diff_file.write(generated_patch)
                     except Exception as e:
-                        print(f"Error writing diff to file {diff_file_path}: {e}")
+                        logger.error(f"Error writing diff to file {diff_file_path}: {e}")
 
                     if 'patches' not in item:
                         item['patches'] = []
@@ -358,27 +343,26 @@ class PatchGenerator:
                     self.applicable_patch = True
                     self.validation_passed = False
                     self.mvn_test_passed = True
-                    print(f"validation failed.")
                     try:
                         with open(full_file_path, 'w') as f:
                             f.write(initial_content)
-                            print(f"Reverted {full_file_path} to its initial content due to validation failure.")
+                            logger.info(f"Reverted {full_file_path} to its initial content due to validation failure.")
                     except Exception as e:
-                        print(f"Error restoring original content to {full_file_path}: {e}")
+                        logger.error(f"Error restoring original content to {full_file_path}: {e}")
 
                     if attempt >= max_attempts:
-                        print(f"Maximum attempts reached for warning ID {warning['id']}.")
+                        logger.warning(f"Maximum attempts reached for warning ID {warning['id']}.")
                     else:
-                        print(f"Retrying for warning ID {warning['id']}...")
+                        logger.info(f"Retrying for warning ID {warning['id']}...")
 
             try:
                 with open(full_file_path, 'w') as f:
                     f.write(initial_content)
             except Exception as e:
-                print(f"Error restoring original content to {full_file_path}: {e}")
+                logger.error(f"Error restoring original content to {full_file_path}: {e}")
 
             if not patch_applied:
-                print(f"Failed to generate a valid patch for warning ID {warning['id']} after {max_attempts} attempts.")
+                logger.error(f"Failed to generate a valid patch for warning ID {warning['id']} after {max_attempts} attempts.")
 
                 if 'patches' not in item:
                     item['patches'] = []
@@ -389,145 +373,105 @@ class PatchGenerator:
             if  self.mvn_test_passed == False:
                 self.compilation_or_test_errors += 1
             self.stats['total_attempts'] += attempt
-            
-
-    def create_sample_patch(self, java_file_path, warning):
-        """Create a sample patch file with the Java file path and warning ID using coordinates from the warning."""
-        warning_id = warning.get('id', 'unknown_id') # Get the ID from the warning, fallback to 'unknown_id' 
-        sample_patch_name = f"{warning_id}_backup_patch.diff" 
-        sample_patch_path = os.path.join(self.diffs_output_dir, sample_patch_name)
-        textrange = warning['items'][0]['textrange']  # Assuming textrange is in the first item of items
-        start_line = textrange.get('startLine', 0)
-        end_line = textrange.get('endLine', 1)
-        start_column = textrange.get('startColumn', 0)
-        end_column = textrange.get('endColumn', 1)
-
-                # Create the patch content using the extracted coordinates
-        with open(sample_patch_path, 'w') as sample_patch:
-                sample_patch.write(f"--- {java_file_path}\n")
-                sample_patch.write(f"+++ {java_file_path}\n")
-                sample_patch.write(f"@@ -{start_line},{start_column} +{end_line},{end_column} @@\n")
-                sample_patch.write(f"+// This is a Backup patch for {java_file_path}\n")
-
-        return sample_patch_name
-    
-
-    # def sast_validation(self, file_path,  name):
-    #     """Run SAST validation on the file to ensure the patch is valid."""
-    #     print(f"Running SAST validation ...")
-    #     try:
-    #         after =  self.sast.run_all(validation=True)
-    #         before = self.mutable_warnings
-    #         print(f"Before: {before}")
-    #         print(f"After: {after}")
-    #         if name in after:
-    #             if before[name] > after[name]:
-    #                 return True
-    #             else:
-    #                 return False
-    #         else:
-    #             return True
-    #     except Exception as e:
-    #         print(f"Error running SAST validation: {e}")
-    #         return False
-    #     finally:
-    #         try:
-    #             with open(self.full_file_path, 'w') as f:
-    #                 f.write(self.initial_content)
-    #         except Exception as e:
-    #             print(f"Error restoring original content to {self.full_file_path}: {e}")
-    #             return
 
 
 
-    def tools_validation(self, file_path, name, tag):
-        """Run validation to ensure the patch is valid using symbolic execution or SAST based on the tag."""
-        print(f"Running validation for {name} with tag '{tag}' ...")
-        
+    def tools_validation(self, name, tag):
+        """
+        Run validation to ensure the patch is valid using symbolic execution or specific SAST tools based on the tag.
+
+        Args:
+            file_path (str): Path to the file being validated.
+            name (str): Name of the issue being validated.
+            tag (str): Tag specifying the tool to use ("SE" for symbolic execution, "SB" for SpotBugs, "PMD" for PMD, or None for all SAST tools).
+
+        Returns:
+            bool: True if validation passed (warning count reduced or no warnings remain), False otherwise.
+        """
+        logger.info(f"Running validation for {name} with tag '{tag}' ...")
+
         try:
-            # Select the tool based on the tag
             if tag == "SE":
-                print("Using symbolic execution tool for validation.")
+                logger.info("Using symbolic execution tool for validation.")
                 after = self.symbolic.analyze(validation=True)
+            elif tag == "SB":
+                logger.info("Using SpotBugs tool for validation.")
+                after = self.sast.run_all(validation=True, tool="SB")
+            elif tag == "PMD":
+                logger.info("Using PMD tool for validation.")
+                after = self.sast.run_all(validation=True, tool="PMD")
             else:
-                print("Using SAST tool for validation.")
+                logger.info("Using all SAST tools for validation.")
                 after = self.sast.run_all(validation=True)
-            
-            before = self.mutable_warnings
-            print(f"Before warnings: {before}")
-            print(f"After warnings: {after}")
 
-            # Check if validation reduced the warnings
+            before = self.mutable_warnings
+
             if name in after:
                 if before[name] > after[name]:
-                    print("Validation passed: warning count reduced.")
+                    logger.info("Validation passed: warning count reduced.")
                     return True
                 else:
-                    print("Validation failed: warning count did not reduce.")
+                    logger.warning("Validation failed: warning count did not reduce.")
                     return False
             else:
-                print("Validation passed: no remaining warnings for this issue.")
+                logger.info("Validation passed: no remaining warnings for this issue.")
                 return True
 
         except Exception as e:
-            print(f"Error running validation: {e}")
+            logger.error(f"Error running validation: {e}")
             return False
 
         finally:
-            # Restore the original content of the file
             try:
                 with open(self.full_file_path, 'w') as f:
                     f.write(self.initial_content)
-                print(f"Original content restored to {self.full_file_path}.")
+                logger.info(f"Original content restored to {self.full_file_path}.")
             except Exception as e:
-                print(f"Error restoring original content to {self.full_file_path}: {e}")
+                logger.error(f"Error restoring original content to {self.full_file_path}: {e}")
 
 
 
         
     def main(self):
         try: 
-            self.stats['start_time'] = time.time() # BB
+            self.stats['start_time'] = time.time()
             if not openai.api_key: 
-                print("OPENAI_API_KEY is not set. Skipping patch generation.") 
+                logger.warning("OPENAI_API_KEY is not set. Skipping patch generation.") 
                 return
             try:
                 with open(self.json_file_path, 'r') as f:
                     self.warnings = json.load(f)
-                    self.stats['total_issues'] = len(self.warnings) # BB
+                    self.stats['total_issues'] = len(self.warnings)
             except Exception as e:
-                print(f"Error reading warnings JSON: {e}")
+                logger.error(f"Error reading warnings JSON: {e}")
                 return
 
-            print("Patch Generation Started...")
+            logger.info("Patch Generation Started...")
             start_time = time.time()
 
 
             for warning in self.warnings:
-                print(f"Processing warning ID {warning['id']}...")
+                logger.info(f"Processing warning ID {warning['id']}...")
                 try:
                     self.process_warning(warning)
                 except KeyboardInterrupt:
-                    print("Keyboard interrupt detected. Stopping the script gracefully.")
+                    logger.warning("Keyboard interrupt detected. Stopping the script gracefully.")
                     return
                 except Exception as e:
-                    print(f"Unexpected error processing warning ID {warning['id']}: {e}")
+                    logger.error(f"Unexpected error processing warning ID {warning['id']}: {e}")
                     continue
-                print(f"Finished processing warning ID {warning['id']}.")
+                logger.info(f"Finished processing warning ID {warning['id']}.")
 
 
             try:
                 with open(self.json_file_path, 'w') as f:
                     json.dump(self.warnings, f, indent=4)
             except Exception as e:
-                print(f"Error saving updated issues JSON: {e}")
+                logger.error(f"Error saving updated issues JSON: {e}")
 
             elapsed_time = time.time() - start_time
-            print(f"Patch generation completed in {elapsed_time:.2f} seconds")
-            print(f"Stats:\n Tests/Compiation Issues: {self.compilation_or_test_errors}\n Validation issues: {self.validation_errors}\n Successful Patches: {self.successful_patches}")
-            model_name = 'llama3.2-90b-text-preview'
-            # model_name = 'gpt-4o-mini'
-            self.visualizer.update_metrics(model_name, {
+            logger.info(f"Patch generation completed in {elapsed_time:.2f} seconds")
+            self.visualizer.update_metrics(self.model_name, {
                 'total_issues': self.stats['total_issues'],
                 'build_failures': self.compilation_or_test_errors,
                 'validation_failures': self.validation_errors,
@@ -540,23 +484,21 @@ class PatchGenerator:
                 'original_warnings_dict': self.mutable_warnings,
                 'elapsed_time': elapsed_time
             })
-            print(f'list of prompt tokens: {self.input_tokens}')
-            print(f'list of response tokens: {self.response_tokens}')
             os.makedirs(self.visualize_path, exist_ok=True)
             self.visualizer.generate_comparison_charts(self.visualize_path)
             self.visualizer.save_metrics(os.path.join(self.visualize_path, 'benchmark_metrics.json'))
-            print(f"Benchmarking results saved to {self.visualize_path}")
+            logger.info(f"Benchmarking results saved to {self.visualize_path}")
             #
         except KeyboardInterrupt:
-            print("Keyboard interrupt detected. Stopping the script gracefully.")
+            logger.error("Keyboard interrupt detected. Stopping the script gracefully.")
             return
         finally:
             try:
-                print(f"Restoring original content to {self.full_file_path}.")
+                logger.info(f"Restoring original content to {self.full_file_path}.")
                 with open(self.full_file_path, 'w') as f:
                     f.write(self.initial_content)
             except Exception as e:
-                print(f"Error restoring original content to {self.full_file_path}: {e}")
+                logger.error(f"Error restoring original content to {self.full_file_path}: {e}")
                 return
         
     def call_openai_with_retries(self, prompt, max_retries=3):
@@ -566,7 +508,7 @@ class PatchGenerator:
             while retries < max_retries:
                 try:
                     response = self.client.chat.completions.create(
-                        model=f"gpt-4o-mini",
+                        model=self.model_name,
                         messages=[
                             {"role": "system", "content": "You are a helpful assistant that can fix code issues."},
                             {"role": "user", "content": prompt}
@@ -574,49 +516,23 @@ class PatchGenerator:
                     )
                     return response
                 except openai.APIConnectionError as e:
-                    print(f"Connection error: {e}, retrying...")
+                    logger.error(f"Connection error: {e}, retrying...")
                 except openai.AuthenticationError as e:
-                    print(f"Authentication error: {e}, retrying...")
+                    logger.error(f"Authentication error: {e}, retrying...")
                     return None
                 except openai.Timeout as e:
-                    print(f"Timeout error: {e}, retrying...")
+                    logger.error(f"Timeout error: {e}, retrying...")
                 except openai.RateLimitError as e:
-                    print(f"Rate limit exceeded: {e}, retrying after delay...")
+                    logger.error(f"Rate limit exceeded: {e}, retrying after delay...")
                     time.sleep(4)
                 except Exception as e:
-                    print(f"Unexpected error: {e}")
+                    logger.error(f"Unexpected error: {e}")
                     break
                 retries += 1
                 time.sleep(2 ** retries + random.uniform(0, 1))
         except Exception as e:
             return None
         
-
-    def call_llama3_with_retries(self, prompt, max_retries=3):
-        try:
-            retries = 0
-            while retries < max_retries:
-                try:
-                    time.sleep(2)
-                    response = self.client2.chat.completions.create(
-                        model="llama-3.2-90b-text-preview",
-                        # model="llama-3.1-70b-versatile",
-
-                        messages=[
-                            {"role": "system", "content": "You are a helpful assistant that can fix code issues, please return the output as one single code block extension ```patch```."},
-                            {"role": "user", "content": prompt}
-                        ]
-                    )
-                    return response
-                except Exception as e:
-                    print(f"Unexpected error with llama3.2: {e}")
-                    retries+=1
-                    break
-        except Exception as e:
-            return None
-        
-
-
 
     def update_json_with_diff(self, json_content, diff_content):
         lines_dict = json.loads(json_content)

@@ -39,7 +39,7 @@ class SpotBugsRunner:
             SystemExit: If the SpotBugs check fails.
         """
         if changed_files == []:
-            print('There are no modified files in the directory to be analyzed on the given commit.')
+            logger.warning('There are no modified files in the directory to be analyzed on the given commit.')
             sys.exit(1)
 
         spotbugs_bin = self.config.get('SAST', 'config.spotbugs_bin', fallback=os.path.join(os.sep, 'opt','spotbugs-4.8.6','bin','spotbugs'))
@@ -50,7 +50,6 @@ class SpotBugsRunner:
         )
 
         try:
-            # Use 'with' to safely manage the subprocess
             with subprocess.Popen(
                 command, cwd=self.project_path,
                 shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
@@ -75,9 +74,6 @@ class SpotBugsRunner:
         Returns:
             str or None: The content of the SpotBugs report if it exists, None otherwise.
         """
-        # if validation:
-        #     report = self.report_path.replace('spotbugs.xml', 'spotbugs_temp.xml')
-        # else:
         report = self.report_path
         if os.path.exists(report):
             with open(report, 'r') as file:
@@ -93,14 +89,8 @@ class SpotBugsRunner:
             list: A list of dictionaries, each representing an issue found by SpotBugs.
         """
         report_content = self.get_report(validation=validation)
-        # if validate:
-        #     json_path = temp_validate_path
-        #     report = report_temp_validate
-        # else:
-        #     json_path = json_repot_path
-        #     report = report_path
         if not report_content:
-            print("No report found to parse.")
+            logger.warning("No report found to parse.")
             return []
 
         issues = []
@@ -111,7 +101,7 @@ class SpotBugsRunner:
                 "id": str(uuid.uuid4().int)[:5],
                 "name": bug_instance.get('type').strip() if bug_instance.get('type') is not None else "Unknown Issue",
                 "explanation": bug_instance.find('LongMessage').text.strip() if bug_instance.find('LongMessage') is not None else "No detailed explanation available.",
-                "tags": ("CWE-" + bug_instance.get('cweid')) if bug_instance.get('cweid') is not None else "CWE-XXXX",
+                "tags": "SB",
                 "items": []
             }
                 

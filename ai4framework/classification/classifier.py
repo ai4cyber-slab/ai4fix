@@ -280,7 +280,6 @@ def main():
                         else:
                             error_and_log_handling(f"{file} was labeled as not security relevant.\n", True)
                             
-                        # os.system('rm changes.diff')
                         os.remove(git_diff_file)
 
                     except Exception as e:

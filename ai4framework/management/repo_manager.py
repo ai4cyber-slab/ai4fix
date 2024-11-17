@@ -70,24 +70,6 @@ class RepoManager:
             logger.error(f"Failed to revert checkout: {e}")
             raise
 
-    # def get_changed_files(self):
-    #     """
-    #     Get a list of files changed in the specified commit.
-
-    #     Returns:
-    #         list: A list of file paths that were changed in the commit.
-    #     """
-    #     repo_path = self.repo.working_tree_dir
-    #     if not os.path.isdir(repo_path):
-    #         logger.error(f"The directory {repo_path} does not exist.")
-    #         sys.exit(1)
-    #     try:
-    #         commit = self.repo.commit(self.commit_hash)
-    #         changed_files = list(commit.stats.files.keys())
-    #         return changed_files
-    #     except Exception as e:
-    #         logger.error(f"An error occurred: {str(e)}")
-    #         return []
     def get_changed_files(self, absolute=True):
         """
         Get a list of files changed in the specified commit, filtered to ensure files are under the repository root.
@@ -119,11 +101,10 @@ class RepoManager:
             commit = self.repo.commit(self.commit_hash)
             all_changed_files = list(commit.stats.files.keys())
             
-            # Filter files that are strictly under the repository path
             changed_files = [
                 file_path for file_path in all_changed_files
-                if file_path.startswith(prefix)  # Ensure file exists within repo
-                and test_dir_prefix not in file_path  # Ensure file is not a test file
+                if file_path.startswith(prefix)
+                and test_dir_prefix not in file_path
             ]
             
             if absolute:
@@ -133,24 +114,6 @@ class RepoManager:
             logger.error(f"An error occurred: {str(e)}")
             return []
 
-    # def get_parent_commit(self):
-    #     """
-    #     Get the parent commit of the specified commit.
-
-    #     Returns:
-    #         str: The hash of the parent commit, or None if retrieval fails.
-    #     """
-    #     try:
-    #         os.chdir(self.repo.working_tree_dir)
-    #         git_command = f'git log --pretty=%P -n 1 {self.commit_hash}'
-    #         result = subprocess.run(git_command, shell=True, stdout=subprocess.PIPE, text=True)
-    #         parent_commit = result.stdout.strip().split()[0]
-    #         logger.info(f"Successfully retrieved the parent commit: {parent_commit}")
-    #         return parent_commit
-    #     except Exception as e:
-    #         logger.error(f"Failed to retrieve parent commit: {e}")
-    #         return None
-
     def get_parent_commit(self):
         """
         Get the parent commit of the specified commit.
@@ -159,13 +122,10 @@ class RepoManager:
             str: The hash of the parent commit, or None if retrieval fails.
         """
         try:
-            # Change to the repository's working directory
             os.chdir(self.repo.working_tree_dir)
 
-            # Git command to retrieve the parent commit
             git_command = ['git', 'log', '--pretty=%P', '-n', '1', self.commit_hash]
 
-            # Use 'with' to handle the subprocess safely
             with subprocess.Popen(git_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as process:
                 stdout, stderr = process.communicate()
 
@@ -181,34 +141,3 @@ class RepoManager:
         except Exception as e:
             logger.error(f"An error occurred while retrieving the parent commit: {str(e)}")
             return None
-
-    @classmethod
-    def clone_repo(cls, remote_url, base_dir):
-        """
-        Clone a repository from a remote URL.
-
-        Args:
-            remote_url (str): The URL of the remote repository to clone.
-            base_dir (str): The base directory where the repository should be cloned.
-
-        Returns:
-            RepoManager: An instance of RepoManager for the cloned repository.
-
-        Raises:
-            Exception: If the cloning operation fails.
-        """
-        try:
-            # Get the repository name from the remote URL
-            repo_name = remote_url.rstrip('/').split('/')[-1].replace('.git', '')
-            repo_path = os.path.join(base_dir, repo_name)
-
-            # Clone the repo into the base directory
-            logger.info(f"Cloning repository from {remote_url} into {repo_path}...")
-            repo = git.Repo.clone_from(remote_url, repo_path)
-            logger.info(f"Successfully cloned repository into {repo_path}.")
-
-            return cls(repo_path)  # Return an instance of RepoManager for the cloned repo
-
-        except Exception as e:
-            logger.error(f"Failed to clone repository: {e}")
-            raise
