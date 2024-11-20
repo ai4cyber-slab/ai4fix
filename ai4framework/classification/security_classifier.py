@@ -41,7 +41,7 @@ class SecurityClassifier:
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
         openai.api_key = os.getenv('OPENAI_API_KEY')
-        self.repo_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
+        self.repo_path = self.config.get('DEFAULT', 'config.project_root')
 
 
     def classify(self):
@@ -53,8 +53,13 @@ class SecurityClassifier:
         """
         # Check if the OpenAI API key is available
         if not openai.api_key:
-            logger.warning("OPENAI_API_KEY is not set. Skipping the classification process.")
-            return  # Skip the classification process if the API key is missing
+            logger.info("OPENAI_API_KEY is not set. Skipping the classification process.")
+            return
+        
+        # Check if the commit sha is available
+        if self.config.get('CLASSIFIER', 'commit_sha') == '':
+            logger.info("Commit sha is not set. Skipping the classification process.")
+            return
 
         current_dir = os.path.dirname(os.path.abspath(__file__))
         os.chdir(current_dir)
@@ -62,6 +67,7 @@ class SecurityClassifier:
             "python", "classifier.py",
             "-p", self.config.get('DEFAULT', 'config.project_root'),
             "-r", self.repo_path,
+            "-f", self.config.get('DEFAULT', 'config.filter'),
             "-c", self.config.get('CLASSIFIER', 'commit_sha'),
             "-m", self.config.get('CLASSIFIER', 'gpt_model'),
             "-t", self.config.get('CLASSIFIER', 'temperature'),

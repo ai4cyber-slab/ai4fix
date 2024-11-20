@@ -14,13 +14,13 @@ class ConfigManager:
 
     _config = None
     @classmethod
-    def get_config(cls, project_root, dir_to_analyze):
+    def get_config(cls, project_root, commit_sha):
         """
         Load configuration settings from a specified file, ignoring comments and comment-only lines.
 
         Args:
             project_root (str): Path to the root of the project.
-            dir_to_analyze (str): Path to the directory that will be analyzed.
+            commit_sha (str): The hash of the commit, with the modified files to be analyzed.
 
         Returns:
             configparser.ConfigParser: The loaded configuration object.
@@ -29,46 +29,41 @@ class ConfigManager:
             project_root = os.getenv("PROJECT_PATH")
 
             if not project_root:
-                logger.warning("Project root path must be provided as a command-line argument (-r/--project_root), or set in the PROJECT_PATH environment variable.")
+                logger.warning("Project root path is missing. Either set it as the PROJECT_PATH environment variable, or provide it as a command-line argument (-r/--project_root).")
                 sys.exit(1)
-
-        if dir_to_analyze == None:
-            dir_to_analyze = project_root
-
-        if not os.path.isabs(dir_to_analyze):
-            dir_to_analyze = os.path.join(project_root, dir_to_analyze)
 
         project_name = project_root.replace('/', '')
 
-        if cls._config is None:
-            cls._config = configparser.ConfigParser()
+        if commit_sha == None:
+            commit_sha = ''
 
-            project_config = [
-                '[DEFAULT]',
-                f'config.project_name={project_name}',
-                f'config.project_root={project_root}',
-                f'config.dir_to_analyze={dir_to_analyze}',
-            ]
+        cls._config = configparser.ConfigParser()
 
-            cls._config.read_string('\n'.join(project_config))
+        cls._config.set('DEFAULT', 'config.project_name', project_name)
+        cls._config.set('DEFAULT', 'config.project_root', project_root)
 
-            cleaned_lines = []
-            config_file = os.path.join(project_root, 'config.properties')
-            with open(config_file, 'r') as file:
-                for line in file:
-                    stripped_line = line.strip()
+        if not cls._config.has_section('CLASSIFIER'):
+            cls._config.add_section('CLASSIFIER')  # Create the section if it doesn't exist
 
-                    if not stripped_line or stripped_line.startswith('#'):
-                        continue
+        cls._config.set('CLASSIFIER', 'commit_sha', commit_sha)
 
-                    line = stripped_line.split('#', 1)[0].strip()
+        cleaned_lines = []
+        config_file = os.path.join(project_root, 'config.properties')
+        with open(config_file, 'r') as file:
+            for line in file:
+                stripped_line = line.strip()
 
-                    if line:
-                        cleaned_lines.append(line)
+                if not stripped_line or stripped_line.startswith('#'):
+                    continue
 
-            cls._config.read_string('\n'.join(cleaned_lines))
+                line = stripped_line.split('#', 1)[0].strip()
 
-            cls.adjust_config_paths(project_root)
+                if line:
+                    cleaned_lines.append(line)
+
+        cls._config.read_string('\n'.join(cleaned_lines))
+
+        cls.adjust_config_paths(project_root)
 
         return cls._config
 

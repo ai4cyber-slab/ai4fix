@@ -23,7 +23,7 @@ class PatchGenerator:
         openai.api_key = os.getenv('OPENAI_API_KEY')
         self.client = openai.OpenAI()
         self.config = config
-        self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
+        self.project_path = self.config.get('DEFAULT', 'config.project_root')
         self.sast = SASTOrchestrator(self.config)
         self.symbolic = SymbolicExecution(self.config)
         self.visualize_path = os.path.join(self.project_path, '.ai4framework', 'visualizations')

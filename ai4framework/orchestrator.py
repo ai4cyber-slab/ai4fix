@@ -22,8 +22,8 @@ class WorkflowFramework:
     of a software project.
     """
 
-    def __init__(self, project_root, dir_to_analyze, skip_patches=False, sast_rerun=False):
-        self.config = ConfigManager.get_config(project_root, dir_to_analyze)
+    def __init__(self, project_root, commit_sha, skip_patches=False, sast_rerun=False):
+        self.config = ConfigManager.get_config(project_root, commit_sha)
         self.sast_rerun = sast_rerun
         self.skip_patches = skip_patches
 
@@ -40,8 +40,8 @@ class WorkflowFramework:
         self.sast.run_all()
 
         if not self.sast_rerun:
-            # self.security_classifier.classify()
-            # self.symbolic_execution.analyze()
+            self.security_classifier.classify()
+            self.symbolic_execution.analyze()
             pass
 
         warnings_dict_original = self.issues_merger.run()
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Execute the security analysis workflow.")
 
     parser.add_argument("-r", "--project_root", help="Path to the root directory of your project.")
-    parser.add_argument("-d", "--dir_to_analyze", help="Path to the directory that should be analyzed. If empty, the root will be used.")
+    parser.add_argument('-c', '--commit_sha', help='The hash of the commit, with the modified files to be analyzed. If not provided, the whole project will be analyzed.')
     parser.add_argument("--skip-patches", action="store_true", help="If provided, the patches part will be skipped.")
     parser.add_argument("--sast-rerun", action="store_true", help="If provided, issues will be generated for the new java files contents.")
 
@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     framework = WorkflowFramework(
         project_root=args.project_root,
-        dir_to_analyze=args.dir_to_analyze,
+        commit_sha=args.commit_sha,
         skip_patches=args.skip_patches,
         sast_rerun=args.sast_rerun
     )

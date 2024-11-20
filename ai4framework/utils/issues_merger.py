@@ -7,7 +7,7 @@ from utils.logger import logger
 class JSONCombiner:
     def __init__(self, config):
         self.config = config
-        self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
+        self.project_path = self.config.get('DEFAULT', 'config.project_root')
         self.project_name = config.get('DEFAULT', 'config.project_name')
         # self.sast_issues_path = os.path.join(self.project_path, 'sast_issues.json')
         self.sast_issues_path = self.config.get("ISSUES", "config.sast_issues_path", fallback=os.path.join(self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "sast_issues.json")))

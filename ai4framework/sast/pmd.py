@@ -24,21 +24,21 @@ class PMDRunner:
         """
         self.config = config
         self.report_path = os.path.join(os.sep, 'app','sast','out','pmd.xml')
-        self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
+        self.project_path = self.config.get('DEFAULT', 'config.project_root')
 
 
-    def run(self, java_files):
+    def run(self, files_to_analyze):
         """
         Run PMD on the specified Java files.
 
         Args:
-            java_files (list): List of Java file paths to analyze.
+            files_to_analyze (list): List of Java file paths to analyze.
 
         Raises:
             SystemExit: If the PMD check fails.
         """
-        if java_files == []:
-            logger.warning('There are no modified files in the directory to be analyzed on the given commit.')
+        if files_to_analyze == []:
+            print('There are no files to be analyzed.')
             sys.exit(1)
 
         report_dir = os.path.dirname(self.report_path)
@@ -48,7 +48,7 @@ class PMDRunner:
 
         command = (
             f"{self.config.get('SAST', 'config.pmd_bin', fallback=os.path.join(os.sep, 'opt','pmd-bin-7.4.0','bin','pmd'))} check "
-            f"-d {','.join(java_files)} "
+            f"-d {','.join(files_to_analyze)} "
             f"-R {self.config.get('SAST', 'config.pmd_ruleset', fallback=os.path.join(os.sep, 'app', 'utils', 'PMD-config.xml'))} "
             f"-f xml "
             f"-r {self.report_path} "
@@ -100,7 +100,6 @@ class PMDRunner:
 
         for file_element in pmd_root.findall('.//pmd:file', namespaces):
             file_name = file_element.get('name')
-            file_path = file_name.replace(self.project_path, '')[1:]
             for violation in file_element.findall('.//pmd:violation', namespaces):
                 issue = {
                     "id": str(uuid.uuid4().int)[:5],
@@ -111,7 +110,7 @@ class PMDRunner:
                         {
                             "patches": [],
                             "textrange": {
-                                "file": file_path,
+                                "file": file_name,
                                 "startLine": int(violation.get('beginline')),
                                 "endLine": int(violation.get('endline')),
                                 "startColumn": int(violation.get('begincolumn')),

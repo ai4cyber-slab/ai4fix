@@ -24,29 +24,27 @@ class SpotBugsRunner:
         """
         self.config = config
         self.report_path = os.path.join(os.sep, 'app','sast','out','spotbugs.xml')
-        self.BASE_SRC_DIR = os.path.join('src', 'main', 'java')
-        self.BASE_TEST_DIR = os.path.join('src', 'test', 'java')
-        self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
+        self.project_path = self.config.get('DEFAULT', 'config.project_root')
 
-    def run(self, changed_files):
+    def run(self, files_to_analyze):
         """
         Run SpotBugs on the specified Java files.
 
         Args:
-            changed_files (list): List of Java file paths to analyze.
+            files_to_analyze (list): List of Java file paths to analyze.
 
         Raises:
             SystemExit: If the SpotBugs check fails.
         """
-        if changed_files == []:
-            logger.warning('There are no modified files in the directory to be analyzed on the given commit.')
+        if files_to_analyze == []:
+            print('There are no files to be analyzed.')
             sys.exit(1)
 
         spotbugs_bin = self.config.get('SAST', 'config.spotbugs_bin', fallback=os.path.join(os.sep, 'opt','spotbugs-4.8.6','bin','spotbugs'))
         command = (
             f"{spotbugs_bin} -textui "
             f"-xml:withMessages={self.report_path} "
-            f"{' '.join(changed_files)}"
+            f"{' '.join(files_to_analyze)}"
         )
 
         try:
@@ -110,15 +108,19 @@ class SpotBugsRunner:
             class_start_value = bug_instance.find('Class').find('SourceLine').get('start') if bug_instance.find('Class') is not None else None
             if first_source_line is not None:
                 relative_path = first_source_line.get('sourcepath', 'unknown file')
+                src_base_dir = find_base_dir_path(self.project_path, relative_path)
+                test_base_dir = find_base_dir_path(self.project_path, relative_path, test_dir=True)
                     
                 if relative_path != 'unknown file':
-                    normalized_relative_path = os.path.normpath(relative_path)
-                    if os.path.exists(os.path.join(self.project_path, self.BASE_SRC_DIR, normalized_relative_path)):
-                        full_path = os.path.join(self.BASE_SRC_DIR, normalized_relative_path)
-                    elif os.path.exists(os.path.join(self.project_path, self.BASE_TEST_DIR, normalized_relative_path)):
-                        full_path = os.path.join(self.BASE_TEST_DIR, normalized_relative_path)
+                    if src_base_dir:
+                        full_path = src_base_dir
+                    elif test_base_dir:
+                        full_path = test_base_dir
+                    else:
+                        full_path = 'unknown file'
                 else:
                     full_path = 'unknown file'
+                    
                 textrange = {
                     "file": full_path,
                     "startLine": int(first_source_line.get('start', class_start_value)),
@@ -131,3 +133,26 @@ class SpotBugsRunner:
             issues.append(issue)
 
             return issues
+
+
+def find_base_dir_path(project_root, target_path, test_dir=False):
+    if not test_dir:
+        target_path = os.path.join('src', 'main', 'java', target_path)
+    else:
+        target_path = os.path.join('src', 'test', 'java', target_path)
+
+    norm_target_path = os.path.normpath(target_path)
+
+    # Walk through the project directory
+    for dirpath, dirnames, filenames in os.walk(project_root):
+        # Reconstruct relative path to each file from project root
+        for file in filenames:
+            # Absolute path of the current file
+            current_file_path = os.path.join(dirpath, file)
+            
+            # Check if the file matches the end of the target path
+            if current_file_path.endswith(norm_target_path):
+                return current_file_path.replace(project_root + '/', '')  # Return the full path where it was found
+
+    # If not found
+    return None

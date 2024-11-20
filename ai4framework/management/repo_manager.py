@@ -70,46 +70,52 @@ class RepoManager:
             logger.error(f"Failed to revert checkout: {e}")
             raise
 
-    def get_changed_files(self, absolute=True):
+    def get_files_to_analyze(self, project_root, filter):
         """
-        Get a list of files changed in the specified commit, filtered to ensure files are under the repository root.
+        Get a list of files to be analyzed, filtered to ensure to skip certain files.
         
         Args:
-            absolute (bool, optional): If True, returns absolute paths of the changed files.
-                                    If False, returns relative paths from the repository root.
-                                    Defaults to True.
+            project_root (str): The path to root of the project.
+            filter (str): List of words to filter the files.
         
         Returns:
-            list: A list of file paths that were changed in the commit. 
-                Paths are absolute if `absolute=True`, otherwise, relative paths are returned.
+            list: A list of file paths that will be analyzed. 
         """
-        repo_path = Path(self.repo_path)
-        dirs = [r for r in str(repo_path).split(os.sep) if r != '']
-        prefix = ''
-        if len(dirs) == 1:
-            prefix = 'src'
-        elif len(dirs) > 1:
-            prefix = os.path.join(*dirs[1:])
-        else:
-            prefix = ''
-
-        if not repo_path.is_dir():
-            logger.error(f"The repository directory {repo_path} does not exist.")
-            sys.exit(1)
-        test_dir_prefix = str(os.path.join('src','test'))
         try:
-            commit = self.repo.commit(self.commit_hash)
-            all_changed_files = list(commit.stats.files.keys())
-            
-            changed_files = [
-                file_path for file_path in all_changed_files
-                if file_path.startswith(prefix)
-                and test_dir_prefix not in file_path
-            ]
-            
-            if absolute:
-                changed_files = [os.path.join(str(repo_path), file_path[file_path.find('src'):]) for file_path in changed_files if os.path.exists(os.path.join(str(repo_path), file_path[file_path.find('src'):]))]
-            return changed_files
+            # Determine files based on whether a commit hash is provided
+            if self.commit_hash != '':
+                repo_path = Path(self.repo_path)
+
+                if not repo_path.is_dir():
+                    logger.error(f"The repository directory {repo_path} does not exist.")
+                    sys.exit(1)
+
+                commit = self.repo.commit(self.commit_hash)
+                all_changed_files = list(commit.stats.files.keys())
+            else:
+                # Collect all files from the project root
+                all_changed_files = [
+                    os.path.join(dirpath, file)
+                    for dirpath, _, filenames in os.walk(project_root)
+                    for file in filenames
+                ]
+
+            # Filter files if a filter is provided
+            if filter != '':
+                filter_words = filter.split(',')
+                files_to_analyze = [
+                    file_path
+                    for file_path in all_changed_files
+                    if not any(word in file_path for word in filter_words)
+                ]
+            else:
+                files_to_analyze = all_changed_files
+
+            # Log total number files
+            logger.info(f"Total changed files: {len(files_to_analyze)}")
+
+            return files_to_analyze
+
         except Exception as e:
             logger.error(f"An error occurred: {str(e)}")
             return []

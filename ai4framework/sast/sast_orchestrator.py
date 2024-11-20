@@ -24,12 +24,12 @@ class SASTOrchestrator:
             config: Configuration object containing necessary settings.
         """
         self.repo_manager = RepoManager(
-            config.get('DEFAULT', 'config.dir_to_analyze'),
+            config.get('DEFAULT', 'config.project_root'),
             config.get('CLASSIFIER', 'commit_sha')
         )
         self.tool_runner = ToolRunner(config, self.repo_manager)
         self.report_merger = ReportMerger(config)
-        self.project_path = config.get('DEFAULT', 'config.dir_to_analyze')
+        self.project_path = config.get('DEFAULT', 'config.project_root')
 
     def run_all(self, validation=False, tool=None):
         """
@@ -45,7 +45,7 @@ class SASTOrchestrator:
             tool (str): Specify the tool to run ("PMD" for PMD, "SB" for SpotBugs, or None for all). Default is None.
         """
         try:
-            if not validation and self.repo_manager.commit_hash:
+            if not validation and self.repo_manager.commit_hash != '':
                 self.repo_manager.checkout_commit()
 
             if tool is None or tool.upper() == "PMD":

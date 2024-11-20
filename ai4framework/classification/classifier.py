@@ -11,6 +11,7 @@ Usage:
 Arguments:
     -p, --project_root: Path to the root of the project that is under analysis
     -r, --repo_path: Path to the Git repository (required)
+    -f, --filter: List of words to filter the modified files
     -c, --commit_sha: Commit hash to analyze (required)
     -m, --model: GPT model to use (default: "gpt-4o")
     -t, --temperature: Temperature setting for the GPT model (default: 0)
@@ -42,6 +43,7 @@ parser = argparse.ArgumentParser(description="Classifier script with arguments",
 # Adding the arguments
 parser.add_argument("-p", "--project_root", type=str, help="Path to the root of the project that is under analysis", required=True)
 parser.add_argument("-r", "--repo_path", type=str, help="The path of your repository", required=True)
+parser.add_argument("-f", "--filter", type=str, help="List of words to filter the modified files")
 parser.add_argument("-c", "--commit_sha", type=str, help="The hash of the commit", required=True)
 parser.add_argument("-m", "--model", type=str, help="The name of the GPT-model", default="gpt-4o")
 parser.add_argument("-t", "--temperature", type=str, help="The temperature of the model", default=0)
@@ -121,7 +123,7 @@ def list_changed_files(repo_path, commit_hash):
     try:
         repo_manager = RepoManager(repo_path, commit_hash)
         
-        changed_files = repo_manager.get_changed_files()
+        changed_files = repo_manager.get_files_to_analyze(args.project_root, args.filter)
         
         if changed_files:
             error_and_log_handling(f"Changed files in commit {commit_hash}: {changed_files}", True)

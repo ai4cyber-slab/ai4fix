@@ -18,7 +18,7 @@ class ReportMerger:
             config: Configuration object containing necessary settings.
         """
         self.config = config
-        self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
+        self.project_path = self.config.get('DEFAULT', 'config.project_root')
         self.issues_path = self.config.get("DEFAULT", "config.issues_path")
 
     def extract_issue_counts(self, data):
@@ -63,14 +63,7 @@ class ReportMerger:
                 logger.info("Processing issues in memory for validation.")
                 return self.extract_issue_counts(issues)
             else:
-                output_path = self.config.get(
-                    "ISSUES",
-                    "config.sast_issues_path",
-                    fallback=os.path.join(
-                        os.path.dirname(self.config.get("DEFAULT", "config.issues_path")),
-                        "sast_issues.json"
-                    )
-                )
+                output_path = self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "sast_issues.json")
                 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
                 with open(output_path, 'w') as json_file:

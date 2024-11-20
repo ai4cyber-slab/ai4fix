@@ -15,7 +15,7 @@ from utils.logger import logger
 class TestGenerator:
     def __init__(self, config):
         self.config = config
-        self.project_path = self.config.get('DEFAULT', 'config.dir_to_analyze')
+        self.project_path = self.config.get('DEFAULT', 'config.project_root')
         self.json_file_path = self.config.get('DEFAULT', 'config.issues_path')
         self.diffs_path = self.config.get('DEFAULT', 'config.results_path')
 

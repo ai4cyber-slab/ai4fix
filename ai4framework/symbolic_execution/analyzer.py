@@ -42,7 +42,7 @@ class Analyzer:
             Exception: If an error occurs during the analysis process.
         """
         if not self.project_name:
-            logger.warning("Project root path must be provided as a command-line argument or set in the PROJECT_PATH environment variable.")
+            logger.warning("Project root path is missing. Either set it as the PROJECT_PATH environment variable, or provide it as a command-line argument (-r/--project_root).")
             sys.exit(1)
             
         logger.info(f"Analyzing project: {self.project_name}")

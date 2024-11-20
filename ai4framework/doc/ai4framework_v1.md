@@ -24,11 +24,10 @@ This guide provides detailed instructions on downloading necessary tools and con
 5. [Maven](#4-maven)
 6. [Static Tools: PMD](#5-static-tools-pmd)
 7. [Static Tools: SpotBugs](#6-static-tools-spotbugs)
-8. [Vulnerability Scanner: Trivy](#7-vulnerability-scanner-trivy)
-9. [Java Development Kit (JDK)](#8-java-development-kit-jdk)
-10. [Symbolic Execution Tool: RTEHunter](#9-symbolic-execution-tool-rtehunter)
-11. [Building and Running AI4Framework with Code-Server using Docker](#building-and-running-ai4framework-with-code-server-using-docker)
-12. [Final Notes](#final-notes)
+8. [Java Development Kit (JDK)](#7-java-development-kit-jdk)
+9. [Symbolic Execution Tool: RTEHunter](#8-symbolic-execution-tool-rtehunter)
+10. [Building and Running AI4Framework with Code-Server using Docker](#building-and-running-ai4framework-with-code-server-using-docker)
+11. [Final Notes](#final-notes)
 
 ---
 
@@ -137,25 +136,7 @@ config.spotbugs_bin=/path/to/spotbugs/bin/spotbugs
 
 ---
 
-## 7. Vulnerability Scanner: Trivy
-
-**Trivy** is a comprehensive vulnerability scanner for containers and artifacts.
-
-### Download
-
-- **Trivy 0.54.1**: [Link](https://github.com/aquasecurity/trivy/releases)
-
-### Configuration in `config.properties`
-
-Set the Trivy binary path:
-
-```properties
-config.trivy_bin=/path/to/trivy
-```
-
----
-
-## 8. Java Development Kit (JDK)
+## 7. Java Development Kit (JDK)
 
 The **Java Development Kit (JDK)** is essential for compiling and running Java applications within the AI4Framework.
 
@@ -166,7 +147,7 @@ The **Java Development Kit (JDK)** is essential for compiling and running Java a
 
 ---
 
-## 9. Symbolic Execution Tool: RTEHunter
+## 8. Symbolic Execution Tool: RTEHunter
 
 **RTEHunter** is a symbolic execution tool that enhances the AI4Framework's ability to detect vulnerabilities.
 
@@ -189,13 +170,13 @@ config.analyzer=/path/to/AI4VULN-analyzer
 Below is a sample `config.properties` file. Update the paths according to your system setup.
 
 ```properties
+[DEFAULT]
+config.filter=test,com # A list with words that filters the files. If they are present in a file path, those files will be ignored. If nothing is passed, every file in the project will be analyzed.
 [SAST]
 config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # change to where it's located
 config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # change to where it's located
 config.pmd_ruleset=/app/utils/PMD-config.xml # change to where it's located or leave the default
-config.trivy_bin=/usr/bin/trivy # change to where it's located
 [CLASSIFIER]
-commit_sha=2f7bb20317500db89c1bc2c0d96275e09f3c62a1 # change to desired commit hash
 gpt_model=gpt-4o # change to desired model
 temperature=0 # change to desired temperature
 [ANALYZER]
@@ -296,12 +277,12 @@ cd /user_project
 
 Then run the analysis script:
 ```bash
-python /app/orchestrator.py -r /user_project -d /user_project --skip-patches --sast-rerun
+python /app/orchestrator.py -r /user_project -c 2f7bb20317500db89c1bc2c0d96275e09f3c62a1 --skip-patches --sast-rerun
 ```
 
 #### Help:
 - `--r /user_project`: Path to the root directory of your project. This field is required unless you provided the PROJECT_PATH enviroment variable.
-- `-d /user_project`: Path to the directory that should be analyzed. If empty, the root will be used.
+- `-c 2f7bb20317500db89c1bc2c0d96275e09f3c62a1`: The hash of the commit, with the modified files to be analyzed. If not provided, the whole project will be analyzed.
 - `--skip-patches`: If provided, the patches part will be skipped.
 - `--sast-rerun`: If provided, issues will be generated for the new java files contents.
 
@@ -323,13 +304,13 @@ Make sure to replace `/user_project` with the correct project path inside the co
 
 Before running the Python script in VS Code for the project you want to analyze, you must create a config.properties file inside the project directory that contains the `.git` with the following content:
 ```properties
+[DEFAULT]
+config.filter=test,com # A list with words that filters the files. If they are present in a file path, those files will be ignored. If nothing is passed, every file in the project will be analyzed.
 [SAST]
 config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # change to where it's located
 config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # change to where it's located
 config.pmd_ruleset=/app/utils/PMD-config.xml # change to where it's located or leave the default
-config.trivy_bin=/usr/bin/trivy # change to where it's located
 [CLASSIFIER]
-commit_sha=2f7bb20317500db89c1bc2c0d96275e09f3c62a1 # change to desired commit hash
 gpt_model=gpt-4o # change to desired model
 temperature=0 # change to desired temperature
 [ANALYZER]
@@ -349,7 +330,7 @@ plugin.test_folder_log=src/test # path of the test folder in the directory to be
 Now, open the VSCode terminal in code-server and run the Python script for analysis.
 
 ```bash
-python /app/orchestrator.py -r /user_project -d /user_project --skip-patches --sast-rerun
+python /app/orchestrator.py -r /user_project -c 2f7bb20317500db89c1bc2c0d96275e09f3c62a1 --skip-patches --sast-rerun
 ```
 
 This will start the analysis process on your project.
@@ -366,13 +347,13 @@ Let's consider a big project like Apache Struts, which is hosted on GitHub. Here
 #### `config.properties` Example
 
 ```properties
+[DEFAULT]
+config.filter=test,com # A list with words that filters the files. If they are present in a file path, those files will be ignored. If nothing is passed, every file in the project will be analyzed.
 [SAST]
 config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # change to where it's located
 config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # change to where it's located
 config.pmd_ruleset=/app/utils/PMD-config.xml # change to where it's located or leave the default
-config.trivy_bin=/usr/bin/trivy # change to where it's located
 [CLASSIFIER]
-commit_sha=735d1bc88d9beceb18558d12f565a466f96a5b2a # change to desired commit hash
 gpt_model=gpt-4o # change to desired model
 temperature=0 # change to desired temperature
 [ANALYZER]
