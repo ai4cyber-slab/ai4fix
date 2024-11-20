@@ -79,10 +79,6 @@ class ToolRunner:
         class_files = []
 
         for java_file in self.repo_manager.get_files_to_analyze(self.project_root, self.filter):
-            if not java_file.endswith('.java'):
-                logger.warning(f"Skipping non-Java file: {java_file}")
-                continue
-
             class_file_path = find_class_file_from_java(java_file)
             if class_file_path:
                 class_files.append(class_file_path)

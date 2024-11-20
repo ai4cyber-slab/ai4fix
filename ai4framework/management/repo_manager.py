@@ -91,28 +91,31 @@ class RepoManager:
                     sys.exit(1)
 
                 commit = self.repo.commit(self.commit_hash)
-                all_changed_files = list(commit.stats.files.keys())
+                all_files = list(commit.stats.files.keys())
             else:
-                # Collect all files from the project root
-                all_changed_files = [
-                    os.path.join(dirpath, file)
-                    for dirpath, _, filenames in os.walk(project_root)
-                    for file in filenames
-                ]
+                # Collect all non-hidden files from the project root
+                all_files = []
+                for dirpath, dirnames, filenames in os.walk(project_root):
+                    dirnames[:] = [d for d in dirnames if not d.startswith('.')]
+                    all_files.extend(
+                        os.path.join(dirpath, file)
+                        for file in filenames
+                        if not file.startswith('.') and file.endswith('.java')
+                    )
 
             # Filter files if a filter is provided
             if filter != '':
                 filter_words = filter.split(',')
                 files_to_analyze = [
                     file_path
-                    for file_path in all_changed_files
+                    for file_path in all_files
                     if not any(word in file_path for word in filter_words)
                 ]
             else:
-                files_to_analyze = all_changed_files
+                files_to_analyze = all_files
 
             # Log total number files
-            logger.info(f"Total changed files: {len(files_to_analyze)}")
+            logger.info(f"Number files to be analyzed: {len(files_to_analyze)}")
 
             return files_to_analyze
 

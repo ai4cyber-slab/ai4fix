@@ -237,58 +237,57 @@ def main():
                 os.remove(filter_path)
 
             for file in changed_files:
-                if file.endswith('.java'):
-                    git_diff_file = os.path.join('changes.diff')
-                    os.system(f'git diff {parent} {args.commit_sha} -- {file} > {git_diff_file}') # Creating the diff file
-                    error_and_log_handling(f"Successfully created the diff file of {file}.", False)
+                git_diff_file = os.path.join('changes.diff')
+                os.system(f'git diff {parent} {args.commit_sha} -- {file} > {git_diff_file}') # Creating the diff file
+                error_and_log_handling(f"Successfully created the diff file of {file}.", False)
 
-                    with open(git_diff_file, 'r', encoding='latin-1') as f:
-                        diff_content = f.read()
+                with open(git_diff_file, 'r', encoding='latin-1') as f:
+                    diff_content = f.read()
 
-                    unnecessary_diff = remove_unnecessary_diff(args.repo_path, diff_content)
-                    if unnecessary_diff:
-                        error_and_log_handling(f"The diff of {file} is unnecessary, it has been removed.\n", True)
-                        os.remove(git_diff_file)
-                        continue
+                unnecessary_diff = remove_unnecessary_diff(args.repo_path, diff_content)
+                if unnecessary_diff:
+                    error_and_log_handling(f"The diff of {file} is unnecessary, it has been removed.\n", True)
+                    os.remove(git_diff_file)
+                    continue
 
-                    try:
-                        diff_prompt = describe_prompt.format(diff=diff_content)
-                        diff_response = llm.invoke(diff_prompt)
-                        description = diff_response.content
+                try:
+                    diff_prompt = describe_prompt.format(diff=diff_content)
+                    diff_response = llm.invoke(diff_prompt)
+                    description = diff_response.content
 
-                        re_run_prompt = classify_prompt.format(diff=diff_content, description=description)
-                        re_run_response = llm.invoke(re_run_prompt)
+                    re_run_prompt = classify_prompt.format(diff=diff_content, description=description)
+                    re_run_response = llm.invoke(re_run_prompt)
+                    
+                    parsed_re_running = label_parser.parse(re_run_response.content)
+                    output = parsed_re_running.worth_to_re_run.strip().lower()
+
+                    if output == 'yes':
+                        line_positions = diff_line_positions(diff_content)
+                        output_dict = {
+                            "file_path": file,
+                            "security_relevant_lines": line_positions
+                        }
+                        output_data['security_relevant_files'].append(output_dict)
+
+                        # For Symbolic Execution
+                        filter_path = os.path.join(args.project_root, '.ai4framework', 'filter.txt')
                         
-                        parsed_re_running = label_parser.parse(re_run_response.content)
-                        output = parsed_re_running.worth_to_re_run.strip().lower()
+                        with open(filter_path, 'a') as filter_file:
+                            if filter_file.tell() == 0:
+                                filter_file.write("-.*\n")
+                            filter_file.write(f"+.*{file}\n")
 
-                        if output == 'yes':
-                            line_positions = diff_line_positions(diff_content)
-                            output_dict = {
-                                "file_path": file,
-                                "security_relevant_lines": line_positions
-                            }
-                            output_data['security_relevant_files'].append(output_dict)
+                        error_and_log_handling(f"{file} was labeled as security relevant.\n", True)
+                    else:
+                        error_and_log_handling(f"{file} was labeled as not security relevant.\n", True)
+                        
+                    os.remove(git_diff_file)
 
-                            # For Symbolic Execution
-                            filter_path = os.path.join(args.project_root, '.ai4framework', 'filter.txt')
-                            
-                            with open(filter_path, 'a') as filter_file:
-                                if filter_file.tell() == 0:
-                                    filter_file.write("-.*\n")
-                                filter_file.write(f"+.*{file}\n")
-
-                            error_and_log_handling(f"{file} was labeled as security relevant.\n", True)
-                        else:
-                            error_and_log_handling(f"{file} was labeled as not security relevant.\n", True)
-                            
-                        os.remove(git_diff_file)
-
-                    except Exception as e:
-                        error_and_log_handling(f"An error occurred during the labeling of {file}:\n{e}", True)
-                        # os.system('rm changes.diff')
-                        os.remove(git_diff_file)
-                        continue    
+                except Exception as e:
+                    error_and_log_handling(f"An error occurred during the labeling of {file}:\n{e}", True)
+                    # os.system('rm changes.diff')
+                    os.remove(git_diff_file)
+                    continue    
         
         else:
             error_and_log_handling(f'No changed files in commit {args.commit_sha}', True)
