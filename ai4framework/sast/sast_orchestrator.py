@@ -31,7 +31,7 @@ class SASTOrchestrator:
         self.report_merger = ReportMerger(config)
         self.project_path = config.get('DEFAULT', 'config.project_root')
 
-    def run_all(self, validation=False, tool=None):
+    def run_all(self, validation=False, tool=None, is_initial_round=True):
         """
         Run all configured SAST tools or specific ones based on the provided tool argument.
 
@@ -45,7 +45,7 @@ class SASTOrchestrator:
             tool (str): Specify the tool to run ("PMD" for PMD, "SB" for SpotBugs, or None for all). Default is None.
         """
         try:
-            if not validation and self.repo_manager.commit_hash != '':
+            if not validation and self.repo_manager.commit_hash != '' and is_initial_round:
                 self.repo_manager.checkout_commit()
 
             if tool is None or tool.upper() == "PMD":

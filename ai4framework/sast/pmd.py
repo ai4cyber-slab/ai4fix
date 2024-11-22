@@ -46,13 +46,18 @@ class PMDRunner:
         if not os.path.exists(report_dir):
             os.makedirs(report_dir)
 
+        cache_dir = os.path.join(os.sep, 'tmp', 'pmd-cache')
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir)
         command = (
-            f"{self.config.get('SAST', 'config.pmd_bin', fallback=os.path.join(os.sep, 'opt','pmd-bin-7.4.0','bin','pmd'))} check "
+            f"{self.config.get('SAST', 'config.pmd_bin', fallback=os.path.join(os.sep, 'opt', 'pmd-bin-7.4.0', 'bin', 'pmd'))} check "
             f"-d {','.join(files_to_analyze)} "
             f"-R {self.config.get('SAST', 'config.pmd_ruleset', fallback=os.path.join(os.sep, 'app', 'utils', 'PMD-config.xml'))} "
             f"-f xml "
             f"-r {self.report_path} "
-            "--no-fail-on-violation"
+            "--no-fail-on-violation "
+            "--verbose "
+            f"--cache {cache_dir}"  # Cache to support Incremental Analysis
         )
 
         try:

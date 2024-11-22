@@ -9,7 +9,7 @@ from utils.logger import logger
 import numpy as np
 
 class BenchmarkVisualizer:
-    def __init__(self):
+    def __init__(self, num_of_rounds):
         self.metrics = defaultdict(lambda: {
             'total_issues': 0,
             'build_failures': 0,
@@ -25,6 +25,7 @@ class BenchmarkVisualizer:
             'original_warnings_distribution': {},
             'elapsed_time': 0.0
         })
+        self.num_of_rounds = num_of_rounds
 
     def update_metrics(self, model_name, stats_data):
         """Update metrics for a specific model run"""
@@ -88,10 +89,10 @@ class BenchmarkVisualizer:
                 ax1.text(i + bar_width, count + 0.2, str(count), ha='center', fontsize=9)
 
             ax2 = fig.add_subplot(gs[0, 1])
-            labels = ['Successful Patches', 'Compilation Errors', 'Validation Failures', 'Non-Applicable Diffs']
+            labels = ['Successful Patches', 'Build Failures', 'Validation Failures', 'Non-Applicable Diffs']
             sizes = [
                 model_data.get('successful_patches', 0),
-                model_data.get('compilation_errors', 0),
+                model_data.get('build_failures', 0),
                 model_data.get('validation_failures', 0),
                 model_data.get('non_applicabale_diffs', 0)
             ]
@@ -144,7 +145,7 @@ class BenchmarkVisualizer:
 
             plt.tight_layout()
 
-            output_file = os.path.join(output_dir, f"{model_name}_charts.png")
+            output_file = os.path.join(output_dir, f"{model_name}_charts_round_{self.num_of_rounds}.png")
             plt.savefig(output_file)
             plt.close()
 

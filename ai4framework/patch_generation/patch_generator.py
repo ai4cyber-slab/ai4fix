@@ -16,12 +16,15 @@ from patch_generation.mesure import BenchmarkVisualizer
 import statistics
 
 class PatchGenerator:
-    def __init__(self, config, warning_dict):
+    def __init__(self, config, warning_dict, num_of_rounds):
         """Initialize PatchGenerator with configuration."""
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
         openai.api_key = os.getenv('OPENAI_API_KEY')
         self.client = openai.OpenAI()
+        self.client2 = Groq(
+            api_key="key"
+        )
         self.config = config
         self.project_path = self.config.get('DEFAULT', 'config.project_root')
         self.sast = SASTOrchestrator(self.config)
@@ -56,7 +59,8 @@ class PatchGenerator:
             'original_warnings_dict': {},
             'elapsed_time': 0.0
         }
-        self.visualizer = BenchmarkVisualizer()
+        self.num_of_rounds = num_of_rounds
+        self.visualizer = BenchmarkVisualizer(num_of_rounds)
 
 
         self.warnings_dict = warning_dict
@@ -271,7 +275,8 @@ class PatchGenerator:
                     """
                     
                 os.makedirs(self.diffs_output_dir, exist_ok=True)
-                response = self.call_openai_with_retries(prompt)
+                # response = self.call_openai_with_retries(prompt)
+                response = self.call_llama3_with_retries(prompt)
 
 
                 if response is None:
@@ -486,9 +491,8 @@ class PatchGenerator:
             })
             os.makedirs(self.visualize_path, exist_ok=True)
             self.visualizer.generate_comparison_charts(self.visualize_path)
-            self.visualizer.save_metrics(os.path.join(self.visualize_path, 'benchmark_metrics.json'))
+            self.visualizer.save_metrics(os.path.join(self.visualize_path, f'benchmark_metrics_round_{self.num_of_rounds}.json'))
             logger.info(f"Benchmarking results saved to {self.visualize_path}")
-            #
         except KeyboardInterrupt:
             logger.error("Keyboard interrupt detected. Stopping the script gracefully.")
             return
@@ -530,6 +534,30 @@ class PatchGenerator:
                     break
                 retries += 1
                 time.sleep(2 ** retries + random.uniform(0, 1))
+        except Exception as e:
+            return None
+
+
+    def call_llama3_with_retries(self, prompt, max_retries=3):
+        try:
+            retries = 0
+            while retries < max_retries:
+                try:
+                    time.sleep(2)
+                    response = self.client2.chat.completions.create(
+                        model="llama-3.2-90b-text-preview",
+                        # model="llama-3.1-70b-versatile",
+
+                        messages=[
+                            {"role": "system", "content": "You are a helpful assistant that can fix code issues, please return the output as one single code block extension ```patch```."},
+                            {"role": "user", "content": prompt}
+                        ]
+                    )
+                    return response
+                except Exception as e:
+                    print(f"Unexpected error with llama3.2: {e}")
+                    retries+=1
+                    break
         except Exception as e:
             return None
         
