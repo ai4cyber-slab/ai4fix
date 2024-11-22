@@ -1,9 +1,11 @@
-from utils.logger import logger
-import git
 import os
 import sys
+import git
 import subprocess
+
 from pathlib import Path
+from utils.logger import logger
+
 
 class RepoManager:
     """
@@ -109,13 +111,13 @@ class RepoManager:
                 files_to_analyze = [
                     file_path
                     for file_path in all_files
-                    if not any(word in file_path for word in filter_words)
+                    if not any(word.strip() in file_path for word in filter_words)
                 ]
             else:
                 files_to_analyze = all_files
 
             # Log total number files
-            logger.info(f"Number files to be analyzed: {len(files_to_analyze)}")
+            logger.info(f"Number of files to be analyzed: {len(files_to_analyze)}")
 
             return files_to_analyze
 
@@ -150,3 +152,4 @@ class RepoManager:
         except Exception as e:
             logger.error(f"An error occurred while retrieving the parent commit: {str(e)}")
             return None
+        

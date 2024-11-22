@@ -125,3 +125,4 @@ class ConfigManager:
         new_path = os.path.normpath(new_path)
 
         return new_path
+    

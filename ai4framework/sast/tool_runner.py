@@ -59,7 +59,7 @@ class ToolRunner:
         files_to_analyze = self.repo_manager.get_files_to_analyze(self.project_root, self.filter)
         self.run_tool("PMD", self.pmd_runner.run, files_to_analyze)
 
-    def run_spotbugs(self, java_file_path=None):
+    def run_spotbugs(self):
         """
         Run SpotBugs on Java class files.
 

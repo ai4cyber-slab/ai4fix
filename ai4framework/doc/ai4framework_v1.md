@@ -171,7 +171,7 @@ Below is a sample `config.properties` file. Update the paths according to your s
 
 ```properties
 [DEFAULT]
-config.filter=test,com # A list with words that filters the files. If they are present in a file path, those files will be ignored. If nothing is passed, every file in the project will be analyzed.
+config.filter=test # A list of words that filters the files. If they are present in a file path, those files will be ignored. If nothing is passed, every file in the project will be analyzed.
 [SAST]
 config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # change to where it's located
 config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # change to where it's located
@@ -305,7 +305,7 @@ Make sure to replace `/user_project` with the correct project path inside the co
 Before running the Python script in VS Code for the project you want to analyze, you must create a config.properties file inside the project directory that contains the `.git` with the following content:
 ```properties
 [DEFAULT]
-config.filter=test,com # A list with words that filters the files. If they are present in a file path, those files will be ignored. If nothing is passed, every file in the project will be analyzed.
+config.filter=test # A list of words that filters the files. If they are present in a file path, those files will be ignored. If nothing is passed, every file in the project will be analyzed.
 [SAST]
 config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # change to where it's located
 config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # change to where it's located
@@ -348,7 +348,7 @@ Let's consider a big project like Apache Struts, which is hosted on GitHub. Here
 
 ```properties
 [DEFAULT]
-config.filter=test,com # A list with words that filters the files. If they are present in a file path, those files will be ignored. If nothing is passed, every file in the project will be analyzed.
+config.filter=test # A list of words that filters the files. If they are present in a file path, those files will be ignored. If nothing is passed, every file in the project will be analyzed.
 [SAST]
 config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # change to where it's located
 config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # change to where it's located

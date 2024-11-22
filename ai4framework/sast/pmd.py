@@ -99,7 +99,7 @@ class PMDRunner:
         pmd_root = ET.fromstring(report_content)
 
         for file_element in pmd_root.findall('.//pmd:file', namespaces):
-            file_name = file_element.get('name')
+            file_name = file_element.get('name').replace(self.project_path + '/', '')
             for violation in file_element.findall('.//pmd:violation', namespaces):
                 issue = {
                     "id": str(uuid.uuid4().int)[:5],

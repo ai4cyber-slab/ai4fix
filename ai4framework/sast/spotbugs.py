@@ -152,7 +152,7 @@ def find_base_dir_path(project_root, target_path, test_dir=False):
             
             # Check if the file matches the end of the target path
             if current_file_path.endswith(norm_target_path):
-                return current_file_path.replace(project_root + '/', '')  # Return the full path where it was found
+                return current_file_path.replace(project_root + '/', '')  # Return the path where it was found
 
     # If not found
     return None

@@ -1,17 +1,18 @@
 import os
 import sys
-import subprocess
-from symbolic_execution.execution import SymbolicExecution
-from config.common_config import ConfigManager
-from utils.logger import logger
-from classification.security_classifier import SecurityClassifier
-from sast.sast_orchestrator import SASTOrchestrator
-from patch_generation.patch_generator import PatchGenerator
-from utils.issues_merger import JSONCombiner
-from utils.plugin_json_converter import JsonPluginConverter
 import time
 import signal
 import argparse
+import subprocess
+
+from utils.logger import logger
+from utils.issues_merger import JSONCombiner
+from config.common_config import ConfigManager
+from sast.sast_orchestrator import SASTOrchestrator
+from utils.plugin_json_converter import JsonPluginConverter
+from symbolic_execution.execution import SymbolicExecution
+from patch_generation.patch_generator import PatchGenerator
+from classification.security_classifier import SecurityClassifier
 
 
 class WorkflowFramework:
@@ -82,7 +83,7 @@ def signal_handler(sig, frame):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Execute the security analysis workflow.")
+    parser = argparse.ArgumentParser(description="Executes the security analysis workflow.")
 
     parser.add_argument("-r", "--project_root", help="Path to the root directory of your project.")
     parser.add_argument('-c', '--commit_sha', help='The hash of the commit, with the modified files to be analyzed. If not provided, the whole project will be analyzed.')
@@ -94,7 +95,6 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-
     framework = WorkflowFramework(
         project_root=args.project_root,
         commit_sha=args.commit_sha,
@@ -104,3 +104,4 @@ if __name__ == "__main__":
 
     framework.execute_workflow()
     kill_rg_processes()
+    
