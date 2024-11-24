@@ -37,7 +37,7 @@ class SpotBugsRunner:
             SystemExit: If the SpotBugs check fails.
         """
         if files_to_analyze == []:
-            print('There are no files to be analyzed.')
+            logger.warning('There are no files to be analyzed.')
             sys.exit(1)
 
         spotbugs_bin = self.config.get('SAST', 'config.spotbugs_bin', fallback=os.path.join(os.sep, 'opt','spotbugs-4.8.6','bin','spotbugs'))

@@ -1,8 +1,9 @@
 import logging
 from pathlib import Path
+import os
 
 AI4FRAMEWORK_DIR = Path(__file__).resolve().parent.parent
-DEFAULT_LOG_FILE_PATH = AI4FRAMEWORK_DIR / 'logs' / 'ai4framework.log'
+DEFAULT_LOG_FILE_PATH = os.path.join(os.getenv('PROJECT_PATH'), '.ai4framework', 'logs', 'ai4framework.log')
 LOG_COLORS = {
     logging.DEBUG: "\033[94m",  # Blue
     logging.INFO: "\033[92m",   # Green

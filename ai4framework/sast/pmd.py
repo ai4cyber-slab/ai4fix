@@ -38,7 +38,7 @@ class PMDRunner:
             SystemExit: If the PMD check fails.
         """
         if files_to_analyze == []:
-            print('There are no files to be analyzed.')
+            logger.warning('There are no files to be analyzed.')
             sys.exit(1)
 
         report_dir = os.path.dirname(self.report_path)

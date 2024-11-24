@@ -1,6 +1,3 @@
-import os
-import sys
-import subprocess
 from symbolic_execution.execution import SymbolicExecution
 from config.common_config import ConfigManager
 from utils.logger import logger
@@ -11,9 +8,7 @@ from utils.issues_merger import JSONCombiner
 from utils.plugin_json_converter import JsonPluginConverter
 from patch_generation.patch_applier import PatchApplier
 import time
-import signal
 import argparse
-import subprocess
 
 
 
@@ -69,30 +64,6 @@ class WorkflowFramework:
         logger.info(f"Workflow execution completed in {elapsed_time:.2f} seconds")
 
 
-def kill_rg_processes():
-    """
-    Function to kill any lingering 'rg' (ripgrep) processes.
-    """
-    try:
-        with subprocess.Popen("grep rg | grep -v grep | awk '{print $2, $11}'", shell=True, stdout=subprocess.PIPE, text=True) as process:
-            result = process.communicate()[0]
-            processes = result.strip().split('\n')
-
-            for process in processes:
-                if process:
-                    pid, name = process.split(' ', 1)
-                    os.kill(int(pid), signal.SIGKILL)
-    except Exception as e:
-        print(f"Error killing processes: {e}")
-
-
-def signal_handler(sig, frame):
-    """
-    Handle termination signals (e.g., Ctrl+C) and perform cleanup.
-    """
-    kill_rg_processes()
-    sys.exit(0)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Executes the security analysis workflow.")
@@ -101,12 +72,8 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--commit_sha", help="The hash of the commit, with the modified files to be analyzed. If not provided, the whole project will be analyzed.")
     parser.add_argument("--skip-patches", action="store_true", help="If provided, the patches part will be skipped.")
     parser.add_argument("--sast-rerun", action="store_true", help="If provided, issues will be generated for the new java files contents.")
-    parser.add_argument("--automatic-application", action="store_true", help="If provided, patches will be applied automatically.")
-
+    parser.add_argument("--auto", action="store_true", help="If provided, patches will be applied automatically after the analysis complete.")
     args = parser.parse_args()
-
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
 
     framework = WorkflowFramework(
         project_root=args.project_root,
@@ -117,5 +84,3 @@ if __name__ == "__main__":
     )
 
     framework.execute_workflow()
-    kill_rg_processes()
-    

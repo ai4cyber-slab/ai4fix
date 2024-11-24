@@ -3,6 +3,8 @@ import os
 import subprocess
 from typing import Dict, List
 from configparser import ConfigParser
+from utils.logger import logger
+import time
 
 class PatchApplier:
     """
@@ -49,10 +51,8 @@ class PatchApplier:
         :param patch_content: The raw patch content.
         :return: Sanitized patch content.
         """
-        # Convert CRLF to LF
         sanitized_content = patch_content.replace('\r\n', '\n').replace('\r', '\n')
 
-        # Ensure the patch ends with a newline
         if not sanitized_content.endswith('\n'):
             sanitized_content += '\n'
 
@@ -66,18 +66,16 @@ class PatchApplier:
         """
         full_path = os.path.join(self.project_root, target_file)
         if not os.path.isfile(full_path):
-            print(f"Target file not found for normalization: {full_path}")
+            logger.warning(f"Target file not found for normalization: {full_path}")
             return
         try:
             with open(full_path, 'rb') as f:
                 content = f.read()
-            # Convert CRLF to LF
             content = content.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
             with open(full_path, 'wb') as f:
                 f.write(content)
-            print(f"Line endings normalized to LF for {full_path}")
         except Exception as e:
-            print(f"Error normalizing line endings for {full_path}: {e}")
+            logger.error(f"Error normalizing line endings for {full_path}: {e}")
 
     def normalize_all_line_endings(self):
         """
@@ -90,13 +88,11 @@ class PatchApplier:
                     try:
                         with open(full_path, 'rb') as f:
                             content = f.read()
-                        # Convert CRLF to LF
                         content = content.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
                         with open(full_path, 'wb') as f:
                             f.write(content)
-                        print(f"Line endings normalized to LF for {full_path}")
                     except Exception as e:
-                        print(f"Error normalizing line endings for {full_path}: {e}")
+                        logger.error(f"Error normalizing line endings for {full_path}: {e}")
 
     def apply_patch(self, patch_content: str, target_file: str) -> bool:
         """
@@ -107,64 +103,49 @@ class PatchApplier:
         :return: True if the patch was successfully applied, False otherwise.
         """
         try:
-            # Sanitize the patch content
+
             patch_content = self.sanitize_patch_content(patch_content)
 
-            # Normalize the target file's line endings
+
             self.normalize_line_endings(target_file)
 
-            print(f"Applying patch to {target_file} with patch content:\n{patch_content}")
-
-            # Construct the `patch` command with additional options
             command = [
                 "patch",
-                "-f",                  # Force patch without prompting
-                "-N",                  # Ignore patches that have already been applied
-                "--fuzz=3",            # Allow fuzz factor of 3
+                "-f",
+                "-N",
+                "--fuzz=3",
                 '--ignore-whitespace',
                 '--no-backup-if-mismatch',
                 '--reject-file=/dev/null',
-                target_file            # Target file to apply the patch
+                target_file
             ]
 
-            # Run the `patch` command, passing the patch content via stdin
+
             result = subprocess.run(
                 command,
-                input=patch_content,    # Pass patch content to stdin
-                cwd=self.project_root,  # Ensure correct working directory
+                input=patch_content,
+                cwd=self.project_root,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
             )
 
-            # Debugging: Print stdout and stderr
-            print(f"Patch stdout: {result.stdout}")
-            print(f"Patch stderr: {result.stderr}")
-
-            # Check the result of the patch command
             if result.returncode == 0:
-                print(f"Patch applied successfully to {target_file}")
                 return True
             else:
-                print(f"Failed to apply patch to {target_file}\nError: {result.stderr}\nOutput: {result.stdout}")
-                # Optionally, read the reject file if it exists
-                rej_file = f"{target_file}.rej"
-                if os.path.isfile(os.path.join(self.project_root, rej_file)):
-                    with open(os.path.join(self.project_root, rej_file), 'r') as rej:
-                        reject_content = rej.read()
-                        print(f"Rejects saved to {rej_file}:\n{reject_content}")
                 return False
 
         except Exception as e:
-            print(f"Exception occurred while applying patch to {target_file}: {e}")
+            logger.error(f"Exception occurred while applying patch to {target_file}: {e}")
             return False
 
     def apply_patches(self):
         """
         Iterate over the JSON data and apply all patches using their content directly.
         """
-        # Normalize all Java files before applying patches
+
         self.normalize_all_line_endings()
+        start_time = time.time()
 
         for item in self.data:
             for sub_item in item.get("items", []):
@@ -177,10 +158,11 @@ class PatchApplier:
                             try:
                                 with open(patch_path, 'r') as pf:
                                     patch_content = pf.read()
-                                success = self.apply_patch(patch_content, target_file)
-                                if not success:
-                                    print(f"Patch application failed for {patch_path} on {target_file}")
+                                self.apply_patch(patch_content, target_file)
                             except Exception as e:
-                                print(f"Error reading patch file {patch_path}: {e}")
+                                logger.error(f"An exception occurred while applying patch to {target_file}: {e}")
                         else:
-                            print(f"Patch file not found: {patch_path}")
+                            logger.warning(f"Patch file not found: {patch_path}")
+
+        logger.info("Automatic patch application finished.")
+        logger.info(f"Total time taken for automatic patch application: {time.time() - start_time} seconds.")
