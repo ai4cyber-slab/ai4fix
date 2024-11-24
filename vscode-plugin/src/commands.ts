@@ -24,7 +24,6 @@ import {
   SetProjectFolder,
   SCRIPT_PATH,
   utf8Stream,
-  PROJECT_ROOT,
 } from "./constants";
 import { IChange, IFix, Iissue, IProjectAnalysis } from "./interfaces";
 import {
@@ -167,7 +166,7 @@ export function init(
       vscode.workspace.workspaceFolders! &&
       vscode.workspace.workspaceFolders!.length > 0
     ) {
-      SetProjectFolder(vscode.workspace.workspaceFolders[0].uri.fsPath);
+      SetProjectFolder(vscode.workspace.workspaceFolders![0].uri.path);
       logging.LogInfoAndShowInformationMessage(
         "No project folder was given, setting opened workspace as project folder.",
         "No project folder was given, setting opened workspace as project folder."
@@ -353,15 +352,14 @@ export function init(
     } catch (error) {
       logging.LogErrorAndShowErrorMessage(`Failed to clear content of the file at ${issuesPath}:`, error as any);
     }
-    let generatedPatchesPath = PATCH_FOLDER;
-    // let subjectProjectPath = PROJECT_ROOT;
+    
     let jsonFilePaths: string[] = [];
 
     return new Promise<void>((resolve, reject) => {
       const scriptPath = upath.normalize(upath.join(SCRIPT_PATH, 'orchestrator.py'));
   
       const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
-      const command = `${pythonCommand} ${scriptPath} -p ${PROJECT_ROOT}`;
+      const command = `${pythonCommand} ${scriptPath} -r ${PROJECT_FOLDER}`;
   
       const options: child_process.ExecOptions = {
         cwd: PROJECT_FOLDER,
@@ -927,7 +925,7 @@ export function init(
     let project_folder = PROJECT_FOLDER;
     let patch_folder = PATCH_FOLDER;
     if (!PROJECT_FOLDER) {
-      SetProjectFolder(vscode.workspace.workspaceFolders[0].uri.fsPath);
+      SetProjectFolder(vscode.workspace.workspaceFolders![0].uri.path);
     }
 
     let sourceFile: string;
@@ -1099,7 +1097,7 @@ export function init(
     // ==== LOAD PATCH IN "view Patch files" MODE: ====
     if (ANALYZER_USE_DIFF_MODE == "view Diffs") {
       if (!PROJECT_FOLDER) {
-        SetProjectFolder(vscode.workspace.workspaceFolders[0].uri.fsPath);
+        SetProjectFolder(vscode.workspace.workspaceFolders![0].uri.path);
       }
 
       var patch = "";
@@ -1220,7 +1218,7 @@ export function init(
 
   function getPatchedContent(original: string, params: any) {
     if (!PROJECT_FOLDER) {
-      SetProjectFolder(vscode.workspace.workspaceFolders[0].uri.fsPath);
+      SetProjectFolder(vscode.workspace.workspaceFolders![0].uri.path);
     }
 
     var patch = "";
@@ -1931,7 +1929,7 @@ async function saveFileAndFixesToState(filePath: string) {
 
   function getLeftContent(patchPath: string) {
     if (!PROJECT_FOLDER) {
-      SetProjectFolder(vscode.workspace.workspaceFolders[0].uri.fsPath);
+      SetProjectFolder(vscode.workspace.workspaceFolders![0].uri.path);
     }
     let outputFolder = PATCH_FOLDER;
     if (!outputFolder) {

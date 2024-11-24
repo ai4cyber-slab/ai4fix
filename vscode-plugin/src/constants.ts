@@ -33,17 +33,29 @@ function parseConfig(content: string): { [section: string]: { [key: string]: str
   const result: { [section: string]: { [key: string]: string } } = {};
   let currentSection = 'DEFAULT';
 
+  result[currentSection] = {};
+
   lines.forEach((line) => {
-    line = line.trim();
+    const strippedLine = line.trim();
 
-    if (line.startsWith('#') || line === '') return;
+    if (!strippedLine || strippedLine.startsWith('#')) {
+      return;
+    }
 
-    if (line.startsWith('[') && line.endsWith(']')) {
-      currentSection = line.slice(1, -1);
-      result[currentSection] = {};
-    } else if (line.includes('=') && !line.startsWith('#')) {
-      const [key, value] = line.split('=');
-      if (key && value) {
+    const cleanedLine = strippedLine.split('#', 1)[0].trim();
+
+    if (cleanedLine.startsWith('[') && cleanedLine.endsWith(']')) {
+      currentSection = cleanedLine.slice(1, -1).trim();
+      if (!result[currentSection]) {
+        result[currentSection] = {};
+      }
+      return;
+    }
+
+    if (cleanedLine.includes('=')) {
+      const [key, value] = cleanedLine.split('=');
+
+      if (key.trim() && value.trim()) {
         result[currentSection][key.trim()] = value.trim();
       }
     }
@@ -67,39 +79,7 @@ function insertHiddenFile(projectPath: string, originalPath: string): string {
 }
 
 
-export let PROJECT_NAME = "/user_project"
-export let PROJECT_ROOT = vscode.workspace.workspaceFolders[0].uri.fsPath;
-async function selectFolderForAnalysis() {
-  const selectedFolders = await vscode.window.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, openLabel: 'Select Folder for Analysis' });
-
-  let selectedFolderPath;
-  
-  if (!selectedFolders || selectedFolders.length === 0) {
-      // No folder selected, use the root of the opened project
-      selectedFolderPath = PROJECT_ROOT;
-  } else {
-      // Folder selected, use the first selected folder
-      selectedFolderPath = selectedFolders[0].fsPath;
-  }
-
-  logging.LogInfo(selectedFolderPath); // Outputs the selected folders after the dialog completes
-
-  return selectedFolderPath;
-}
-export let PROJECT_FOLDER = upath.normalize(selectFolderForAnalysis());
-/* export var PROJECT_ROOT = upath.normalize(config['DEFAULT']?.['config.project_root'] || '');
-export var PROJECT_DIR = upath.normalize(config['DEFAULT']?.['config.project_dir'] || '');
-
-if (PROJECT_ROOT === '') {
-  logging.LogErrorAndShowErrorMessage(
-    "CONFIG.PROJECT_ROOT is not set in the configuration!",
-    "CONFIG.PROJECT_ROOT is not set in the configuration!"
-  );
-}
-
-if (PROJECT_DIR === '') {
-  PROJECT_DIR = PROJECT_ROOT;
-} */
+export let PROJECT_FOLDER = vscode.workspace.workspaceFolders![0].uri.path;
 
 export function SetProjectFolder(path: string) {
   PROJECT_FOLDER = upath.normalize(path);
@@ -107,17 +87,17 @@ export function SetProjectFolder(path: string) {
 }
 
 // Access values from the parsed config
-export const PATCH_FOLDER = insertHiddenFile(PROJECT_ROOT, upath.normalize(config['DEFAULT']?.['config.results_path'] || 'symbolic_results'));
-export const ISSUES_PATH = insertHiddenFile(PROJECT_ROOT, upath.normalize(config['DEFAULT']?.['config.jsons_listfile'] || 'jsons.lists'))
-export const ANALYZER_USE_DIFF_MODE = config['PLUGIN']?.['plugin.use_diff_mode'] || '';
+export const PATCH_FOLDER = insertHiddenFile(PROJECT_FOLDER, upath.normalize(config['DEFAULT']?.['config.results_path'] || 'symbolic_results'));
+export const ISSUES_PATH = insertHiddenFile(PROJECT_FOLDER, upath.normalize(config['DEFAULT']?.['config.jsons_listfile'] || 'jsons.lists'))
+export const ANALYZER_USE_DIFF_MODE = config['PLUGIN']?.['plugin.use_diff_mode'] || 'view Diffs';
 
 let test_folder_path = config['PLUGIN']?.['plugin.test_folder_log'] || '';
-if(upath.isAbsolute(test_folder_path)) {
-  test_folder_path = upath.relative(PROJECT_ROOT, test_folder_path);
+if(!upath.isAbsolute(test_folder_path)) {
+  test_folder_path = upath.resolve(PROJECT_FOLDER, test_folder_path);
 }
 export const TEST_FOLDER = test_folder_path;
 
-export const SCRIPT_PATH = config['PLUGIN']?.['plugin.script_path'] || '';
+export const SCRIPT_PATH = config['PLUGIN']?.['plugin.script_path'] || '/app';
 export const ANALYZER_MENTION = 'analyzer_mention';
 export const ISSUE = 'issue';
 

@@ -184,8 +184,6 @@ config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # change to where it's located
 # Vscode-Plugin settings
 [PLUGIN]
 plugin.use_diff_mode=view Diffs
-plugin.executing_parameters=ls # makes the connection with the extension - do not change
-plugin.executable_path=target # change to specified project directory in container
 plugin.script_path=/app # makes the connection with the extension - do not change
 plugin.test_folder_log=src/test # path of the test folder in the directory to be analyzed - makes the connection with the extension
 ```
@@ -318,8 +316,6 @@ config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # change to where it's located
 # Vscode-Plugin settings
 [PLUGIN]
 plugin.use_diff_mode=view Diffs
-plugin.executing_parameters=ls # makes the connection with the extension - do not change
-plugin.executable_path=target # change to specified project directory in container
 plugin.script_path=/app # makes the connection with the extension - do not change
 plugin.test_folder_log=src/test # path of the test folder in the directory to be analyzed - makes the connection with the extension
 ```
@@ -361,8 +357,6 @@ config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # change to where it's located
 # Vscode-Plugin settings
 [PLUGIN]
 plugin.use_diff_mode=view Diffs
-plugin.executing_parameters=ls # makes the connection with the extension - do not change
-plugin.executable_path=core/target # change to specified project directory in container
 plugin.script_path=/app # makes the connection with the extension - do not change
 plugin.test_folder_log=core/src/test # path of the test folder in the directory to be analyzed - makes the connection with the extension
 ```
