@@ -80,7 +80,7 @@ if __name__ == "__main__":
         commit_sha=args.commit_sha,
         skip_patches=args.skip_patches,
         sast_rerun=args.sast_rerun,
-        automatic_application=args.automatic_application
+        automatic_application=args.auto
     )
 
     framework.execute_workflow()
