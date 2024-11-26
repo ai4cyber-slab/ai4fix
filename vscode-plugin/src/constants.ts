@@ -79,16 +79,16 @@ function insertHiddenFile(projectPath: string, originalPath: string): string {
 }
 
 
-export let PROJECT_FOLDER = vscode.workspace.workspaceFolders![0].uri.path;
+export let PROJECT_FOLDER = upath.normalize(vscode.workspace.workspaceFolders![0].uri.fsPath);
 
 export function SetProjectFolder(path: string) {
-  PROJECT_FOLDER = upath.normalize(path);
+  PROJECT_FOLDER = upath.normalize(upath.toUnix(path));
   PROJECT_FOLDER_LOG = 'plugin.subject_project_path' + '=' + PROJECT_FOLDER + os.EOL;
 }
 
 // Access values from the parsed config
 export const PATCH_FOLDER = insertHiddenFile(PROJECT_FOLDER, upath.normalize(config['DEFAULT']?.['config.results_path'] || 'symbolic_results'));
-export const ISSUES_PATH = insertHiddenFile(PROJECT_FOLDER, upath.normalize(config['DEFAULT']?.['config.jsons_listfile'] || 'jsons.lists'))
+export const ISSUES_PATH = insertHiddenFile(PROJECT_FOLDER, upath.normalize(config['DEFAULT']?.['config.jsons_listfile'] || 'jsons.lists'));
 export const ANALYZER_USE_DIFF_MODE = config['PLUGIN']?.['plugin.use_diff_mode'] || 'view Diffs';
 
 let test_folder_path = config['PLUGIN']?.['plugin.test_folder_log'] || '';
