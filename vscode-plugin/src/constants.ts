@@ -87,7 +87,7 @@ export function SetProjectFolder(path: string) {
 }
 
 // Access values from the parsed config
-export const PATCH_FOLDER = insertHiddenFile(PROJECT_FOLDER, upath.normalize(config['DEFAULT']?.['config.results_path'] || 'symbolic_results'));
+export const PATCH_FOLDER = insertHiddenFile(PROJECT_FOLDER, upath.normalize(config['DEFAULT']?.['config.results_path'] || 'patches'));
 export const ISSUES_PATH = insertHiddenFile(PROJECT_FOLDER, upath.normalize(config['DEFAULT']?.['config.jsons_listfile'] || 'jsons.lists'))
 export const ANALYZER_USE_DIFF_MODE = config['PLUGIN']?.['plugin.use_diff_mode'] || 'view Diffs';
 
