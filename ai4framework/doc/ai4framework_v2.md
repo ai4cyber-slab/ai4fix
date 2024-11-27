@@ -128,7 +128,7 @@ If you still cannot retrieve the large files using Git LFS, you can manually dow
 - If you're not already in the AI4Framework directory, navigate there by running:
 
   ```bash
-  cd ai4fix
+  cd ai4framework
   ```
 
 Now you're inside the AI4Framework directory.
