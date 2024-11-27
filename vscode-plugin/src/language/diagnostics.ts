@@ -39,7 +39,7 @@ export async function refreshDiagnostics(
     } else {
       aiFixCodeDiagnostics.set(doc.uri, diagnostics);
     }
-    
+
     logging.LogInfo("Finished diagnosis.");
   } catch (error) {
     console.error("Unable to run diagnosis on file:", error);
@@ -54,14 +54,36 @@ function createItemDiagnostic(
   doc: vscode.TextDocument,
   issue: any
 ): vscode.Diagnostic {
-  const range = new vscode.Range(
-    issue.textRange.startLine - 1,
-    issue.textRange.startColumn,
-    issue.textRange.endLine - 1,
-    issue.textRange.endColumn
-  );
-  
-  if (issue.explanation===undefined){
+  let range: any;
+
+  // Handle case when the start and end column matches
+  if (issue.textRange.startColumn === issue.textRange.endColumn && issue.textRange.startLine === issue.textRange.endLine) {
+    const editor = vscode.window.activeTextEditor;
+    if (editor) {
+      const document = editor.document;
+
+      const line = document.lineAt(issue.textRange.startLine - 1);
+      const lineText = line.text;
+
+      const firstNonWhitespaceColumn = line.firstNonWhitespaceCharacterIndex;
+
+      range = new vscode.Range(
+        issue.textRange.startLine - 1,
+        firstNonWhitespaceColumn,
+        issue.textRange.endLine - 1,
+        lineText.length
+      );
+    }
+  } else {
+    range = new vscode.Range(
+      issue.textRange.startLine - 1,
+      issue.textRange.startColumn,
+      issue.textRange.endLine - 1,
+      issue.textRange.endColumn
+    );
+  }
+
+  if (issue.explanation === undefined) {
     issue.explanation = "There is no available patch for this warning."
   }
   const message = `${issue.JavaFileName}: ${issue.explanation}`;
