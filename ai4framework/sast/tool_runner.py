@@ -75,16 +75,12 @@ class ToolRunner:
         Returns:
             list: A list of paths to .class files corresponding to the Java files.
         """
-        start_time = time.time()
         class_files = []
 
         for java_file in self.repo_manager.get_files_to_analyze(self.project_root, self.filter):
             class_file_path = find_class_file_from_java(java_file)
             if class_file_path:
                 class_files.append(class_file_path)
-
-        elapsed_time = time.time() - start_time
-        logger.debug(f"Time taken to find changed class files: {elapsed_time:.2f} seconds")
         return class_files if class_files else []
 
 def find_class_file_from_java(java_file_path):
@@ -100,7 +96,7 @@ def find_class_file_from_java(java_file_path):
     start_time = time.time()
     java_file = os.path.normpath(java_file_path)
     
-    # Determine if it's a test file or main file
+    
     if 'src' + os.path.sep + 'test' in java_file:
         class_path = java_file.replace('src' + os.path.sep + 'test' + os.path.sep + 'java' + os.path.sep, 'target' + os.path.sep + 'test-classes' + os.path.sep)
     elif 'src' + os.path.sep + 'main' in java_file:

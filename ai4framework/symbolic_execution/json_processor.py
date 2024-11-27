@@ -6,7 +6,7 @@ class JSONProcessor:
     @staticmethod
     def extract_and_clean_json(input_file, output_file, base_path='/user_project'):
         """
-        Extracts issues from an input JSON file, cleans and merges them, and saves to an output file.
+        Extracts issues from an input JSON file, cleans them, and saves to an output file.
 
         Args:
             input_file (str): Path to the input JSON file.
@@ -18,26 +18,24 @@ class JSONProcessor:
         """
         def extract_issues(json_file):
             """
-            Extracts and merges issues from a JSON file, converting file paths to relative paths.
+            Extracts issues from a JSON file, converting file paths to relative paths.
 
             Args:
                 json_file (str): Path to the JSON file to process.
 
             Returns:
-                list: A list of merged issues. If the file is empty or contains no valid issues,
+                list: A list of cleaned issues. If the file is empty or contains no valid issues,
                       an empty list will be returned.
             """
             with open(json_file, 'r') as infile:
                 data = json.load(infile)
 
-            merged_issues = {}
+            cleaned_issues = []
 
             def make_relative_path(full_path, base):
                 return os.path.relpath(full_path, base)
 
             for issue in data:
-                explanation = issue['explanation']
-                
                 issue["tags"] = "SE"
                 
                 for item in issue['items']:
@@ -46,19 +44,9 @@ class JSONProcessor:
                     if 'trace' in item:
                         del item['trace']
 
-                if explanation not in merged_issues:
-                    merged_issues[explanation] = {
-                        "id": issue["id"],
-                        "name": issue["name"],
-                        "explanation": explanation,
-                        "tags": issue["tags"],
-                        "items": issue["items"]
-                    }
-                else:
-                    merged_issues[explanation]["items"].extend(issue["items"])
+                cleaned_issues.append(issue)
 
-            merged_issues_list = list(merged_issues.values())
-            return merged_issues_list
+            return cleaned_issues
         
         issues = extract_issues(input_file)
         

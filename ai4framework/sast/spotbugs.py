@@ -3,16 +3,12 @@ import sys
 import uuid
 import subprocess
 import xml.etree.ElementTree as ET
-
 from utils.logger import logger
 
 
 class SpotBugsRunner:
     """
     A class to run SpotBugs static code analysis tool and parse its results.
-
-    This class provides methods to execute SpotBugs on Java files, retrieve the generated report,
-    and parse the report into a structured format.
     """
 
     def __init__(self, config):
@@ -26,6 +22,16 @@ class SpotBugsRunner:
         self.report_path = os.path.join(os.sep, 'app','sast','out','spotbugs.xml')
         self.project_path = self.config.get('DEFAULT', 'config.project_root')
 
+    def find_classes_directories(self, root_path):
+        """
+        Find all 'target/classes' directories in a Maven multi-module project.
+        """
+        return [
+            os.path.join(dirpath, "classes")
+            for dirpath, dirnames, filenames in os.walk(root_path)
+            if dirpath.endswith("target") and "classes" in dirnames
+        ]
+
     def run(self, files_to_analyze):
         """
         Run SpotBugs on the specified Java files.
@@ -36,34 +42,36 @@ class SpotBugsRunner:
         Raises:
             SystemExit: If the SpotBugs check fails.
         """
-        if files_to_analyze == []:
-            logger.warning('There are no files to be analyzed.')
+        if not files_to_analyze:
+            logger.warning("There are no files to be analyzed.")
             sys.exit(1)
 
-        spotbugs_bin = self.config.get('SAST', 'config.spotbugs_bin', fallback=os.path.join(os.sep, 'opt','spotbugs-4.8.6','bin','spotbugs'))
-        command = (
-            f"{spotbugs_bin} -textui "
-            f"-xml:withMessages={self.report_path} "
-            f"{' '.join(files_to_analyze)}"
+        spotbugs_bin = self.config.get(
+            'SAST', 'config.spotbugs_bin',
+            fallback=os.path.join(os.sep, 'opt', 'spotbugs-4.8.6', 'bin', 'spotbugs')
         )
 
+        to_analyze = (
+            ' '.join(self.find_classes_directories(self.project_path))
+            if len(files_to_analyze) > 500 else
+            ' '.join(files_to_analyze)
+        )
+
+        command = f"{spotbugs_bin} -textui -xml:withMessages={self.report_path} {to_analyze}"
+
         try:
-            with subprocess.Popen(
+            process = subprocess.run(
                 command, cwd=self.project_path,
                 shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-            ) as process:
-                stdout, stderr = process.communicate()
-
+            )
             if process.returncode == 0:
                 logger.info("SpotBugs check completed successfully.")
             else:
-                logger.error(f"SpotBugs check failed with return code {process.returncode}: {stderr}")
+                logger.error(f"SpotBugs check failed with return code {process.returncode}: {process.stderr}")
                 sys.exit(process.returncode)
-
         except Exception as e:
             logger.error(f"An error occurred while running SpotBugs: {str(e)}")
             sys.exit(1)
-
 
     def get_report(self, validation=False):
         """
@@ -72,12 +80,10 @@ class SpotBugsRunner:
         Returns:
             str or None: The content of the SpotBugs report if it exists, None otherwise.
         """
-        report = self.report_path
-        if os.path.exists(report):
-            with open(report, 'r') as file:
+        if os.path.exists(self.report_path):
+            with open(self.report_path, 'r') as file:
                 return file.read()
         return None
-
 
     def parse_report(self, limit=100, validation=False):
         """
@@ -97,62 +103,61 @@ class SpotBugsRunner:
         for bug_instance in spotbugs_root.findall('.//BugInstance'):
             issue = {
                 "id": str(uuid.uuid4().int)[:5],
-                "name": bug_instance.get('type').strip() if bug_instance.get('type') is not None else "Unknown Issue",
-                "explanation": bug_instance.find('LongMessage').text.strip() if bug_instance.find('LongMessage') is not None else "No detailed explanation available.",
+                "name": bug_instance.get('type', '').strip(),
+                "explanation": (bug_instance.find('LongMessage').text or "No detailed explanation available.").strip(),
                 "tags": "SB",
                 "items": []
             }
-                
+
             first_source_line = bug_instance.find('SourceLine')
-            class_end_value = bug_instance.find('Class').find('SourceLine').get('end') if bug_instance.find('Class') is not None else None
-            class_start_value = bug_instance.find('Class').find('SourceLine').get('start') if bug_instance.find('Class') is not None else None
+            class_data = bug_instance.find('Class')
+            class_start = class_data.find('SourceLine').get('start') if class_data is not None else '1'
+            class_end = class_data.find('SourceLine').get('end') if class_data is not None else '1'
+
             if first_source_line is not None:
                 relative_path = first_source_line.get('sourcepath', 'unknown file')
-                src_base_dir = find_base_dir_path(self.project_path, relative_path)
-                test_base_dir = find_base_dir_path(self.project_path, relative_path, test_dir=True)
-                    
-                if relative_path != 'unknown file':
-                    if src_base_dir:
-                        full_path = src_base_dir
-                    elif test_base_dir:
-                        full_path = test_base_dir
-                    else:
-                        full_path = 'unknown file'
-                else:
-                    full_path = 'unknown file'
-                    
+                full_path = find_base_dir_path(self.project_path, relative_path) or 'unknown file'
+
+                start_line = first_source_line.get('start', class_start)
+                end_line = first_source_line.get('end', class_end)
+                start_column = first_source_line.get('startBytecode', '1')
+                end_column = first_source_line.get('endBytecode', first_source_line.get('startBytecode', '1'))
+
+                if not all([start_line, end_line, start_column, end_column]):
+                    continue
+
                 textrange = {
                     "file": full_path,
-                    "startLine": int(first_source_line.get('start', class_start_value)),
-                    "endLine": int(first_source_line.get('end', class_end_value)),
-                    "startColumn": int(first_source_line.get('startBytecode', '0')),
-                    "endColumn": int(first_source_line.get('endBytecode', first_source_line.get('startBytecode', '0')))
+                    "startLine": int(start_line),
+                    "endLine": int(end_line),
+                    "startColumn": int(start_column),
+                    "endColumn": int(end_column)
                 }
                 issue["items"].append({"patches": [], "textrange": textrange})
-                
+
             issues.append(issue)
 
-            return issues
+        return issues
 
 
 def find_base_dir_path(project_root, target_path, test_dir=False):
-    if not test_dir:
-        target_path = os.path.join('src', 'main', 'java', target_path)
-    else:
-        target_path = os.path.join('src', 'test', 'java', target_path)
+    """
+    Find the base directory path for a given target efficiently.
 
+    Args:
+        project_root (str): Root directory of the project.
+        target_path (str): The target path to locate.
+        test_dir (bool): Whether to look in the 'test' directory. Defaults to 'main'.
+
+    Returns:
+        str or None: The relative path of the found file from the project root, or None if not found.
+    """
+    target_path = os.path.join('src', 'test' if test_dir else 'main', 'java', target_path)
     norm_target_path = os.path.normpath(target_path)
-
-    # Walk through the project directory
-    for dirpath, dirnames, filenames in os.walk(project_root):
-        # Reconstruct relative path to each file from project root
+    for dirpath, _, filenames in os.walk(project_root):
         for file in filenames:
-            # Absolute path of the current file
-            current_file_path = os.path.join(dirpath, file)
-            
-            # Check if the file matches the end of the target path
-            if current_file_path.endswith(norm_target_path):
-                return current_file_path.replace(project_root + '/', '')  # Return the path where it was found
-
-    # If not found
+            if file == os.path.basename(norm_target_path):
+                current_file_path = os.path.relpath(os.path.join(dirpath, file), project_root)
+                if current_file_path.endswith(norm_target_path):
+                    return current_file_path
     return None
