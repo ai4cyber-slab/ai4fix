@@ -79,10 +79,10 @@ function insertHiddenFile(projectPath: string, originalPath: string): string {
 }
 
 
-export let PROJECT_FOLDER = vscode.workspace.workspaceFolders![0].uri.path;
+export let PROJECT_FOLDER = upath.normalize(vscode.workspace.workspaceFolders![0].uri.fsPath);
 
 export function SetProjectFolder(path: string) {
-  PROJECT_FOLDER = upath.normalize(path);
+  PROJECT_FOLDER = upath.normalize(upath.toUnix(path));
   PROJECT_FOLDER_LOG = 'plugin.subject_project_path' + '=' + PROJECT_FOLDER + os.EOL;
 }
 

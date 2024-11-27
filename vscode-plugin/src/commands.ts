@@ -988,7 +988,7 @@ export function init(
 
           const document = await vscode.workspace.openTextDocument(openFilePath);
           await vscode.window.showTextDocument(document);
-
+          await setIssueSelectionInEditor(patchPathOrIssue);
           await refreshDiagnostics(document, analysisDiagnostics);
 
           if (textRange) {
