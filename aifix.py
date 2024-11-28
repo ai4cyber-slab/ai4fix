@@ -1,12 +1,17 @@
-from dotenv import load_dotenv
-import openai
 import os
-import json
 import sys
+import json
 import subprocess
 
+from dotenv import load_dotenv
+from ai4framework.config.common_config import ConfigManager
+from ai4framework.config.llm_configuration import llm_response
+
+
 load_dotenv()
-openai.api_key = os.getenv('OPENAI_API_KEY')
+provider = ConfigManager._config.get('API', 'config.provider')
+model = ConfigManager._config.get('API', 'config.model')
+api_key = ConfigManager._config.get('API', 'config.key')
 
 def read_file(file_path):
     with open(file_path, 'r') as file:
@@ -31,13 +36,9 @@ def generate_diff(java_code, issue_data):
         f"Based on this, please generate the necessary diff snippet for these lines only."
     )
 
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "user", "content": prompt}
-        ]
-    )
-    return response.choices[0].message['content']
+    messages = [{"role": "user", "content": prompt}]
+    response = llm_response(provider, model, api_key, messages)
+    return response['message']
 
 
 def generate_explanation(diff_content):
@@ -45,14 +46,9 @@ def generate_explanation(diff_content):
         f"Given this diff:\n{diff_content}\n\n"
         f"Summarize the purpose of these changes in a short single sentence:"
     )
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=40
-    )
-    return response.choices[0].message['content']
+    messages = [{"role": "user", "content": prompt}]
+    response = llm_response(provider, model, api_key, messages)
+    return response['message']
 
 
 def write_to_file(file_path, content):

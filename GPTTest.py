@@ -1,12 +1,15 @@
-import openai
-import sys
 import re
+import sys
+
 from dotenv import load_dotenv
-import os
+from ai4framework.config.common_config import ConfigManager
+from ai4framework.config.llm_configuration import llm_response
 
 load_dotenv()
 
-openai.api_key = os.getenv('OPENAI_API_KEY')
+provider = ConfigManager._config.get('API', 'config.provider')
+model = ConfigManager._config.get('API', 'config.model')
+api_key = ConfigManager._config.get('API', 'config.key')
 
 if len(sys.argv) < 4:
     print("Error: Not enough arguments provided. Expected file paths for Java code, diff, test code.")
@@ -30,15 +33,11 @@ diff_file = read_file(diff_file_path)
 
 # prompt
 prompt = f"Original Java Code:\n{java_code}\n\nDiff for the Original Java Code:\n{diff_file}\n\nTest Code for the Original Java Code:\n{java_test}\n\nPlease suggest an updated test code considering the above changes. Only write the code, no additional comment. You should return with the whole original test file with the extra modifications."
-response = openai.ChatCompletion.create(
-    model="gpt-4",
-    messages=[
-        {"role": "user", "content": prompt}
-    ]
-)
+messages = [{"role": "user", "content": prompt}]
+response = llm_response(provider, model, api_key, messages)
 
 def process_response(response):
-    test_code = response.choices[0].message['content']
+    test_code = response['message']
     
     modified_test_code = re.sub(r'class (\w+)Test', r'class \1AITest', test_code)
 

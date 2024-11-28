@@ -1,22 +1,23 @@
-import sys
-import openai
-from openai import OpenAI
-import glob
 import os
 import re
+import sys
+import glob
+
 from dotenv import load_dotenv, find_dotenv
-from collections import defaultdict
 from pom_modifier import PomModifier as PM
+from config.llm_configuration import llm_response
 
 class TestGenerationAI:
     def __init__(self, config=None):
+        self.config = config
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
-        openai.api_key = os.getenv('OPENAI_API_KEY')
-        if not openai.api_key:
-            print("OpenAI API key not found. Please set the OPENAI_API_KEY environment variable.")
-            return
-        self.client = OpenAI()
+        self.provider = self.config.get('API', 'config.provider')
+        self.model = self.config.get('API', 'config.model')
+        self.api_key = self.config.get('API', 'config.key', fallback='')
+        if self.api_key == '':
+            print("API key not found. Please set it in the configuration.")
+            sys.exit(1)
     
 
     def read_file_content(self, file_path):
@@ -32,7 +33,7 @@ class TestGenerationAI:
         else:
             return response_content.strip()
     
-    def generate_test_class(self, java_class_path, diff_content=None):
+    def generate_test_class(self, java_class_path):
         prompt = f"""
         You are a highly accurate coding assistant. You are provided with the following:
 
@@ -44,11 +45,10 @@ class TestGenerationAI:
         by things the java already have built in and ensure the tests follows proper JUnit conventions and do not
         provide any comments or explination just the test class code and if the original java class contains private fields and params use reflection.
         """
-        response = self.client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return self.extract_code_from_response(response.choices[0].message.content)
+
+        messages = [{"role": "user", "content": prompt}]
+        response = llm_response(self.provider, self.model, self.api_key, messages)
+        return self.extract_code_from_response(response['message'])
     
 
     def construct_test_file_path(self, source_file_path, project_path):

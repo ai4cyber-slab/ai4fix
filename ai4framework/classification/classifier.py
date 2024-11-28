@@ -2,20 +2,20 @@
 AI4Framework Classifier Module
 
 This module provides functionality for classifying code changes in a Git repository
-based on their potential security impact. It uses OpenAI's GPT models to analyze
+based on their potential security impact. It uses various LLMs to analyze
 diff files and determine if security testing should be re-run.
 
 Usage:
-    python classifier.py -r <repo_path> -c <commit_sha> -k <openai_api_key> [-m <model>] [-t <temperature>]
+    python classifier.py -r <project_root> -f <filter> -c <commit_sha> -m <model> -t <temperature> -p <provider> -k <api_key>
 
 Arguments:
-    -p, --project_root: Path to the root of the project that is under analysis
-    -r, --repo_path: Path to the Git repository (required)
+    -r, --project_root: Path to the root of the project that is under analysis
     -f, --filter: List of words to filter the modified files
-    -c, --commit_sha: Commit hash to analyze (required)
-    -m, --model: GPT model to use (default: "gpt-4o")
-    -t, --temperature: Temperature setting for the GPT model (default: 0)
-    -k, --key: OpenAI API key (required)
+    -c, --commit_sha: Commit hash to analyze
+    -m, --model: Model to use
+    -t, --temperature: Temperature setting for the model
+    -p, --provider: The LLM provider
+    -k, --key: API key
 
 The script outputs results to both a text log file and a JSON file in the 'out' directory.
 """
@@ -30,9 +30,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from pydantic import BaseModel, Field
 from diff_filtering import remove_unnecessary_diff
-from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from management.repo_manager import RepoManager
+from config.llm_configuration import llm_response
 from langchain.output_parsers import PydanticOutputParser
 
 
@@ -41,21 +41,21 @@ parser = argparse.ArgumentParser(description="Classifier script with arguments",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 # Adding the arguments
-parser.add_argument("-p", "--project_root", type=str, help="Path to the root of the project that is under analysis", required=True)
-parser.add_argument("-r", "--repo_path", type=str, help="The path of your repository", required=True)
+parser.add_argument("-r", "--project_root", type=str, help="Path to the root of the project that is under analysis")
 parser.add_argument("-f", "--filter", type=str, help="List of words to filter the modified files")
-parser.add_argument("-c", "--commit_sha", type=str, help="The hash of the commit", required=True)
-parser.add_argument("-m", "--model", type=str, help="The name of the GPT-model", default="gpt-4o")
-parser.add_argument("-t", "--temperature", type=str, help="The temperature of the model", default=0)
-parser.add_argument("-k", "--key", type=str, help="Your OpenAI API key", required=True)
+parser.add_argument("-c", "--commit_sha", type=str, help="The hash of the commit")
+parser.add_argument("-m", "--model", type=str, help="The name of the model")
+parser.add_argument("-t", "--temperature", type=str, help="The temperature of the model")
+parser.add_argument("-p", "--provider", type=str, help="The LLM provider")
+parser.add_argument("-k", "--key", type=str, help="Your API key")
 
 # Parsing the arguments
 args = parser.parse_args()
 
 output_data = {
-    "repository_path": args.repo_path,
+    "repository_path": args.project_root,
     "commit_sha": args.commit_sha,
-    "gpt_model": args.model,
+    "model": args.model,
     "temperature": args.temperature,
     "security_relevant_files": []
 }
@@ -66,7 +66,7 @@ out_dir = os.path.join(starting_dir, 'out')
 os.makedirs(out_dir, exist_ok=True)
 txt_path = os.path.join(out_dir, args.commit_sha)
 with open(f"{txt_path}.txt", "a") as log_file:
-    log_file.write(f"Repository path: {args.repo_path}\n"
+    log_file.write(f"Repository path: {args.project_root}\n"
                     f"Commmit hash: {args.commit_sha}\n"
                     f"Model: {args.model}\n"
                     f"Temperature: {args.temperature}\n\n")
@@ -153,7 +153,7 @@ def main():
     """
     Main function to run the classifier.
 
-    This function initializes the GPT model, retrieves changed files,
+    This function initializes the LLMs, retrieves changed files,
     analyzes each file's diff, and determines if security testing should be re-run.
     Results are logged and saved to a JSON file.
     """
@@ -213,26 +213,17 @@ def main():
     )
 
 
-    # Initializing the LLM
-    try:
-        llm = ChatOpenAI(api_key=args.key, temperature=args.temperature, model=args.model)
-        llm.invoke("Testing the LLM.")
-    except Exception as e:
-        error_and_log_handling(f"An error occurred while initializing the llm: {e}", True)
-        sys.exit(1)
-
-
     # Inference
     try:
-        changed_files = list_changed_files(args.repo_path, args.commit_sha)
+        changed_files = list_changed_files(args.project_root, args.commit_sha)
         if changed_files != []:
             error_and_log_handling("Successfully retrieved the commit files.", False)
 
-            repo_manager = RepoManager(args.repo_path, args.commit_sha)
+            repo_manager = RepoManager(args.project_root, args.commit_sha)
             parent = repo_manager.get_parent_commit()
             if parent:
                 error_and_log_handling(f"Successfully retrieved the parent commit: {parent}.", False)
-                filter_path = os.path.join(args.repo_path, 'filter.txt')
+                filter_path = os.path.join(args.project_root, 'filter.txt')
                 if os.path.exists(filter_path):
                     os.remove(filter_path)
 
@@ -244,7 +235,7 @@ def main():
                     with open(git_diff_file, 'r', encoding='latin-1') as f:
                         diff_content = f.read()
 
-                    unnecessary_diff = remove_unnecessary_diff(args.repo_path, diff_content)
+                    unnecessary_diff = remove_unnecessary_diff(args.project_root, diff_content)
                     if unnecessary_diff:
                         error_and_log_handling(f"The diff of {file} is unnecessary, it has been removed.\n", True)
                         os.remove(git_diff_file)
@@ -252,16 +243,16 @@ def main():
 
                     try:
                         diff_prompt = describe_prompt.format(diff=diff_content)
-                        diff_response = llm.invoke(diff_prompt)
-                        description = diff_response.content
+                        diff_response = llm_response(args.provider, args.model, args.key, diff_prompt)
+                        description = diff_response['message']
 
                         re_run_prompt = classify_prompt.format(diff=diff_content, description=description)
-                        re_run_response = llm.invoke(re_run_prompt)
+                        re_run_response = llm_response(args.provider, args.model, args.key, re_run_prompt)
                         
-                        parsed_re_running = label_parser.parse(re_run_response.content)
+                        parsed_re_running = label_parser.parse(re_run_response['message'])
                         output = parsed_re_running.worth_to_re_run.strip().lower()
 
-                        if output == 'yes':
+                        if 'yes' in output:
                             line_positions = diff_line_positions(diff_content)
                             output_dict = {
                                 "file_path": file,
@@ -285,7 +276,6 @@ def main():
 
                     except Exception as e:
                         error_and_log_handling(f"An error occurred during the labeling of {file}:\n{e}", True)
-                        # os.system('rm changes.diff')
                         os.remove(git_diff_file)
                         continue
             else:

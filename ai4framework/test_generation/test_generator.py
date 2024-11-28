@@ -1,15 +1,15 @@
 import os
 import re
+import sys
 import json
 import time
-import openai
 import difflib
 import javalang
 import subprocess
 
-from openai import OpenAI
 from dotenv import load_dotenv, find_dotenv
 from utils.logger import logger
+from config.llm_configuration import llm_response
 
 
 class TestGenerator:
@@ -21,8 +21,13 @@ class TestGenerator:
 
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
-        openai.api_key = os.getenv('OPENAI_API_KEY')
-        self.client = OpenAI()
+        self.provider = self.config.get('API', 'config.provider')
+        self.model = self.config.get('API', 'config.model')
+        self.api_key = config.get('API', 'config.key', fallback='')
+        if self.api_key == '':
+            print("API key not found. Please set it in the configuration.")
+            sys.exit(1)
+
 
     def generate_diff(self, old_code, new_code, file_path):
         file_name = os.path.basename(file_path)
@@ -74,11 +79,9 @@ class TestGenerator:
         - Ensure method names, parameters, and access modifiers are consistent with the provided class code.
         """
 
-        response = self.client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return self.extract_code_from_response(response.choices[0].message.content)
+        messages = [{"role": "user", "content": prompt}]
+        response = llm_response(self.provider, self.model, self.api_key, messages)
+        return self.extract_code_from_response(response['message'])
 
 
     def analyze_maven_output(self, result):
@@ -190,8 +193,8 @@ class TestGenerator:
         return new_test_code
 
     def main(self):
-        if not openai.api_key:
-            logger.warning("OPENAI_API_KEY is not set. Skipping the test generation process.")
+        if self.api_key == '':
+            logger.warning("API key is not set. Skipping the test generation process.")
             return
 
         # Check if JSON issues file path is provided
