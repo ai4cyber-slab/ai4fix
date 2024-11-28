@@ -86,7 +86,7 @@ function createItemDiagnostic(
   if (issue.explanation === undefined) {
     issue.explanation = "There is no available patch for this warning."
   }
-  const message = `${issue.JavaFileName}: ${issue.explanation}`;
+  const message = `${issue.name}: ${issue.explanation}`;
 
   const diagnostic = new vscode.Diagnostic(
     range,

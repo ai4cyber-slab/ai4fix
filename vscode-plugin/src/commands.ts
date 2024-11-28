@@ -344,6 +344,23 @@ export function init(
     );
   }
 
+  async function highlightIssueInEditor(textRange: any) {
+    const editor = vscode.window.activeTextEditor;
+    if (editor) {
+      const newSelection = new vscode.Selection(
+        textRange["startLine"] - 1,
+        textRange["startColumn"],
+        textRange["endLine"] - 1,
+        textRange["endColumn"]
+      );
+      editor.selection = newSelection;
+      editor.revealRange(
+        newSelection,
+        vscode.TextEditorRevealType.InCenter
+      );
+    }
+  }
+
   function runOrchestratorScript() {
     let issuesPath = ISSUES_PATH;
     try {
@@ -380,16 +397,12 @@ export function init(
           logging.LogError(`orchestrator.py stderr: ${stderr}`);
         }
   
-        logging.LogInfo(`orchestrator.py output: ${stdout}`);
+        //logging.LogInfo(`orchestrator.py output: ${stdout}`);
         resolve();
       });
   
       childProc.stdout?.on('data', (data) => {
         logging.LogInfo(`orchestrator.py: ${data}`);
-      });
-  
-      childProc.stderr?.on('data', (data) => {
-        logging.LogInfo(`orchestrator.py error: ${data}`);
       });
     })
       .then(() => {
@@ -1055,6 +1068,8 @@ export function init(
       const issueData = patchPathOrIssue;
       targetTextRange = issueData.textRange;
     }
+
+    await highlightIssueInEditor(targetTextRange);
   }
 
   async function extractLineFromPatch(patchPath: string) {
