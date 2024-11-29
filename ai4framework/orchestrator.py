@@ -9,6 +9,8 @@ from utils.plugin_json_converter import JsonPluginConverter
 from patch_generation.patch_applier import PatchApplier
 import time
 import argparse
+import signal
+import sys
 
 
 
@@ -37,12 +39,11 @@ class WorkflowFramework:
         start_time = time.time()
 
         try:
-            rounds_count = int(self.config.get("DEFAULT", "rounds_count", fallback=1))
-        except ValueError:
-            logger.warning("Invalid rounds_count value in configuration, it should be an Integer (eg: rounds_count=3). Using default value of 1.")
-            rounds_count = 1
+            # Register signal handler for SIGINT
+            signal.signal(signal.SIGINT, self.handle_sigint)
 
-        try:
+            rounds_count = int(self.config.get("DEFAULT", "rounds_count", fallback=1))
+
             for i in range(1, rounds_count + 1):
                 self.sast.run_all() if i == 1 else self.sast.run_all(is_initial_round=False)
 
@@ -60,21 +61,22 @@ class WorkflowFramework:
 
                 if self.automatic_application:
                     PatchApplier(self.config).apply_patches()
+
         except KeyboardInterrupt:
-            logger.info("Workflow execution interrupted by user.")
-            # Save current progress
-            logger.info("Saving current progress...")
-            self.json_converter.process()
-            logger.info("Progress saved.")
-            # Exit gracefully
-            exit(0)
+            logger.info("SIGINT received. Gracefully stopping workflow.")
+            self.json_converter.process()  # Save progress
+            logger.info("Progress saved successfully.")
+            sys.exit(0)
         except Exception as e:
-            logger.error(f"An error occurred during workflow execution: {e}")
+            logger.error(f"An error occurred: {e}")
         finally:
             elapsed_time = time.time() - start_time
             logger.info(f"Workflow execution completed in {elapsed_time:.2f} seconds")
 
-
+    def handle_sigint(self, signal_number, frame):
+        """Handle SIGINT (Ctrl+C) for graceful shutdown."""
+        logger.info("SIGINT signal received. Cancelling workflow...")
+        raise KeyboardInterrupt
 
 
 if __name__ == "__main__":
