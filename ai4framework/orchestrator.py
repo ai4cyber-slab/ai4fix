@@ -1,4 +1,6 @@
+import sys
 import time
+import signal
 import argparse
 
 from utils.logger import logger
@@ -8,11 +10,8 @@ from sast.sast_orchestrator import SASTOrchestrator
 from utils.plugin_json_converter import JsonPluginConverter
 from symbolic_execution.execution import SymbolicExecution
 from patch_generation.patch_applier import PatchApplier
-import time
-import argparse
-import signal
-import sys
-
+from patch_generation.patch_generator import PatchGenerator
+from classification.security_classifier import SecurityClassifier
 
 
 class WorkflowFramework:
@@ -30,7 +29,7 @@ class WorkflowFramework:
 
         self.sast = SASTOrchestrator(self.config)
         self.security_classifier = SecurityClassifier(self.config)
-        # self.symbolic_execution = SymbolicExecution(self.config)
+        self.symbolic_execution = SymbolicExecution(self.config)
         self.issues_merger = JSONCombiner(self.config)
         self.json_converter = JsonPluginConverter(self.config)
 
@@ -49,7 +48,7 @@ class WorkflowFramework:
 
             if not self.sast_rerun:
                 self.security_classifier.classify()
-                # self.symbolic_execution.analyze()
+                self.symbolic_execution.analyze()
 
                 warnings_dict_original = self.issues_merger.run()
 
