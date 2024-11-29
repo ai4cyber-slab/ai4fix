@@ -50,7 +50,7 @@ class WorkflowFramework:
             signal.signal(signal.SIGINT, self.handle_sigint)
             logger.info("Signal handler registered")
 
-            rounds_count = int(self.config.get("DEFAULT", "rounds_count", fallback=1))
+            rounds_count = int(self.config.get("DEFAULT", "config.rounds_count", fallback=1))
             logger.info(f"Rounds count: {rounds_count}")
 
             for i in range(1, rounds_count + 1):
@@ -119,5 +119,4 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error("An unexpected error occurred. Please try again or contact support.")
     finally:
-        logger.info("Security analysis workflow execution has ended.")
         sys.exit(0)
