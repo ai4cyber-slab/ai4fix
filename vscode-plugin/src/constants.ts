@@ -13,16 +13,17 @@ var os = require('os');
 
 // EXTENSION SETTINGS:
 
-const configPath = upath.normalize(vscode.workspace.getConfiguration().get<string>('aifix4seccode.analyzer.configPath') || '');
+let configPath = upath.join(vscode.workspace.workspaceFolders![0].uri.fsPath, 'config.properties');
+const normalized_configPath = upath.normalize(configPath);
 
 let config: { [section: string]: { [key: string]: string } } = {};
 
 try {
-  if (configPath && fs.existsSync(configPath)) {
-    const configContent = fs.readFileSync(configPath, 'utf8');
+  if (normalized_configPath && fs.existsSync(normalized_configPath)) {
+    const configContent = fs.readFileSync(normalized_configPath, 'utf8');
     config = parseConfig(configContent);
   } else {
-    vscode.window.showErrorMessage('Configuration file not found: ' + configPath);
+    vscode.window.showErrorMessage('Configuration file not found: ' + normalized_configPath);
   }
 } catch (err) {
   vscode.window.showErrorMessage('Error reading config file: ' + err);

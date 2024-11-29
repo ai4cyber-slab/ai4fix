@@ -91,9 +91,6 @@ RUN code-server --install-extension /opt/aifix4seccode-vscode-1.0.39.vsix
 # Expose port 8080 for code-server
 EXPOSE 8080
 
-# Set the OpenAI API Key as an environment variable (to be provided at runtime)
-ENV OPENAI_API_KEY=''
-
 ENV PROJECT_PATH=''
 
 ENV USER=user

@@ -14,6 +14,9 @@ import requests
 # from huggingface_hub import InferenceClient
 from dotenv import load_dotenv, find_dotenv
 
+from ai4framework.config.common_config import ConfigManager
+from ai4framework.config.llm_configuration import llm_response
+
 
 # Base directory
 base_directory = "C:\\Users\\HP\\slab\\ai4fix\\tester-project\\src\\main\\java"
@@ -55,7 +58,9 @@ def measure_relevant_code_size(vulnerability):
     return class_code_size
 
 bearer_token = os.getenv('HUGGINGFACE_API_TOKEN')
-openai.api_key = os.getenv('OPENAI_API_KEY')
+provider = ConfigManager._config.get('API', 'config.provider')
+model = ConfigManager._config.get('API', 'config.model')
+api_key = ConfigManager._config.get('API', 'config.key')
 
 # hf models
 
@@ -105,25 +110,19 @@ def query(payload):
         answer+=(message.choices[0].delta.content)
     return(answer) """
 
-# openai gpt models
-# recommended version: pip openai==0.28
+# other models
 def generate_text(input_text, retries=3, wait=5):
     for attempt in range(retries):
         try:
-            response = openai.ChatCompletion.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are a software developer tasked with writing a patch for the following vulnerability."},
-                    {"role": "user", "content": input_text}
-                ]
-            )
-            return response['choices'][0]['message']['content']
-        except openai.error.APIError as e:
-            if e.http_status == 524:
-                print(f"Attempt {attempt + 1}/{retries} failed with error: {e}. Retrying in {wait} seconds...")
-                time.sleep(wait)
-            else:
-                raise e
+            messages=[
+                {"role": "system", "content": "You are a software developer tasked with writing a patch for the following vulnerability."},
+                {"role": "user", "content": input_text}
+            ]
+            response = llm_response(provider, model, api_key, messages)
+            return response['message']
+        except Exception as e:
+            print(f"Attempt {attempt + 1}/{retries} failed with error: {e}. Retrying in {wait} seconds...")
+            time.sleep(wait)
     raise Exception("Failed to get a response after several retries")
 
 def create_input_text(vulnerability, additional_info=''):

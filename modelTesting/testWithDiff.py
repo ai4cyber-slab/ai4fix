@@ -6,8 +6,9 @@ import shutil
 from collections import defaultdict
 import requests
 import re
-import time
 from dotenv import load_dotenv, find_dotenv
+from ai4framework.config.common_config import ConfigManager
+from ai4framework.config.llm_configuration import llm_response
 
 run = 0
 failed = 0
@@ -29,7 +30,9 @@ collect_warnings_script = r'path_to_collect_warnings_script\collectWarnings.py'
 dotenv_path = find_dotenv()
 load_dotenv(dotenv_path)
 bearer_token = os.getenv('HUGGINGFACE_API_TOKEN')
-openai.api_key = os.getenv('OPENAI_API_KEY')
+provider = ConfigManager._config.get('API', 'config.provider')
+model = ConfigManager._config.get('API', 'config.model')
+api_key = ConfigManager._config.get('API', 'config.key')
 
 API_URL = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct"
 headers = {"Authorization": f"Bearer {bearer_token}"}
@@ -57,17 +60,14 @@ def generate_text(input_text):
         print(f"An error occurred: {e}")
         return None
 
-# gpt-4o
-"""
-def generate_text(input_text):
-    response = openai.ChatCompletion.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": "You are a software developer tasked with writing a patch for the following vulnerability."},
-            {"role": "user", "content": input_text}
-        ]
-    )
-    return response['choices'][0]['message']['content']  """
+# other model
+# def generate_text(input_text):
+    messages=[
+        {"role": "system", "content": "You are a software developer tasked with writing a patch for the following vulnerability."},
+        {"role": "user", "content": input_text}
+    ]
+    response = llm_response(provider, model, api_key, messages)
+    return response['message']
 
 def create_input_text(vulnerability, additional_info=""):
     input_text = f"""
