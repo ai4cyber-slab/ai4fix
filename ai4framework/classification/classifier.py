@@ -229,11 +229,17 @@ def main():
 
                 for file in changed_files:
                     git_diff_file = os.path.join('changes.diff')
+
+                    default_dir = os.getcwd()
+                    os.chdir(args.project_root)
+
                     os.system(f'git diff {parent} {args.commit_sha} -- {file} > {git_diff_file}') # Creating the diff file
                     error_and_log_handling(f"Successfully created the diff file of {file}.", False)
 
                     with open(git_diff_file, 'r', encoding='latin-1') as f:
                         diff_content = f.read()
+
+                    os.chdir(default_dir)
 
                     unnecessary_diff = remove_unnecessary_diff(args.project_root, diff_content)
                     if unnecessary_diff:
@@ -243,11 +249,13 @@ def main():
 
                     try:
                         diff_prompt = describe_prompt.format(diff=diff_content)
-                        diff_response = llm_response(args.provider, args.model, args.key, diff_prompt)
+                        diff_messages = [{"role": "user", "content": diff_prompt}]
+                        diff_response = llm_response(args.provider, args.model, args.key, diff_messages)
                         description = diff_response['message']
 
                         re_run_prompt = classify_prompt.format(diff=diff_content, description=description)
-                        re_run_response = llm_response(args.provider, args.model, args.key, re_run_prompt)
+                        re_run_messages = [{"role": "user", "content": re_run_prompt}]
+                        re_run_response = llm_response(args.provider, args.model, args.key, re_run_messages)
                         
                         parsed_re_running = label_parser.parse(re_run_response['message'])
                         output = parsed_re_running.worth_to_re_run.strip().lower()

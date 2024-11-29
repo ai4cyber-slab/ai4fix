@@ -1,11 +1,12 @@
-from symbolic_execution.execution import SymbolicExecution
-from config.common_config import ConfigManager
+import time
+import argparse
+
 from utils.logger import logger
-from classification.security_classifier import SecurityClassifier
-from sast.sast_orchestrator import SASTOrchestrator
-from patch_generation.patch_generator import PatchGenerator
 from utils.issues_merger import JSONCombiner
+from config.common_config import ConfigManager
+from sast.sast_orchestrator import SASTOrchestrator
 from utils.plugin_json_converter import JsonPluginConverter
+from symbolic_execution.execution import SymbolicExecution
 from patch_generation.patch_applier import PatchApplier
 import time
 import argparse
@@ -21,7 +22,6 @@ class WorkflowFramework:
     security classification, and symbolic execution to perform a comprehensive security analysis
     of a software project.
     """
-
     def __init__(self, project_root, commit_sha, skip_patches=False, sast_rerun=False, automatic_application=False):
         self.config = ConfigManager.get_config(project_root, commit_sha)
         self.sast_rerun = sast_rerun
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--commit_sha", help="The hash of the commit, with the modified files to be analyzed. If not provided, the whole project will be analyzed.")
     parser.add_argument("--skip-patches", action="store_true", help="If provided, the patches part will be skipped.")
     parser.add_argument("--sast-rerun", action="store_true", help="If provided, issues will be generated for the new java files contents.")
-    parser.add_argument("--auto", action="store_true", help="If provided, patches will be applied automatically after the analysis complete.")
+    parser.add_argument("--auto", action="store_true", help="If provided, patches will be applied automatically after the analysis is complete.")
     args = parser.parse_args()
 
     framework = WorkflowFramework(
