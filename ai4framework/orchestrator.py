@@ -22,8 +22,8 @@ class WorkflowFramework:
     of a software project.
     """
 
-    def __init__(self, project_root, commit_sha, skip_patches=False, sast_rerun=False, automatic_application=False):
-        self.config = ConfigManager.get_config(project_root, commit_sha)
+    def __init__(self, commit_sha, skip_patches=False, sast_rerun=False, automatic_application=False):
+        self.config = ConfigManager.get_config(commit_sha)
         self.sast_rerun = sast_rerun
         self.skip_patches = skip_patches
         self.automatic_application = automatic_application
@@ -92,7 +92,6 @@ if __name__ == "__main__":
     try:
         parser = argparse.ArgumentParser(description="Executes the security analysis workflow.")
 
-        parser.add_argument("-r", "--project_root", help="Path to the root directory of your project.")
         parser.add_argument("-c", "--commit_sha", help="The hash of the commit, with the modified files to be analyzed. If not provided, the whole project will be analyzed.")
         parser.add_argument("--skip-patches", action="store_true", help="If provided, the patches part will be skipped.")
         parser.add_argument("--sast-rerun", action="store_true", help="If provided, issues will be generated for the new java files contents.")
@@ -100,7 +99,6 @@ if __name__ == "__main__":
         args = parser.parse_args()
 
         framework = WorkflowFramework(
-            project_root=args.project_root,
             commit_sha=args.commit_sha,
             skip_patches=args.skip_patches,
             sast_rerun=args.sast_rerun,

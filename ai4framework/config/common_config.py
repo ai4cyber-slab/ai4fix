@@ -14,23 +14,22 @@ class ConfigManager:
 
     _config = None
     @classmethod
-    def get_config(cls, project_root, commit_sha):
+    def get_config(cls, commit_sha):
         """
         Load configuration settings from a specified file, ignoring comments and comment-only lines.
 
         Args:
-            project_root (str): Path to the root of the project.
             commit_sha (str): The hash of the commit, with the modified files to be analyzed.
 
         Returns:
             configparser.ConfigParser: The loaded configuration object.
         """
-        if project_root == None:
-            project_root = os.getenv("PROJECT_PATH")
+        
+        project_root = os.getenv("LOCAL_PROJECT_PATH")
 
-            if not project_root:
-                logger.warning("Project root path is missing. Either set it as the PROJECT_PATH environment variable, or provide it as a command-line argument (-r/--project_root).")
-                sys.exit(1)
+        if not project_root:
+            logger.warning("LOCAL_PROJECT_PATH environment variable is missing. Terminating.")
+            sys.exit(1)
 
         project_name = project_root.replace('/', '')
 

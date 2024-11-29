@@ -91,7 +91,7 @@ RUN code-server --install-extension /opt/aifix4seccode-vscode-1.0.39.vsix
 # Expose port 8080 for code-server
 EXPOSE 8080
 
-ENV PROJECT_PATH=''
+ENV LOCAL_PROJECT_PATH=''
 
 ENV USER=user
 ENV USERNAME=user

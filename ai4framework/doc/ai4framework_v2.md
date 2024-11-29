@@ -9,18 +9,18 @@ Welcome to **AI4Framework**! This guide will walk you through setting up and usi
 1. [What is AI4Framework?](#what-is-ai4framework)
 2. [Before You Start](#before-you-start)
 3. [Setting Up AI4Framework](#setting-up-ai4framework)
-4. [Running AI4Framework](#running-ai4framework)
-   - [On Windows](#on-windows)
-   - [On Linux or macOS](#on-linux-or-macos)
+4. [Running Docker](#running-docker)
+    - [On Windows](#on-windows)
+    - [On Linux or macOS](#on-linux-or-macos)
 5. [Analyzing Your Project](#analyzing-your-project)
-   - [Option 1: Using the Built-in Editor](#option-1-using-the-built-in-editor)
-   - [Option 2: Using Command Line Access (Headless Mode)](#option-2-using-command-line-access-headless-mode)
-   - [Orchestrator.py Script Options](#orchestratorpy-script-options)
+    - [Option 1: Using the Built-in Editor](#option-1-using-the-built-in-editor)
+    - [Option 2: Using Command Line Access (Headless Mode)](#option-2-using-command-line-access-headless-mode)
+    - [Configuration File](#configuration-file)
+    - [Orchestrator.py Script Options](#orchestratorpy-script-options)
 6. [Example Scenario: Running AI4Framework on macOS in Headless Mode](#example-scenario-running-ai4framework-on-macos-in-headless-mode)
-7. [Understanding the Results](#understanding-the-results)
-8. [Getting Your Results Back](#getting-your-results-back)
-9. [Configuration File](#configuration-file)
-10. [Need Support?](#need-support)
+    - [Reviewing and Retrieving the Results](#reviewing-and-retrieving-the-results)
+    - [Getting Your Results Back](#getting-your-results-back)
+7. [Need Support?](#need-support)
 
 ---
 
@@ -39,7 +39,7 @@ Welcome to **AI4Framework**! This guide will walk you through setting up and usi
 - **Git and Git LFS**: Installed ([Download Git](https://git-scm.com/downloads), [Download Git LFS](https://git-lfs.github.com/))
   - **Important**: AI4Framework's repository contains large files managed by Git LFS.
 - **A Maven-Structured Project**: Your project should be organized with Maven (typically contains a `pom.xml` file in the root directory).
-- **Configuration File**: A `config.properties` file in your project's root folder (instructions provided below).
+- **Configuration File**: A `config.properties` file in your project's root folder. See the guide in the [Configuration File](#configuration-file) section.
 
 ---
 
@@ -65,6 +65,15 @@ If Git LFS does not retrieve large files automatically, navigate to the `ai4fram
 git lfs pull
 ```
 
+#### Manually Downloading Large Files
+If you still cannot retrieve the large files using Git LFS, you can manually download them from GitHub:
+1. Visit the [AI4Framework GitHub repository](https://github.com/ai4cyber-slab/ai4fix).
+2. Navigate to the files or folders that are large (they might be indicated in the repository).
+3. Download the files directly from GitHub by clicking on them and selecting **Download**.
+4. Place the downloaded files into the appropriate directories within the `ai4framework` folder on your computer.
+
+**Important**: Ensure that the files are placed in the correct locations to avoid any issues when running the framework.
+
 ### Step 2: Navigate to the AI4Framework Directory
 
 ```bash
@@ -73,7 +82,7 @@ cd ai4framework
 
 ---
 
-## Running AI4Framework
+## Running Docker
 
 ### On Windows
 
@@ -175,6 +184,39 @@ Once the container starts, you'll be in its command line interface.
 
 - Press **Enter**.
 
+---
+
+### Configuration File
+
+Create a `config.properties` file in your project's root folder with the following content:
+
+```properties
+[DEFAULT]
+config.filter= # Words to filter files (if present in file paths, those files will be ignored). Leave empty to analyze all files.
+config.rounds_count=1 # Number of times to run the process. Useful for auto patching with '--auto' option.
+
+[API]
+config.provider=openai # Service to use ('groq', 'openai', 'claude')
+config.key=your_api_key  # Enter your API key directly
+config.model=gpt-4o # Desired model name
+config.temperature=0 # Desired temperature
+
+[SAST]
+config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # Path as specified in the Dockerfile
+config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # Path as specified in the Dockerfile
+config.pmd_ruleset=/app/utils/PMD-config.xml # Leave as default or change if needed
+
+[ANALYZER]
+config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # Path as specified in the Dockerfile
+
+[PLUGIN]
+plugin.use_diff_mode=view Diffs
+plugin.script_path=/app # Do not change
+plugin.test_folder_log=src/test # Path of the test folder in your project
+```
+
+---
+
 ### Orchestrator.py Script Options
 
 You can customize the analysis by providing various command-line arguments.
@@ -267,9 +309,7 @@ bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/Users/yourusername/projects/my
 python /app/orchestrator.py
 ```
 
----
-
-## Understanding the Results
+### Reviewing and Retrieving the Results
 
 After the analysis, AI4Framework creates a hidden folder `.ai4framework` in your project directory containing:
 
@@ -281,13 +321,28 @@ After the analysis, AI4Framework creates a hidden folder `.ai4framework` in your
 - **sast_issues**: Issues found by static analysis tools.
 - **jsons.lists**: Paths to the validated JSON files.
 
----
+Back in your Mac terminal (outside the container), copy the results from the container to your local project folder.
+First, find the container ID by running:
 
-## Getting Your Results Back
+```bash
+docker ps -a
+```
+
+Note the container ID associated with AI4Framework.
+
+Copy the `.ai4framework` folder from the container to your project directory:
+
+```bash
+docker cp <container_id>:/project/.ai4framework "/Users/yourusername/projects/myproject"
+```
+
+Replace `<container_id>` with the actual container ID.
+
+### Getting Your Results Back
 
 Before finishing, copy the results from the Docker container to your computer.
 
-### Step 1: Find Your Container ID
+#### Step 1: Find Your Container ID
 
 Run:
 
@@ -297,44 +352,13 @@ docker ps -a
 
 Note the container ID associated with AI4Framework.
 
-### Step 2: Copy the Results
+#### Step 2: Copy the Results
 
 ```bash
 docker cp <container_id>:/project/.ai4framework /path/to/your/project
 ```
 
 Replace `<container_id>` with the actual container ID and `/path/to/your/project` with your local project path.
-
----
-
-## Configuration File
-
-Create a `config.properties` file in your project's root folder with the following content:
-
-```properties
-[DEFAULT]
-config.filter= # Words to filter files (if present in file paths, those files will be ignored). Leave empty to analyze all files.
-config.rounds_count=1 # Number of times to run the process. Useful for auto patching with '--auto' option.
-
-[API]
-config.provider=openai # Service to use ('groq', 'openai', 'claude')
-config.key=your_api_key  # Enter your API key directly
-config.model=gpt-4o # Desired model name
-config.temperature=0 # Desired temperature
-
-[SAST]
-config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # Path as specified in the Dockerfile
-config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # Path as specified in the Dockerfile
-config.pmd_ruleset=/app/utils/PMD-config.xml # Leave as default or change if needed
-
-[ANALYZER]
-config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # Path as specified in the Dockerfile
-
-[PLUGIN]
-plugin.use_diff_mode=view Diffs
-plugin.script_path=/app # Do not change
-plugin.test_folder_log=src/test # Path of the test folder in your project
-```
 
 ---
 
