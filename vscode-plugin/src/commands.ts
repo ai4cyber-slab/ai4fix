@@ -414,7 +414,6 @@ export function init(
         error as any
       );
       vscode.window.showErrorMessage(`Failed to clear issues path file: ${error}`);
-      throw error; // Stop execution if we cannot clear the issues file
     }
 
     // Step 2: Define the path to orchestrator.py
