@@ -49,10 +49,6 @@ class WorkflowFramework:
         start_time = time.time()
 
         try:
-            # Register signal handler for SIGINT
-            signal.signal(signal.SIGINT, self.handle_sigint)
-            logger.info("Signal handler registered")
-
             rounds_count = int(self.config.get("DEFAULT", "config.rounds_count", fallback=1))
             logger.info(f"Rounds count: {rounds_count}")
 

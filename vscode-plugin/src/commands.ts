@@ -543,7 +543,6 @@ export function init(
         if (jsonFilePaths.length === 0) {
           logging.LogError('No JSON file paths found in the issuesPath file.');
           vscode.window.showErrorMessage('No issues found after analysis.');
-          return;
         }
       } catch (err) {
         logging.LogError(`Error reading the issuesPath file: ${err}`);
