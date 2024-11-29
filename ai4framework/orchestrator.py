@@ -42,26 +42,38 @@ class WorkflowFramework:
             logger.warning("Invalid rounds_count value in configuration, it should be an Integer (eg: rounds_count=3). Using default value of 1.")
             rounds_count = 1
 
-        for i in range(1, rounds_count + 1):
-            self.sast.run_all() if i == 1 else self.sast.run_all(is_initial_round=False)
+        try:
+            for i in range(1, rounds_count + 1):
+                self.sast.run_all() if i == 1 else self.sast.run_all(is_initial_round=False)
 
-            if not self.sast_rerun:
-                # self.security_classifier.classify()
-                self.symbolic_execution.analyze()
+                if not self.sast_rerun:
+                    # self.security_classifier.classify()
+                    self.symbolic_execution.analyze()
 
+                warnings_dict_original = self.issues_merger.run()
 
-            warnings_dict_original = self.issues_merger.run()
+                if not self.skip_patches and not self.sast_rerun:
+                    patch_generator = PatchGenerator(self.config, warnings_dict_original, i)
+                    patch_generator.main()
 
-            if not self.skip_patches and not self.sast_rerun:
-                patch_generator = PatchGenerator(self.config, warnings_dict_original, i)
-                patch_generator.main()
+                self.json_converter.process()
 
+                if self.automatic_application:
+                    PatchApplier(self.config).apply_patches()
+        except KeyboardInterrupt:
+            logger.info("Workflow execution interrupted by user.")
+            # Save current progress
+            logger.info("Saving current progress...")
             self.json_converter.process()
+            logger.info("Progress saved.")
+            # Exit gracefully
+            exit(0)
+        except Exception as e:
+            logger.error(f"An error occurred during workflow execution: {e}")
+        finally:
+            elapsed_time = time.time() - start_time
+            logger.info(f"Workflow execution completed in {elapsed_time:.2f} seconds")
 
-            if self.automatic_application:
-                PatchApplier(self.config).apply_patches()
-        elapsed_time = time.time() - start_time
-        logger.info(f"Workflow execution completed in {elapsed_time:.2f} seconds")
 
 
 

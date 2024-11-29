@@ -25,7 +25,7 @@ try {
     vscode.window.showErrorMessage('Configuration file not found: ' + configPath);
   }
 } catch (err) {
-  vscode.window.showErrorMessage('Error reading config file: ' + err);
+  logging.LogErrorAndShowErrorMessage('Error reading config file: ', err as any);
 }
 
 function parseConfig(content: string): { [section: string]: { [key: string]: string } } {

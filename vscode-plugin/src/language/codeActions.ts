@@ -213,7 +213,7 @@ export class Analyzer implements vscode.CodeActionProvider {
                                 let currentFilePath = vscode.window.activeTextEditor?.document.uri.path!;
                                 if (currentFilePath) {
                                     // Push the Python script command
-                                    commandActions.push(this.createPythonCommand("AI: generate new patch", range, warningId, currentFilePath, projectFolder, patch_folder, issuesPath));
+                                    //commandActions.push(this.createPythonCommand("AI: generate new patch", range, warningId, currentFilePath, projectFolder, patch_folder, issuesPath));
                                     pythonCommandAdded = true; // Mark the Python command as added
                                 }
                             }
@@ -221,14 +221,14 @@ export class Analyzer implements vscode.CodeActionProvider {
                     });
 
                     // Add the Python script option, even if there are no available patches
-                    if (!pythonCommandAdded) {
+                    /* if (!pythonCommandAdded) {
                         let currentFilePath = vscode.window.activeTextEditor?.document.uri.path!;
                         if (currentFilePath) {
                             // Push the Python script command
                             commandActions.push(this.createPythonCommand("AI: generate new patch", range, warningId, currentFilePath, PROJECT_FOLDER, PATCH_FOLDER, ISSUES_PATH));
                             pythonCommandAdded = true; // Mark the Python command as added
                         }
-                    }
+                    } */
                 }
             });
         });
@@ -244,7 +244,7 @@ export class Analyzer implements vscode.CodeActionProvider {
   }
 
   // Create the new command for running the Python script
-  private createPythonCommand(title: string, range: vscode.Range, warningId: string, javaFilePath: string, projectFolder: string, patchFolder: string, issuesPath: string): vscode.CodeAction {
+  /* private createPythonCommand(title: string, range: vscode.Range, warningId: string, javaFilePath: string, projectFolder: string, patchFolder: string, issuesPath: string): vscode.CodeAction {
     const action = new vscode.CodeAction(title, vscode.CodeActionKind.QuickFix);
     action.command = {
       command: 'aifix4seccode-vscode.generatePatchForSingleWarning',
@@ -253,7 +253,7 @@ export class Analyzer implements vscode.CodeActionProvider {
       tooltip: 'This will run a Python script.'
     };
     return action;
-  }
+  } */
 }
 
 export class AnalyzerInfo implements vscode.CodeActionProvider {
