@@ -15,123 +15,61 @@ Welcome to **AI4Framework**! This guide will walk you through setting up and usi
 5. [Analyzing Your Project](#analyzing-your-project)
    - [Option 1: Using the Built-in Editor](#option-1-using-the-built-in-editor)
    - [Option 2: Using Command Line Access (Headless Mode)](#option-2-using-command-line-access-headless-mode)
+   - [Orchestrator.py Script Options](#orchestratorpy-script-options)
 6. [Example Scenario: Running AI4Framework on macOS in Headless Mode](#example-scenario-running-ai4framework-on-macos-in-headless-mode)
 7. [Understanding the Results](#understanding-the-results)
 8. [Getting Your Results Back](#getting-your-results-back)
-9. [Additional Help](#additional-help)
+9. [Configuration File](#configuration-file)
 10. [Need Support?](#need-support)
 
 ---
 
 ## What is AI4Framework?
 
-**AI4Framework** is a tool that helps you automatically check your code for issues and even suggests fixes. Think of it as a smart assistant that reviews your code to make it better and more secure.
+**AI4Framework** is a tool that automatically checks your code for issues and suggests fixes, helping you improve your code's quality and security.
 
 ---
 
 ## Before You Start
 
-### What You Need
+### Prerequisites
 
-1. **A Computer with One of the Following Operating Systems:**
-   - Windows
-   - Linux
-   - macOS
-
-2. **Docker Installed and Running:**
-   - Docker allows applications to run in containers. If you don't have it, you can download it from [Docker's official site](https://www.docker.com/get-started).
-
-3. **Git Installed:**
-   - Git is a version control system. You can download it from [Git's official site](https://git-scm.com/downloads).
-
-4. **Git LFS Installed:**
-   - **Important**: AI4Framework's repository contains large files managed by Git LFS (Large File Storage). You need to install Git LFS to properly clone the repository.
-   - Download Git LFS from [Git LFS's official site](https://git-lfs.github.com/).
-
-5. **A Maven-Structured Project:**
-   - AI4Framework works with projects organized using Maven. If you're not sure, Maven projects typically have a `pom.xml` file in the root directory.
-
-6. **An OpenAI API Key:**
-   - You'll need an API key from OpenAI to use some features. You can get one by signing up at [OpenAI's website](https://openai.com/api/).
-
-7. **A Configuration File:**
-   - You need to create a file named `config.properties` in the root folder of your project (the one you want to analyze). We'll guide you on how to do this in the [Additional Help](#additional-help) section.
+- **Operating System**: Windows, Linux, or macOS
+- **Docker**: Installed and running ([Download Docker](https://www.docker.com/get-started))
+- **Git and Git LFS**: Installed ([Download Git](https://git-scm.com/downloads), [Download Git LFS](https://git-lfs.github.com/))
+  - **Important**: AI4Framework's repository contains large files managed by Git LFS.
+- **A Maven-Structured Project**: Your project should be organized with Maven (typically contains a `pom.xml` file in the root directory).
+- **Configuration File**: A `config.properties` file in your project's root folder (instructions provided below).
 
 ---
 
 ## Setting Up AI4Framework
 
-### Step 1: Install Git LFS
+### Step 1: Clone the AI4Framework Repository
 
-Before cloning the AI4Framework repository, you need to install Git LFS (Large File Storage) to handle large files in the repository.
+Ensure Git LFS is installed and initialized:
 
-#### Install Git LFS
+```bash
+git lfs install
+```
 
-- Download and install Git LFS from [Git LFS's official site](https://git-lfs.github.com/).
-- Follow the installation instructions for your operating system.
+Clone the repository:
 
-#### Initialize Git LFS
+```bash
+git clone --branch dev --single-branch https://github.com/ai4cyber-slab/ai4fix.git
+```
 
-- Open your command prompt (Windows) or terminal (Linux/macOS).
-- Run the following command to initialize Git LFS:
+If Git LFS does not retrieve large files automatically, navigate to the `ai4framework` directory and run:
 
-  ```bash
-  git lfs install
-  ```
+```bash
+git lfs pull
+```
 
-### Step 2: Download AI4Framework
+### Step 2: Navigate to the AI4Framework Directory
 
-Now, you're ready to clone the AI4Framework repository.
-
-- In your command prompt or terminal, run:
-
-  ```bash
-  git clone --branch dev --single-branch https://github.com/ai4cyber-slab/ai4fix.git
-  ```
-
-This command downloads AI4Framework to your computer.
-
-**Note**: Git LFS will automatically download the large files during the cloning process.
-
-#### If Git LFS Does Not Retrieve Large Files
-
-In some cases, Git LFS may not automatically download the large files. If you notice that some files are missing or appear as pointers (small text files), follow these steps:
-
-- Navigate to the AI4Framework directory:
-
-  ```bash
-  cd ai4framework
-  ```
-
-- Run the following command to fetch the large files:
-
-  ```bash
-  git lfs pull
-  ```
-
-#### Manually Downloading Large Files
-
-If you still cannot retrieve the large files using Git LFS, you can manually download them from GitHub:
-
-1. Visit the [AI4Framework GitHub repository](https://github.com/ai4cyber-slab/ai4fix).
-
-2. Navigate to the files or folders that are large (they might be indicated in the repository).
-
-3. Download the files directly from GitHub by clicking on them and selecting **Download**.
-
-4. Place the downloaded files into the appropriate directories within the `ai4framework` folder on your computer.
-
-**Important**: Ensure that the files are placed in the correct locations to avoid any issues when running the framework.
-
-### Step 3: Navigate to the AI4Framework Folder
-
-- If you're not already in the AI4Framework directory, navigate there by running:
-
-  ```bash
-  cd ai4framework
-  ```
-
-Now you're inside the AI4Framework directory.
+```bash
+cd ai4framework
+```
 
 ---
 
@@ -141,20 +79,19 @@ Now you're inside the AI4Framework directory.
 
 #### Step 1: Open PowerShell
 
-- Press `Win + X` and select **Windows PowerShell**.
+Press `Win + X` and select **Windows PowerShell**.
 
 #### Step 2: Run the Script
 
-Replace the placeholders with your information:
+Replace placeholders with your information:
 
 ```powershell
-.\ai4framework_entry.ps1 -OPENAI_API_KEY "your_api_key" -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/project" -PORT 8080
+.\ai4framework_entry.ps1 -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/project" -PORT 8080
 ```
 
-- **`your_api_key`**: Your OpenAI API key.
-- **`C:\path\to\your\project`**: The full path to your project folder.
-- **`/project`**: The path inside the container (you can leave this as `/project`).
-- **`8080`**: The port number (you can change this if needed).
+- **`C:\path\to\your\project`**: Full path to your project folder.
+- **`/project`**: Path inside the container (usually `/project`).
+- **`8080`**: Port number (change if needed).
 
 ### On Linux or macOS
 
@@ -162,22 +99,21 @@ Replace the placeholders with your information:
 
 #### Step 2: Run the Script
 
-Replace the placeholders with your information:
+Replace placeholders with your information:
 
 ```bash
-bash ai4framework_entry.sh --OPENAI_API_KEY "your_api_key" --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 8080
+bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 8080
 ```
 
-- **`your_api_key`**: Your OpenAI API key.
-- **`/path/to/your/project`**: The full path to your project folder.
-- **`/project`**: The path inside the container (you can leave this as `/project`).
-- **`8080`**: The port number (you can change this if needed).
+- **`/path/to/your/project`**: Full path to your project folder.
+- **`/project`**: Path inside the container (usually `/project`).
+- **`8080`**: Port number (change if needed).
 
 ---
 
 ## Analyzing Your Project
 
-After running the script, AI4Framework sets up a special environment (a Docker container) where your project will be analyzed.
+After running the script, AI4Framework sets up a Docker container where your project will be analyzed.
 
 You have two options to proceed:
 
@@ -197,11 +133,11 @@ This method lets you use a web-based code editor similar to Visual Studio Code.
 
 #### Step 2: Open the Terminal in the Editor
 
-- In the web editor, click on **Terminal** in the top menu, then **New Terminal**.
+- In the web editor, click on **Terminal** > **New Terminal**.
 
 #### Step 3: Run the Analysis
 
-- In the terminal that opens at the bottom, type:
+- In the terminal, type:
 
   ```bash
   python /app/orchestrator.py
@@ -209,31 +145,27 @@ This method lets you use a web-based code editor similar to Visual Studio Code.
 
 - Press **Enter**.
 
-The framework will initiate an analysis of your entire project. To view available options, use the `-h` argument.
-
 ### Option 2: Using Command Line Access (Headless Mode)
 
-If you prefer using the command line without the web editor, you can run the script with an additional argument to get direct access to the container's terminal.
+If you prefer using the command line without the web editor, run the script with an additional argument to get direct access to the container's terminal.
 
 #### Step 1: Run the Script with Bash Access
 
 **On Windows:**
 
 ```powershell
-.\ai4framework_entry.ps1 -OPENAI_API_KEY "your_api_key" -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/project" -PORT 8080 -RunWithBash
+.\ai4framework_entry.ps1 -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/project" -PORT 8080 -RunWithBash
 ```
 
 **On Linux or macOS:**
 
 ```bash
-bash ai4framework_entry.sh --OPENAI_API_KEY "your_api_key" --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 8080 --RunWithBash
+bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 8080 --RunWithBash
 ```
-
-- The `-RunWithBash` or `--RunWithBash` argument tells the script to open the container with direct command line access after setup.
 
 #### Step 2: Run the Analysis Inside the Container
 
-Once the container starts, you'll be inside its command line interface.
+Once the container starts, you'll be in its command line interface.
 
 - Type:
 
@@ -243,234 +175,166 @@ Once the container starts, you'll be inside its command line interface.
 
 - Press **Enter**.
 
-The framework will start analyzing your entire project. To view available options, use the `-h` argument.
+### Orchestrator.py Script Options
 
----
+You can customize the analysis by providing various command-line arguments.
 
-## Example Scenario: Running AI4Framework on macOS in Headless Mode
+#### Usage
 
-Let's walk through a specific example where:
+```bash
+python /app/orchestrator.py [options]
+```
 
-- You're using **macOS**.
-- You want to deploy AI4Framework in your infrastructure.
-- You prefer to run it in **headless mode** (command line only).
-- You want to analyze **the entire project folder**.
-- You need to use port **9090** because port 8080 is already in use.
-- You want to obtain all **warnings and patches** (`.diff` files).
+#### Options
 
-### Step-by-Step Instructions
+- **`-h`, `--help`**: Show help message and exit.
+- **`-c COMMIT_SHA`, `--commit_sha COMMIT_SHA`**: Analyze only files changed in the specified commit.
+- **`--skip-patches`**: Perform analysis without generating patches.
+- **`--sast-rerun`**: Run static analysis tools only.
+- **`--auto`**: Automatically apply generated patches to your code.
 
-#### Step 1: Open Terminal
+#### Examples
 
-- On your Mac, open the **Terminal** application.
-
-#### Step 2: Navigate to the AI4Framework Directory
-
-- If you haven't already, clone the AI4Framework repository (with Git LFS):
-
-  ```bash
-  git clone --branch dev --single-branch https://github.com/ai4cyber-slab/ai4fix.git
-  ```
-
-  **Note**: Ensure Git LFS is installed and initialized before cloning.
-
-- Change directory to AI4Framework:
-
-  ```bash
-  cd ai4framework
-  ```
-
-#### Step 3: Prepare Your Project
-
-- Ensure your project is a **Maven-structured project**.
-- Place your project folder somewhere accessible, e.g., `/Users/yourusername/projects/myproject`.
-
-#### Step 4: Create the `config.properties` File
-
-- In your project's root folder (`myproject`), create a file named `config.properties` with the following content:
-
-  ```properties
-  [DEFAULT]
-  config.filter=  # Leave empty to analyze all files
-
-  [SAST]
-  config.pmd_ruleset=/app/utils/PMD-config.xml
-
-  [CLASSIFIER]
-  gpt_model=gpt-4o
-  temperature=0
-
-  [PLUGIN]
-  plugin.use_diff_mode=view Diffs
-  ```
-
-- **Note**: By leaving `config.filter` empty, all files in your project will be analyzed.
-
-#### Step 5: Run the Script with Bash Access and Custom Port
-
-- In the AI4Framework directory, run:
-
-  ```bash
-  bash ai4framework_entry.sh --OPENAI_API_KEY "your_api_key" --LOCAL_PROJECT_PATH "/Users/yourusername/projects/myproject" --CONTAINER_PROJECT_PATH "/project" --PORT 9090 --RunWithBash
-  ```
-
-  - Replace `"your_api_key"` with your actual OpenAI API key.
-  - Ensure the `LOCAL_PROJECT_PATH` points to your project folder.
-  - The `--PORT 9090` argument tells the script to use port **9090** instead of the default **8080**.
-  - The `--RunWithBash` argument opens the container in headless mode.
-
-#### Step 6: Run the Analysis Inside the Container
-
-- Once inside the container's command line interface, start the analysis by typing:
+- **Analyze the Entire Project**
 
   ```bash
   python /app/orchestrator.py
   ```
 
-- Press **Enter**.
-
-The framework will now analyze your entire project and generate warnings and patches.
-
-#### Step 7: Wait for the Analysis to Complete
-
-- The analysis might take some time, depending on the size of your project.
-- You'll see progress messages in the terminal.
-
-#### Step 8: Exit the Container
-
-- After the analysis is complete, exit the container by typing:
+- **Analyze Files Changed in a Specific Commit**
 
   ```bash
-  exit
+  python /app/orchestrator.py -c <commit_sha>
   ```
 
-- Press **Enter**.
-
-#### Step 9: Retrieve the Results
-
-- Back in your Mac terminal (outside the container), copy the results from the container to your local project folder.
-- First, find the container ID by running:
+- **Analyze Without Generating Patches**
 
   ```bash
-  docker ps -a
+  python /app/orchestrator.py --skip-patches
   ```
 
-- Note the container ID associated with AI4Framework.
-
-- Copy the `.ai4framework` folder from the container to your project directory:
+- **Run Static Analysis Tools Only**
 
   ```bash
-  docker cp <container_id>:/project/.ai4framework "/Users/yourusername/projects/myproject"
+  python /app/orchestrator.py --sast-rerun
   ```
 
-  - Replace `<container_id>` with the actual container ID.
-
-#### Step 10: Review the Results
-
-- Navigate to your project folder:
+- **Automatically Apply Patches**
 
   ```bash
-  cd "/Users/yourusername/projects/myproject"
+  python /app/orchestrator.py --auto
   ```
 
-- The `.ai4framework` folder contains all the warnings and patches (`.diff` files).
+---
+
+## Example Scenario: Running AI4Framework on macOS in Headless Mode
+
+Suppose you want to:
+
+- Use **macOS**.
+- Deploy AI4Framework in headless mode.
+- Analyze the entire project folder.
+- Use port **9090** because port 8080 is already in use.
+- Obtain all **warnings and patches**.
+
+### Steps
+
+#### Step 1: Open Terminal
+
+#### Step 2: Navigate to the AI4Framework Directory
+
+```bash
+cd ai4framework
+```
+
+#### Step 3: Prepare Your Project
+
+Ensure your project is a **Maven-structured project** located at `/Users/yourusername/projects/myproject`.
+
+#### Step 4: Create the `config.properties` File
+
+In your project's root folder (`myproject`), create a file named `config.properties`. See the [Configuration File](#configuration-file) section for details.
+
+#### Step 5: Run the Script with Bash Access and Custom Port
+
+```bash
+bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/Users/yourusername/projects/myproject" --CONTAINER_PROJECT_PATH "/project" --PORT 9090 --RunWithBash
+```
+
+#### Step 6: Run the Analysis Inside the Container
+
+```bash
+python /app/orchestrator.py
+```
 
 ---
 
 ## Understanding the Results
 
-Once the analysis is complete, AI4Framework creates a hidden folder in your project called `.ai4framework`. Here's what's inside:
+After the analysis, AI4Framework creates a hidden folder `.ai4framework` in your project directory containing:
 
-- **patches**: Contains the validated `.diff` files with suggested fixes.
+- **patches**: Validated `.diff` files with suggested fixes.
 - **symbolic_results**: Issues found by the symbolic execution tool.
-- **validation**: Relevant to the web-based editor option, this folder contains details about issues found and the suggested patches.
-- **visualizations**: Stats like how many issues were found/Fixed/Token consumption etc.
-- **issues.json**: A file listing all the issues and suggested fixes.
+- **validation**: Details about issues found and suggested patches.
+- **visualizations**: Statistics like the number of issues found/fixed, token consumption, etc.
+- **issues.json**: A file listing all issues and suggested fixes.
 - **sast_issues**: Issues found by static analysis tools.
-- **jsons.lists**: Relevant to the web-based editor option, it holds paths to the validated JSON files.
+- **jsons.lists**: Paths to the validated JSON files.
 
 ---
 
 ## Getting Your Results Back
 
-Before you finish, make sure to copy the results from the Docker container back to your computer.
+Before finishing, copy the results from the Docker container to your computer.
 
 ### Step 1: Find Your Container ID
 
-- Open a new terminal or command prompt (outside the container).
-- Run:
+Run:
 
-  ```bash
-  docker ps -a
-  ```
+```bash
+docker ps -a
+```
 
-- Note the container ID of the AI4Framework container (it may have a name similar to `ai4fix`).
+Note the container ID associated with AI4Framework.
 
 ### Step 2: Copy the Results
 
-- Run:
+```bash
+docker cp <container_id>:/project/.ai4framework /path/to/your/project
+```
 
-  ```bash
-  docker cp <container_id>:/project/.ai4framework /path/to/your/project
-  ```
-
-  Replace:
-
-  - `<container_id>` with the ID of the Docker container running AI4Framework.
-  - `/path/to/your/project` with the local path to your project folder on your computer.
-
-Now, the `.ai4framework` folder with all the results is in your project folder.
+Replace `<container_id>` with the actual container ID and `/path/to/your/project` with your local project path.
 
 ---
 
-## Additional Help
+## Configuration File
 
-### Creating the `config.properties` File
-
-In your project's root folder, create a file named `config.properties` with the following content:
+Create a `config.properties` file in your project's root folder with the following content:
 
 ```properties
 [DEFAULT]
-config.filter=  # Leave empty to analyze all files
+config.filter= # Words to filter files (if present in file paths, those files will be ignored). Leave empty to analyze all files.
+config.rounds_count=1 # Number of times to run the process. Useful for auto patching with '--auto' option.
+
+[API]
+config.provider=openai # Service to use ('groq', 'openai', 'claude')
+config.key=your_api_key  # Enter your API key directly
+config.model=gpt-4o # Desired model name
+config.temperature=0 # Desired temperature
 
 [SAST]
-config.pmd_ruleset=/app/utils/PMD-config.xml
+config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # Path as specified in the Dockerfile
+config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # Path as specified in the Dockerfile
+config.pmd_ruleset=/app/utils/PMD-config.xml # Leave as default or change if needed
 
-[CLASSIFIER]
-gpt_model=gpt-4o
-temperature=0
+[ANALYZER]
+config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # Path as specified in the Dockerfile
 
 [PLUGIN]
 plugin.use_diff_mode=view Diffs
+plugin.script_path=/app # Do not change
+plugin.test_folder_log=src/test # Path of the test folder in your project
 ```
-
-- **`config.filter`**: By leaving it empty, all files will be analyzed.
-- **`gpt_model`**: The AI model to use. You can leave it as `gpt-4`.
-- **`temperature`**: Controls the randomness of the AI's responses. `0` means very deterministic.
-
-### Script Options and Help
-
-You can view all available options for the script by running:
-
-**On Windows:**
-
-```powershell
-.\ai4framework_entry.ps1 -h
-```
-
-**On Linux or macOS:**
-
-```bash
-bash ai4framework_entry.sh -h
-```
-
-**Script Options:**
-
-- **`OPENAI_API_KEY`**: Your OpenAI API key.
-- **`LOCAL_PROJECT_PATH`**: Path to your local project directory.
-- **`CONTAINER_PROJECT_PATH`**: Path inside the container where the project will reside.
-- **`PORT`**: (Optional) Specify the port number for the container (default is `8080`).
-- **`RunWithBash`**: (Optional) Open the container with command line access (Headless mode).
 
 ---
 

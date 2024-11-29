@@ -87,7 +87,7 @@ class RepoManager:
                     if not file.name.startswith('.')
                 ]
 
-            if filter:
+            if filter != '':
                 filter_words = {word.strip() for word in filter.split(',')}
                 files_to_analyze = [
                     file for file in all_files
