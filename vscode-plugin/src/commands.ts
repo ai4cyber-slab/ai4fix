@@ -280,24 +280,25 @@ export function init(
       vscode.window.showWarningMessage('Analysis is already running.');
       return;
     }
-
+  
     isAnalyzing = true;
     analysisCancellationTokenSource = new vscode.CancellationTokenSource();
-
-    analysisStatusBarItem.text = '$(sync~spin) Analyzing... (Click to Cancel)';
-    analysisStatusBarItem.command = 'aifix4seccode-vscode.cancelAnalysis'; // Set to cancelAnalysis
-
+  
+    analysisStatusBarItem.text = '$(sync~spin) Analyzing...';
+    analysisStatusBarItem.command = undefined; // Remove the cancel command
+  
     logging.LogInfo('===== Analysis started from command. =====');
-
+  
     try {
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: 'Analyzing project!',
-          cancellable: false,
+          title: 'Analyzing project...',
+          cancellable: true, // Make the progress notification cancellable
         },
-        async () => {
-          await runOrchestratorScript(analysisCancellationTokenSource!.token);
+        async (progress, cancellationToken) => {
+          // Pass the progress and cancellationToken to runOrchestratorScript
+          await runOrchestratorScript(progress, cancellationToken);
         }
       );
     } catch (error) {
@@ -401,9 +402,12 @@ export function init(
     }
   }
 
-  async function runOrchestratorScript(cancellationToken: vscode.CancellationToken) {
+  async function runOrchestratorScript(
+    progress: vscode.Progress<{ message?: string; increment?: number }>,
+    cancellationToken: vscode.CancellationToken
+  ) {
     const issuesPath = ISSUES_PATH;
-
+  
     // Step 1: Clear the issuesPath file
     try {
       writeFileSync(issuesPath, '', 'utf8');
@@ -414,70 +418,92 @@ export function init(
         error as any
       );
       vscode.window.showErrorMessage(`Failed to clear issues path file: ${error}`);
-      throw error; // Stop execution if we cannot clear the issues file
     }
-
+  
     // Step 2: Define the path to orchestrator.py
     const scriptPath = upath.normalize(upath.join(SCRIPT_PATH, 'orchestrator.py'));
-
+  
     // Determine the Python command based on the platform
     const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
-
+  
     // Define arguments for the script
     const args = [scriptPath, '-r', PROJECT_FOLDER];
-
+  
     // Define spawn options
     const options: child_process.SpawnOptions = {
       cwd: PROJECT_FOLDER,
-      shell: false, // Avoid using shell to prevent command injection
+      shell: false,
       env: {
         ...process.env,
         PYTHONUNBUFFERED: '1', // Disable output buffering
       },
     };
-
+  
     logging.LogInfo(`Running orchestrator in: ${PROJECT_FOLDER}`);
-
+  
     // Step 3: Spawn the orchestrator.py process
     const childProc = spawn(pythonCommand, args, options);
-
+  
     // Handle cancellation
     cancellationToken.onCancellationRequested(() => {
       logging.LogInfo('Cancellation requested. Terminating orchestrator.py...');
-      childProc.kill('SIGINT'); // Send SIGINT to trigger KeyboardInterrupt
+      if (process.platform === 'win32') {
+        const pid = childProc.pid;
+        const exec = require('child_process').exec;
+        exec(`taskkill /PID ${pid} /T /F`, (error: any, stdout: any, stderr: any) => {
+          if (error) {
+            logging.LogError(`Error killing process: ${error.message}`);
+          } else {
+            logging.LogInfo('Process terminated successfully.');
+          }
+        });
+      } else {
+        childProc.kill('SIGINT');
+      }
     });
-    
+  
     // Set up readline to process stdout line by line
     const rl = readline.createInterface({
       input: childProc.stdout,
       crlfDelay: Infinity,
     });
-
+  
+    // Initialize progress variables
+    let totalTasks = 0;
+    let completedTasks = 0;
+  
     // Listen for lines from stdout
     rl.on('line', (line: string) => {
       logging.LogInfo(`orchestrator.py: ${line}`);
-
+    
       // Parse progress updates in the format "PROGRESS_UPDATE: x/y"
       const progressMatch = line.match(/^PROGRESS_UPDATE:\s*(\d+)\/(\d+)/);
       if (progressMatch) {
-        const current = parseInt(progressMatch[1], 10);
-        const total = parseInt(progressMatch[2], 10);
-        analysisStatusBarItem.text = `$(sync~spin) Patch generation ${current}/${total} (Click to Cancel)`;
+        completedTasks = parseInt(progressMatch[1], 10);
+        totalTasks = parseInt(progressMatch[2], 10);
+    
+        if (totalTasks > 0) {
+          const increment = (1 / totalTasks) * 100; // Increment for each task
+          progress.report({
+            message: `Processing issue ${completedTasks}/${totalTasks}`,
+            increment: increment,
+          });
+        }
       }
     });
-
+  
     // Listen for errors on stderr
     childProc.stderr.on('data', (data: Buffer) => {
       const message = data.toString();
       logging.LogInfo(`orchestrator.py: ${message}`);
     });
-
+  
     // Handle process exit
     const processExitPromise = new Promise<void>((resolve, reject) => {
       childProc.on('close', (code, signal) => {
         if (cancellationToken.isCancellationRequested) {
           logging.LogInfo('Process was cancelled by the user.');
-          resolve(); // Resolve since cancellation is expected
+          resolve();
         } else if (code === 0) {
           logging.LogInfo(`orchestrator.py completed successfully with exit code ${code}`);
           resolve();
@@ -488,18 +514,18 @@ export function init(
           reject(error);
         }
       });
-
+  
       childProc.on('error', (error) => {
         logging.LogError(`Failed to start orchestrator.py: ${error.message}`);
         vscode.window.showErrorMessage(`Failed to start analysis: ${error.message}`);
         reject(error);
       });
     });
-
+  
     try {
       // Await the process to complete or be cancelled
       await processExitPromise;
-
+  
       if (cancellationToken.isCancellationRequested) {
         logging.LogInfo('Analysis was cancelled by the user.');
         getDiagnosticsAfterPatch();
