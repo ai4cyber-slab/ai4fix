@@ -25,10 +25,10 @@ class ConfigManager:
             configparser.ConfigParser: The loaded configuration object.
         """
         
-        project_root = os.getenv("LOCAL_PROJECT_PATH")
+        project_root = os.getenv("PROJECT_PATH")
 
         if not project_root:
-            logger.warning("LOCAL_PROJECT_PATH environment variable is missing. Terminating.")
+            logger.warning("PROJECT_PATH environment variable is missing. Terminating.")
             sys.exit(1)
 
         project_name = project_root.replace('/', '')

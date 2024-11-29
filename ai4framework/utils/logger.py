@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 
 AI4FRAMEWORK_DIR = Path(__file__).resolve().parent.parent
-DEFAULT_LOG_FILE_PATH = os.path.join(os.getenv('LOCAL_PROJECT_PATH'), '.ai4framework', 'logs', 'ai4framework.log')
+DEFAULT_LOG_FILE_PATH = os.path.join(os.getenv('PROJECT_PATH'), '.ai4framework', 'logs', 'ai4framework.log')
 BANNER_FILE_PATH = os.path.join(AI4FRAMEWORK_DIR, 'banner.txt')
 LOG_COLORS = {
     logging.DEBUG: "\033[94m",  # Blue
