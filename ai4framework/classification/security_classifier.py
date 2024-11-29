@@ -57,7 +57,7 @@ class SecurityClassifier:
             return
         
         # Check if the commit sha is available
-        if self.config.get('CLASSIFIER', 'commit_sha') == '':
+        if self.config.get('DEFAULT', 'config.commit_sha') == '':
             logger.info("Commit sha is not set. Skipping the classification process.")
             return
 
@@ -67,7 +67,7 @@ class SecurityClassifier:
             "python", "classifier.py",
             "-r", self.repo_path,
             "-f", self.config.get('DEFAULT', 'config.filter'),
-            "-c", self.config.get('CLASSIFIER', 'commit_sha'),
+            "-c", self.config.get('DEFAULT', 'config.commit_sha'),
             "-m", self.config.get('API', 'config.model'),
             "-t", self.config.get('API', 'config.temperature'),
             "-p", self.config.get('API', 'config.provider'),

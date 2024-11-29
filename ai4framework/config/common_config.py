@@ -41,11 +41,7 @@ class ConfigManager:
 
         cls._config.set('DEFAULT', 'config.project_name', project_name)
         cls._config.set('DEFAULT', 'config.project_root', project_root)
-
-        if not cls._config.has_section('CLASSIFIER'):
-            cls._config.add_section('CLASSIFIER')  # Create the section if it doesn't exist
-
-        cls._config.set('CLASSIFIER', 'commit_sha', commit_sha)
+        cls._config.set('DEFAULT', 'config.commit_sha', commit_sha)
 
         cleaned_lines = []
         config_file = os.path.join(project_root, 'config.properties')
