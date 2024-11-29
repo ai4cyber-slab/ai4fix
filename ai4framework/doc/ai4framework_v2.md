@@ -15,6 +15,7 @@ Welcome to **AI4Framework**! This guide will walk you through setting up and usi
 5. [Analyzing Your Project](#analyzing-your-project)
    - [Option 1: Using the Built-in Editor](#option-1-using-the-built-in-editor)
    - [Option 2: Using Command Line Access (Headless Mode)](#option-2-using-command-line-access-headless-mode)
+   - [Understanding Orchestrator.py Script Options](#understanding-orchestratorpy-script-options)
 6. [Example Scenario: Running AI4Framework on macOS in Headless Mode](#example-scenario-running-ai4framework-on-macos-in-headless-mode)
 7. [Understanding the Results](#understanding-the-results)
 8. [Getting Your Results Back](#getting-your-results-back)
@@ -51,10 +52,7 @@ Welcome to **AI4Framework**! This guide will walk you through setting up and usi
 5. **A Maven-Structured Project:**
    - AI4Framework works with projects organized using Maven. If you're not sure, Maven projects typically have a `pom.xml` file in the root directory.
 
-6. **An OpenAI API Key:**
-   - You'll need an API key from OpenAI to use some features. You can get one by signing up at [OpenAI's website](https://openai.com/api/).
-
-7. **A Configuration File:**
+6. **A Configuration File:**
    - You need to create a file named `config.properties` in the root folder of your project (the one you want to analyze). We'll guide you on how to do this in the [Additional Help](#additional-help) section.
 
 ---
@@ -148,10 +146,9 @@ Now you're inside the AI4Framework directory.
 Replace the placeholders with your information:
 
 ```powershell
-.\ai4framework_entry.ps1 -OPENAI_API_KEY "your_api_key" -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/project" -PORT 8080
+.\ai4framework_entry.ps1 -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/project" -PORT 8080
 ```
 
-- **`your_api_key`**: Your OpenAI API key.
 - **`C:\path\to\your\project`**: The full path to your project folder.
 - **`/project`**: The path inside the container (you can leave this as `/project`).
 - **`8080`**: The port number (you can change this if needed).
@@ -165,10 +162,9 @@ Replace the placeholders with your information:
 Replace the placeholders with your information:
 
 ```bash
-bash ai4framework_entry.sh --OPENAI_API_KEY "your_api_key" --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 8080
+bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 8080
 ```
 
-- **`your_api_key`**: Your OpenAI API key.
 - **`/path/to/your/project`**: The full path to your project folder.
 - **`/project`**: The path inside the container (you can leave this as `/project`).
 - **`8080`**: The port number (you can change this if needed).
@@ -220,13 +216,13 @@ If you prefer using the command line without the web editor, you can run the scr
 **On Windows:**
 
 ```powershell
-.\ai4framework_entry.ps1 -OPENAI_API_KEY "your_api_key" -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/project" -PORT 8080 -RunWithBash
+.\ai4framework_entry.ps1 -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/project" -PORT 8080 -RunWithBash
 ```
 
 **On Linux or macOS:**
 
 ```bash
-bash ai4framework_entry.sh --OPENAI_API_KEY "your_api_key" --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 8080 --RunWithBash
+bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 8080 --RunWithBash
 ```
 
 - The `-RunWithBash` or `--RunWithBash` argument tells the script to open the container with direct command line access after setup.
@@ -244,6 +240,125 @@ Once the container starts, you'll be inside its command line interface.
 - Press **Enter**.
 
 The framework will start analyzing your entire project. To view available options, use the `-h` argument.
+
+### Understanding Orchestrator.py Script Options
+
+When running the `orchestrator.py` script, you can customize the analysis by providing various command-line arguments.
+
+#### Usage
+
+```bash
+python /app/orchestrator.py [-h] [-r PROJECT_ROOT] [-c COMMIT_SHA] [--skip-patches] [--sast-rerun] [--auto]
+```
+
+**Description:**
+
+Executes the security analysis workflow.
+
+#### Optional Arguments
+
+- **`-h`, `--help`**
+
+  Show the help message and exit.
+
+- **`-r PROJECT_ROOT`, `--project_root PROJECT_ROOT`**
+
+  Path to the root directory of your project.
+
+  - **Note**: If you have already provided the project path via the `ai4framework_entry.ps1` or `ai4framework_entry.sh` scripts using the `LOCAL_PROJECT_PATH` argument, you do not need to specify the `PROJECT_ROOT` again here.
+
+- **`-c COMMIT_SHA`, `--commit_sha COMMIT_SHA`**
+
+  The hash of the commit containing the modified files to be analyzed.
+
+  - **Usage**: Use this argument if you want to analyze only the files changed in a specific commit rather than the entire project.
+  - **Note**: If not provided, the whole project will be analyzed.
+
+- **`--skip-patches`**
+
+  If provided, the script will perform the analysis and generate warnings and results, but it will not generate any patches or `.diff` files for the issues found.
+
+  - **Use Case**: Useful when you want to review the issues without generating suggested fixes.
+
+- **`--sast-rerun`**
+
+  If provided, the script will run the static analysis tools only, such as SpotBugs and PMD, without proceeding to the patch generation step.
+
+  - **Use Case**: Useful when you want to update or refresh the static analysis results.
+
+- **`--auto`**
+
+  If provided, the script will automatically apply the generated patches to your code after the analysis is complete.
+
+  - **How It Works**: After generating the `.diff` files (patches), the script will apply them one by one to your project files.
+  - **Note**: This feature works based on the `config.rounds_count` setting in your `config.properties` file. If not all patches are applied successfully due to mismatches or conflicts, increasing `config.rounds_count` can allow the script to attempt multiple rounds of patch application.
+
+#### Examples
+
+- **Analyze the Entire Project**
+
+  ```bash
+  python /app/orchestrator.py
+  ```
+
+- **Analyze Only Files Changed in a Specific Commit**
+
+  ```bash
+  python /app/orchestrator.py -c <commit_sha>
+  ```
+
+  Replace `<commit_sha>` with the actual commit hash.
+
+- **Analyze Without Generating Patches**
+
+  ```bash
+  python /app/orchestrator.py --skip-patches
+  ```
+
+- **Run Static Analysis Tools Only**
+
+  ```bash
+  python /app/orchestrator.py --sast-rerun
+  ```
+
+- **Automatically Apply Patches**
+
+  ```bash
+  python /app/orchestrator.py --auto
+  ```
+
+  - Ensure your `config.properties` file has the appropriate `config.rounds_count` setting. For example, setting `config.rounds_count=2` allows the script to attempt applying patches over two rounds.
+
+#### Additional Notes
+
+- **Combining Arguments**
+
+  You can combine multiple arguments to customize the analysis. For example:
+
+  ```bash
+  python /app/orchestrator.py -c <commit_sha> --auto
+  ```
+
+  This command analyzes only the files changed in the specified commit and automatically applies the patches.
+
+- **Project Root**
+
+  If you need to specify a different project root within the container, use the `-r` or `--project_root` argument. However, in most cases, if you have set up the project path correctly when running the entry script, you don't need to specify this argument again.
+
+- **Automatic Patch Application**
+
+  The `--auto` flag works in conjunction with the `config.rounds_count` setting in your `config.properties` file. If some patches cannot be applied due to code changes or conflicts, increasing the `config.rounds_count` allows the script to attempt multiple times.
+
+  - **Example `config.properties` Setting:**
+
+    ```properties
+    config.rounds_count=2
+    ```
+
+- **Limitations**
+
+  - Automatic patch application might not always succeed if the code has significantly changed since the patches were generated.
+  - Always review the applied patches to ensure they do not introduce new issues.
 
 ---
 
@@ -291,17 +406,24 @@ Let's walk through a specific example where:
 
   ```properties
   [DEFAULT]
-  config.filter=  # Leave empty to analyze all files
-
+  config.filter=test # A list of words that filters the files. If they are present in a file path, those files will be ignored. If nothing is passed, every file in the project will be analyzed.
+  config.rounds_count=1 # Number of times to run the process. Default is 1. Useful for auto patching with python /app/orchestrator.py --auto
+  [API]
+  config.provider=openai # specify which service to use (groq, openai, claude)
+  config.key=your_api_key  # Enter your API key directly without quotes
+  config.model=gpt-4o # change to desired model name
+  config.temperature=0 # change to desired temperature
   [SAST]
-  config.pmd_ruleset=/app/utils/PMD-config.xml
-
-  [CLASSIFIER]
-  gpt_model=gpt-4o
-  temperature=0
-
+  config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # change to where it's located
+  config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # change to where it's located
+  config.pmd_ruleset=/app/utils/PMD-config.xml # change to where it's located or leave the default
+  [ANALYZER]
+  config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # change to where it's located
+  # Vscode-Plugin settings
   [PLUGIN]
   plugin.use_diff_mode=view Diffs
+  plugin.script_path=/app # makes the connection with the extension - do not change
+  plugin.test_folder_log=src/test # path of the test folder in the directory to be analyzed - makes the connection with the extension
   ```
 
 - **Note**: By leaving `config.filter` empty, all files in your project will be analyzed.
@@ -311,10 +433,9 @@ Let's walk through a specific example where:
 - In the AI4Framework directory, run:
 
   ```bash
-  bash ai4framework_entry.sh --OPENAI_API_KEY "your_api_key" --LOCAL_PROJECT_PATH "/Users/yourusername/projects/myproject" --CONTAINER_PROJECT_PATH "/project" --PORT 9090 --RunWithBash
+  bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/Users/yourusername/projects/myproject" --CONTAINER_PROJECT_PATH "/project" --PORT 9090 --RunWithBash
   ```
 
-  - Replace `"your_api_key"` with your actual OpenAI API key.
   - Ensure the `LOCAL_PROJECT_PATH` points to your project folder.
   - The `--PORT 9090` argument tells the script to use port **9090** instead of the default **8080**.
   - The `--RunWithBash` argument opens the container in headless mode.
@@ -384,7 +505,7 @@ Once the analysis is complete, AI4Framework creates a hidden folder in your proj
 - **patches**: Contains the validated `.diff` files with suggested fixes.
 - **symbolic_results**: Issues found by the symbolic execution tool.
 - **validation**: Relevant to the web-based editor option, this folder contains details about issues found and the suggested patches.
-- **visualizations**: Stats like how many issues were found/Fixed/Token consumption etc.
+- **visualizations**: Stats like how many issues were found/fixed, token consumption, etc.
 - **issues.json**: A file listing all the issues and suggested fixes.
 - **sast_issues**: Issues found by static analysis tools.
 - **jsons.lists**: Relevant to the web-based editor option, it holds paths to the validated JSON files.
@@ -431,26 +552,43 @@ In your project's root folder, create a file named `config.properties` with the 
 
 ```properties
 [DEFAULT]
-config.filter=  # Leave empty to analyze all files
-
+config.filter=test # A list of words that filters the files. If they are present in a file path, those files will be ignored. If nothing is passed, every file in the project will be analyzed.
+config.rounds_count=1 # Number of times to run the process. Default is 1. Useful for auto patching with python /app/orchestrator.py --auto
+[API]
+config.provider=openai # specify which service to use (groq, openai, claude)
+config.key=your_api_key  # Enter your API key directly without quotes
+config.model=gpt-4o # change to desired model name
+config.temperature=0 # change to desired temperature
 [SAST]
-config.pmd_ruleset=/app/utils/PMD-config.xml
-
-[CLASSIFIER]
-gpt_model=gpt-4o
-temperature=0
-
+config.spotbugs_bin=/opt/spotbugs-4.8.6/bin/spotbugs # as specified in the Dockerfile
+config.pmd_bin=/opt/pmd-bin-7.4.0/bin/pmd # as specified in the Dockerfile
+config.pmd_ruleset=/app/utils/PMD-config.xml # change to where it's located or leave the default
+[ANALYZER]
+config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # path as specified in Dockerfile
+# Vscode-Plugin settings
 [PLUGIN]
 plugin.use_diff_mode=view Diffs
+plugin.script_path=/app # makes the connection with the extension - do not change
+plugin.test_folder_log=src/test # path of the test folder in the directory to be analyzed - makes the connection with the extension
 ```
 
-- **`config.filter`**: By leaving it empty, all files will be analyzed.
-- **`gpt_model`**: The AI model to use. You can leave it as `gpt-4`.
-- **`temperature`**: Controls the randomness of the AI's responses. `0` means very deterministic.
+- **`config.filter`**: A list of words that filters the files. If they are present in a file path, those files will be ignored. If nothing is passed, every file in the project will be analyzed.
+- **`config.rounds_count`**: Number of times to run the process. Default is 1. Useful for auto patching with `python /app/orchestrator.py --auto`.
+- **`config.provider`**: Specify which service to use (`groq`, `openai`, `claude`).
+- **`config.key`**: Enter your API key directly without quotes.
+- **`config.model`**: Change to the desired model name.
+- **`config.temperature`**: Change to the desired temperature.
+- **`config.spotbugs_bin`**: Reference the Dockerfile for the saved location of SpotBugs.
+- **`config.pmd_bin`**: Reference the Dockerfile for the saved location of PMD.
+- **`config.pmd_ruleset`**: Change to where the PMD ruleset is located or leave the default.
+- **`config.analyzer`**: Reference the Dockerfile for the saved location of the analyzer.
+- **`plugin.use_diff_mode`**: Set to 'view Diffs' to use the diff mode.
+- **`plugin.script_path`**: Makes the connection with the extension - do not change.
+- **`plugin.test_folder_log`**: Path of the test folder in the directory to be analyzed - makes the connection with the extension.
 
-### Script Options and Help
+### Entry Script Options and Help
 
-You can view all available options for the script by running:
+You can view all available options for the entry script by running:
 
 **On Windows:**
 
@@ -464,9 +602,8 @@ You can view all available options for the script by running:
 bash ai4framework_entry.sh -h
 ```
 
-**Script Options:**
+**Entry Script Options:**
 
-- **`OPENAI_API_KEY`**: Your OpenAI API key.
 - **`LOCAL_PROJECT_PATH`**: Path to your local project directory.
 - **`CONTAINER_PROJECT_PATH`**: Path inside the container where the project will reside.
 - **`PORT`**: (Optional) Specify the port number for the container (default is `8080`).
