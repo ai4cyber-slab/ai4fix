@@ -8,29 +8,9 @@ from anthropic import Anthropic
 def llm_response(provider, model, api_key, messages):
     try:
         if provider == 'openai':
-            client = OpenAI(api_key=api_key)
-            response = client.chat.completions.create(
-                model=model,
-                messages=messages,
-            )
-            return {
-                'message': response.choices[0].message.content,
-                'input_tokens': response.usage.prompt_tokens,
-                'output_tokens': response.usage.completion_tokens
-            }
+            return client_response(OpenAI(api_key=api_key), model, messages)
         elif provider == 'groq':
-            client = Groq(
-                api_key=api_key,
-            )
-            response = client.chat.completions.create(
-                messages=messages,
-                model=model,
-            )
-            return {
-                'message': response.choices[0].message.content,
-                'input_tokens': response.usage.prompt_tokens,
-                'output_tokens': response.usage.completion_tokens
-            }
+            return client_response(Groq(api_key=api_key), model, messages)
         elif provider == 'claude':
             client = Anthropic(
                 api_key=api_key,
@@ -51,3 +31,15 @@ def llm_response(provider, model, api_key, messages):
     except Exception as e:  
         print(f'An error occured while initializing the LLM: {e}')
         sys.exit(1)
+
+
+def client_response(client, model, messages):
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+    )
+    return {
+        'message': response.choices[0].message.content,
+        'input_tokens': response.usage.prompt_tokens,
+        'output_tokens': response.usage.completion_tokens
+    }

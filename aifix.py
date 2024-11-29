@@ -9,9 +9,13 @@ from ai4framework.config.llm_configuration import llm_response
 
 
 load_dotenv()
-provider = ConfigManager._config.get('API', 'config.provider')
-model = ConfigManager._config.get('API', 'config.model')
-api_key = ConfigManager._config.get('API', 'config.key')
+provider = ConfigManager._config.get('API', 'config.provider', fallback='')
+model = ConfigManager._config.get('API', 'config.model', fallback='')
+api_key = ConfigManager._config.get('API', 'config.key', fallback='')
+if api_key == '':
+    print('API key is not yet configured. Terminating.')
+    sys.exit(1)
+
 
 def read_file(file_path):
     with open(file_path, 'r') as file:

@@ -1,14 +1,16 @@
-import json
 import os
-import subprocess
-import openai
-import shutil
-from collections import defaultdict
-import requests
 import re
+import sys
+import json
+import shutil
+import requests
+import subprocess
+
 from dotenv import load_dotenv, find_dotenv
+from collections import defaultdict
 from ai4framework.config.common_config import ConfigManager
 from ai4framework.config.llm_configuration import llm_response
+
 
 run = 0
 failed = 0
@@ -30,9 +32,13 @@ collect_warnings_script = r'path_to_collect_warnings_script\collectWarnings.py'
 dotenv_path = find_dotenv()
 load_dotenv(dotenv_path)
 bearer_token = os.getenv('HUGGINGFACE_API_TOKEN')
-provider = ConfigManager._config.get('API', 'config.provider')
-model = ConfigManager._config.get('API', 'config.model')
-api_key = ConfigManager._config.get('API', 'config.key')
+
+provider = ConfigManager._config.get('API', 'config.provider', fallback='')
+model = ConfigManager._config.get('API', 'config.model', fallback='')
+api_key = ConfigManager._config.get('API', 'config.key', fallback='')
+if api_key == '':
+    print('API key is not yet configured. Terminating.')
+    sys.exit(1)
 
 API_URL = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct"
 headers = {"Authorization": f"Bearer {bearer_token}"}

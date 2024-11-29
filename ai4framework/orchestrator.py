@@ -9,13 +9,6 @@ from config.common_config import ConfigManager
 from sast.sast_orchestrator import SASTOrchestrator
 from utils.plugin_json_converter import JsonPluginConverter
 from symbolic_execution.execution import SymbolicExecution
-from config.common_config import ConfigManager
-from utils.logger import logger
-from classification.security_classifier import SecurityClassifier
-from sast.sast_orchestrator import SASTOrchestrator
-from patch_generation.patch_generator import PatchGenerator
-from utils.issues_merger import JSONCombiner
-from utils.plugin_json_converter import JsonPluginConverter
 from patch_generation.patch_applier import PatchApplier
 from patch_generation.patch_generator import PatchGenerator
 from classification.security_classifier import SecurityClassifier

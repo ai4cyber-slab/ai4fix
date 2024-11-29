@@ -1,19 +1,18 @@
-import openai
-# import ollama
-import json
 import os
-import subprocess
-import shutil
-from collections import defaultdict
-import numpy as np
-import javalang
+import sys
+import json
 import time
+import shutil
+# import ollama
+import javalang
 import requests
-# from langchain_openai import ChatOpenAI
+import subprocess
+
+from dotenv import load_dotenv, find_dotenv
+from collections import defaultdict
 # from gradio_client import Client
 # from huggingface_hub import InferenceClient
-from dotenv import load_dotenv, find_dotenv
-
+# from langchain_openai import ChatOpenAI
 from ai4framework.config.common_config import ConfigManager
 from ai4framework.config.llm_configuration import llm_response
 
@@ -58,12 +57,15 @@ def measure_relevant_code_size(vulnerability):
     return class_code_size
 
 bearer_token = os.getenv('HUGGINGFACE_API_TOKEN')
-provider = ConfigManager._config.get('API', 'config.provider')
-model = ConfigManager._config.get('API', 'config.model')
-api_key = ConfigManager._config.get('API', 'config.key')
+
+provider = ConfigManager._config.get('API', 'config.provider', fallback='')
+model = ConfigManager._config.get('API', 'config.model', fallback='')
+api_key = ConfigManager._config.get('API', 'config.key', fallback='')
+if api_key == '':
+    print('API key is not yet configured. Terminating.')
+    sys.exit(1)
 
 # hf models
-
 API_URL = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3.1-405B-Instruct"
 headers = {"Authorization": f"Bearer {bearer_token}"}
 
