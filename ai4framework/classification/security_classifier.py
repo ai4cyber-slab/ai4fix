@@ -1,6 +1,6 @@
 import os
+import sys
 import time
-import openai
 import subprocess
 
 from dotenv import load_dotenv, find_dotenv
@@ -26,7 +26,7 @@ class SecurityClassifier:
     """
     A class to handle security classification of code changes.
 
-    This class uses OpenAI's GPT model to analyze and classify code changes
+    This class uses various LLMs to analyze and classify code changes
     for potential security impacts.
     """
 
@@ -40,7 +40,7 @@ class SecurityClassifier:
         self.config = config
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
-        openai.api_key = os.getenv('OPENAI_API_KEY')
+        self.api_key = self.config.get('API', 'config.key', fallback='')
         self.repo_path = self.config.get('DEFAULT', 'config.project_root')
 
 
@@ -51,9 +51,9 @@ class SecurityClassifier:
         This method executes the external classifier script with the appropriate arguments
         and handles the output and potential errors.
         """
-        # Check if the OpenAI API key is available
-        if not openai.api_key:
-            logger.info("OPENAI_API_KEY is not set. Skipping the classification process.")
+        # Check if the API key is available
+        if self.api_key == '':
+            logger.info("Commit sha is not set. Skipping the classification process.")
             return
         
         # Check if the commit sha is available
@@ -65,13 +65,13 @@ class SecurityClassifier:
         os.chdir(current_dir)
         command = [
             "python", "classifier.py",
-            "-p", self.config.get('DEFAULT', 'config.project_root'),
             "-r", self.repo_path,
             "-f", self.config.get('DEFAULT', 'config.filter'),
             "-c", self.config.get('CLASSIFIER', 'commit_sha'),
-            "-m", self.config.get('CLASSIFIER', 'gpt_model'),
-            "-t", self.config.get('CLASSIFIER', 'temperature'),
-            "-k", openai.api_key
+            "-m", self.config.get('API', 'config.model'),
+            "-t", self.config.get('API', 'config.temperature'),
+            "-p", self.config.get('API', 'config.provider'),
+            "-k", self.api_key
         ]
 
         try:

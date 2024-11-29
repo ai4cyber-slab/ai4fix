@@ -2,9 +2,8 @@
 
 
 function show_usage {
-    echo "Usage: ai4framework_entry.sh --OPENAI_API_KEY <string> --LOCAL_PROJECT_PATH <string> --CONTAINER_PROJECT_PATH <string> [--RunWithBash] [--PORT <int>]"
+    echo "Usage: ai4framework_entry.sh --LOCAL_PROJECT_PATH <string> --CONTAINER_PROJECT_PATH <string> [--RunWithBash] [--PORT <int>]"
     echo "Options:"
-    echo "  --OPENAI_API_KEY          Your OpenAI API key."
     echo "  --LOCAL_PROJECT_PATH      Path to the local project directory."
     echo "  --CONTAINER_PROJECT_PATH  Path to the project directory inside the container."
     echo "  --RunWithBash             (Optional) Open the container with bash after execution."
@@ -17,7 +16,6 @@ function show_usage {
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         -h|--help) show_usage ;;
-        --OPENAI_API_KEY) OPENAI_API_KEY="$2"; shift ;;
         --LOCAL_PROJECT_PATH) LOCAL_PROJECT_PATH="$2"; shift ;;
         --CONTAINER_PROJECT_PATH) CONTAINER_PROJECT_PATH="$2"; shift ;;
         --PORT) PORT="$2"; shift ;;
@@ -31,7 +29,7 @@ done
 PORT=${PORT:-8080}
 
 
-if [[ -z "$OPENAI_API_KEY" || -z "$LOCAL_PROJECT_PATH" || -z "$CONTAINER_PROJECT_PATH" ]]; then
+if [[-z "$LOCAL_PROJECT_PATH" || -z "$CONTAINER_PROJECT_PATH" ]]; then
     echo "Error: Missing required parameters."
     show_usage
 fi
@@ -70,12 +68,10 @@ echo "Docker image built successfully."
 echo "Starting the Docker container..."
 if [[ "$RUN_WITH_BASH" == true ]]; then
     CONTAINER_ID=$(docker run -dit -p "${PORT}:8080" \
-        -e OPENAI_API_KEY="$OPENAI_API_KEY" \
         -e PROJECT_PATH="$CONTAINER_PROJECT_PATH" \
         code-analyzer-vs-version bash)
 else
     CONTAINER_ID=$(docker run -dit -p "${PORT}:8080" \
-        -e OPENAI_API_KEY="$OPENAI_API_KEY" \
         -e PROJECT_PATH="$CONTAINER_PROJECT_PATH" \
         code-analyzer-vs-version)
 fi

@@ -3,7 +3,6 @@ param(
     [Alias("h", "usage")]
     [switch]$ShowHelp,
 
-    [string]$OPENAI_API_KEY,
     [string]$LOCAL_PROJECT_PATH,
     [string]$CONTAINER_PROJECT_PATH,
     [int]$PORT = 8080,
@@ -12,9 +11,8 @@ param(
 )
 
 function Show-Usage {
-    Write-Host "Usage: ai4framework_entry.ps1 -OPENAI_API_KEY <string> -LOCAL_PROJECT_PATH <string> -CONTAINER_PROJECT_PATH <string> [-RunWithBash] [-PORT <int>]" -ForegroundColor Cyan
+    Write-Host "Usage: ai4framework_entry.ps1 -LOCAL_PROJECT_PATH <string> -CONTAINER_PROJECT_PATH <string> [-RunWithBash] [-PORT <int>]" -ForegroundColor Cyan
     Write-Host "Options:"
-    Write-Host "  -OPENAI_API_KEY          Your OpenAI API key." -ForegroundColor Yellow
     Write-Host "  -LOCAL_PROJECT_PATH      Path to the local project directory." -ForegroundColor Yellow
     Write-Host "  -CONTAINER_PROJECT_PATH  Path to the project directory inside the container." -ForegroundColor Yellow
     Write-Host "  -RunWithBash             (Optional) Open the container with bash after execution." -ForegroundColor Yellow
@@ -28,7 +26,7 @@ if ($ShowHelp) {
 }
 
 
-if (-not $OPENAI_API_KEY -or -not $LOCAL_PROJECT_PATH -or -not $CONTAINER_PROJECT_PATH) {
+if (-not $LOCAL_PROJECT_PATH -or -not $CONTAINER_PROJECT_PATH) {
     Write-Host "Error: Missing required parameters." -ForegroundColor Red
     Show-Usage
 }
@@ -73,12 +71,10 @@ Write-Host "Docker image built successfully."
 Write-Host "Starting the Docker container..."
 if ($RunWithBash) {
     $ContainerID = docker run -dit -p $PORT`:8080 `
-        -e OPENAI_API_KEY="$OPENAI_API_KEY" `
         -e PROJECT_PATH="$CONTAINER_PROJECT_PATH" `
         code-analyzer-vs-version bash
 } else {
     $ContainerID = docker run -dit -p $PORT`:8080 `
-        -e OPENAI_API_KEY="$OPENAI_API_KEY" `
         -e PROJECT_PATH="$CONTAINER_PROJECT_PATH" `
         code-analyzer-vs-version
 }

@@ -1,23 +1,30 @@
 import os
-import json
-import difflib
-import time
-import sys
-import openai
-import random
-import subprocess
-from collections import defaultdict
-from dotenv import load_dotenv, find_dotenv
 import re
-import argparse
+import sys
+import json
+import time
 import uuid
+import random
+import difflib
+import argparse
+import subprocess
+
+from dotenv import load_dotenv, find_dotenv
+from collections import defaultdict
+from config.llm_configuration import llm_response
+
 
 class PatchManager:
     def __init__(self, config=None):
+        self.config = config
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
-        openai.api_key = os.getenv('OPENAI_API_KEY')
-        self.client = openai.OpenAI()
+        self.provider = self.config.get('API', 'config.provider')
+        self.model = self.config.get('API', 'config.model')
+        self.api_key = self.config.get('API', 'config.key', fallback='')
+        if self.api_key == '':
+            print("API key not found. Please set it in the configuration.")
+            sys.exit(1)
 
         parser = argparse.ArgumentParser(description='Process warning')
         parser.add_argument('-j', '--java_file_path', help='Path to the Java file', required=True)
@@ -78,33 +85,20 @@ class PatchManager:
         return matching_warnings
     
 
-    def call_openai_with_retries(self, prompt, max_retries=3):
+    def call_ai_with_retries(self, prompt, max_retries=3):
         try:
-            """Call OpenAI API with retry logic and handle keyboard interrupt."""
+            """Call API with retry logic and handle keyboard interrupt."""
             retries = 0
             while retries < max_retries:
                 try:
-                    response = self.client.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=[
-                            {"role": "system", "content": "You are a helpful assistant that can fix code issues."},
-                            {"role": "user", "content": prompt}
-                        ]
-                    )
+                    messages = [
+                        {"role": "system", "content": "You are a helpful assistant that can fix code issues."},
+                        {"role": "user", "content": prompt},
+                    ]
+                    response = llm_response(self.provider, self.model, self.api_key, messages)
                     return response
-                except openai.APIConnectionError as e:
-                    print(f"Connection error: {e}, retrying...")
-                except openai.AuthenticationError as e:
-                    print(f"Authentication error: {e}, retrying...")
-                    return None
-                except openai.Timeout as e:
-                    print(f"Timeout error: {e}, retrying...")
-                except openai.RateLimitError as e:
-                    print(f"Rate limit exceeded: {e}, retrying after delay...")
-                    time.sleep(4)
                 except Exception as e:
-                    print(f"Unexpected error: {e}")
-                    break
+                    print(f"Unexpected error: {e}, retrying...")
                 retries += 1
                 time.sleep(2 ** retries + random.uniform(0, 1))
         except Exception as e:
@@ -215,13 +209,13 @@ class PatchManager:
                 - Do not alter comments, whitespace, or formatting.
                 - Provide the complete updated code.
                 """
-                response = self.call_openai_with_retries(prompt)
+                response = self.call_ai_with_retries(prompt)
 
                 if response is None:
-                    print(f"Failed to get response from OpenAI. Creating backup patch.")
+                    print(f"Failed to get response from LLM. Creating backup patch.")
                     sys.exit(0)
                 
-                generated_code = self.extract_code_from_response(response.choices[0].message.content)
+                generated_code = self.extract_code_from_response(response['message'])
                 
                 try:
                     with open(java_file_path, 'w') as f:

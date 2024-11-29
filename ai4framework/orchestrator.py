@@ -28,7 +28,7 @@ class WorkflowFramework:
 
         self.sast = SASTOrchestrator(self.config)
         self.security_classifier = SecurityClassifier(self.config)
-        self.symbolic_execution = SymbolicExecution(self.config)
+        # self.symbolic_execution = SymbolicExecution(self.config)
         self.issues_merger = JSONCombiner(self.config)
         self.json_converter = JsonPluginConverter(self.config)
 
@@ -46,9 +46,9 @@ class WorkflowFramework:
             for i in range(1, rounds_count + 1):
                 self.sast.run_all() if i == 1 else self.sast.run_all(is_initial_round=False)
 
-                if not self.sast_rerun:
-                    # self.security_classifier.classify()
-                    self.symbolic_execution.analyze()
+            if not self.sast_rerun:
+                self.security_classifier.classify()
+                # self.symbolic_execution.analyze()
 
                 warnings_dict_original = self.issues_merger.run()
 

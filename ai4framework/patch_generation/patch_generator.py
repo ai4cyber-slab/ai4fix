@@ -1,28 +1,35 @@
 import os
+import re
+import sys
+import time
 import json
+import random
+import statistics
 import subprocess
-import openai
+
 from dotenv import load_dotenv, find_dotenv
 from utils.logger import logger
-import re
-import time
-import random
+from utils.findMethod import get_method_info_if_any
 from sast.sast_orchestrator import SASTOrchestrator
+from config.llm_configuration import llm_response
+from patch_generation.mesure import BenchmarkVisualizer
 from symbolic_execution.execution import SymbolicExecution
 from patch_generation.sast_mapping import SAST_WARNINGS
-from utils.findMethod import get_method_info_if_any
-from groq import Groq
-from patch_generation.mesure import BenchmarkVisualizer
-import statistics
+
 
 class PatchGenerator:
     def __init__(self, config, warning_dict, num_of_rounds):
         """Initialize PatchGenerator with configuration."""
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
-        openai.api_key = os.getenv('OPENAI_API_KEY')
-        self.client = openai.OpenAI()
         self.config = config
+        self.provider = self.config.get('API', 'config.provider')
+        self.model = self.config.get('API', 'config.model')
+        self.api_key = self.config.get('API', 'config.key', fallback='')
+        if self.api_key == '':
+            print("API key not found. Please set it in the configuration.")
+            sys.exit(1)
+
         self.project_path = self.config.get('DEFAULT', 'config.project_root')
         self.sast = SASTOrchestrator(self.config)
         self.symbolic = SymbolicExecution(self.config)
@@ -30,7 +37,7 @@ class PatchGenerator:
         self.base_dir = self.project_path
         self.diffs_output_dir = self.config.get('DEFAULT', 'config.results_path')
         self.json_file_path = self.config.get('DEFAULT', 'config.issues_path')
-        self.model_name = self.config.get("CLASSIFIER", "gpt_model")
+        self.model_name = self.config.get("API", "config.model")
         self.warnings = []
         self.full_file_path = ""
         self.initial_content = ""
@@ -162,11 +169,7 @@ class PatchGenerator:
         
         return '\n'.join(updated_patch_lines)
 
-    def process_hunk(self, hunk_lines, header_info):
-        original_line_count = int(header_info[1])
-        new_line_count = int(header_info[3])
-        
-
+    def process_hunk(self, hunk_lines, header_info):       
         context_lines = 0
         added_lines = 0
         removed_lines = 0
@@ -272,13 +275,13 @@ class PatchGenerator:
                     """
                     
                 os.makedirs(self.diffs_output_dir, exist_ok=True)
-                response = self.call_openai_with_retries(prompt)
 
-
+                response = self.call_ai_with_retries(prompt)
                 if response is None:
                     logger.error(f"Failed to get response.")
                     break
-                generated_patch = self.extract_patch_from_response(response.choices[0].message.content)
+                
+                generated_patch = self.extract_patch_from_response(response['message'])
                 previous_generated_patch = generated_patch
                 try:
                     if not self.apply_patch_from_text(self.full_file_path, self.adjust_patch_content(generated_patch), extract_json_section):
@@ -320,8 +323,8 @@ class PatchGenerator:
                     self.applicable_patch = True
                     self.validation_passed = True
                     self.mvn_test_passed = True
-                    self.input_tokens.append(response.usage.prompt_tokens)
-                    self.response_tokens.append(response.usage.completion_tokens)
+                    self.input_tokens.append(response['input_tokens'])
+                    self.response_tokens.append(response['output_tokens'])
                     diff_file_name = f"{os.path.splitext(os.path.basename(full_file_path))[0]}_patch_{warning['id']}_attempt_{attempt}.diff"
                     diff_file_path = os.path.join(self.diffs_output_dir, diff_file_name)
                     try:
@@ -433,8 +436,8 @@ class PatchGenerator:
     def main(self):
         try:
             self.stats['start_time'] = time.time()
-            if not openai.api_key:
-                logger.warning("OPENAI_API_KEY is not set. Skipping patch generation.")
+            if self.api_key == '':
+                logger.warning("API key is not set. Skipping patch generation.")
                 return
             try:
                 with open(self.json_file_path, 'r') as f:
@@ -497,33 +500,20 @@ class PatchGenerator:
             logger.error(f"Error saving updated warnings JSON: {e}")
 
         
-    def call_openai_with_retries(self, prompt, max_retries=3):
+    def call_ai_with_retries(self, prompt, max_retries=3):
         try:
-            """Call OpenAI API with retry logic and handle keyboard interrupt."""
+            """Call API with retry logic and handle keyboard interrupt."""
             retries = 0
             while retries < max_retries:
                 try:
-                    response = self.client.chat.completions.create(
-                        model=self.model_name,
-                        messages=[
-                            {"role": "system", "content": "You are a helpful assistant that can fix code issues."},
-                            {"role": "user", "content": prompt}
-                        ]
-                    )
+                    messages = [
+                        {"role": "system", "content": "You are a helpful assistant that can fix code issues."},
+                        {"role": "user", "content": prompt},
+                    ]
+                    response = llm_response(self.provider, self.model, self.api_key, messages)
                     return response
-                except openai.APIConnectionError as e:
-                    logger.error(f"Connection error: {e}, retrying...")
-                except openai.AuthenticationError as e:
-                    logger.error(f"Authentication error: {e}, retrying...")
-                    return None
-                except openai.Timeout as e:
-                    logger.error(f"Timeout error: {e}, retrying...")
-                except openai.RateLimitError as e:
-                    logger.error(f"Rate limit exceeded: {e}, retrying after delay...")
-                    time.sleep(4)
                 except Exception as e:
-                    logger.error(f"Unexpected error: {e}")
-                    break
+                    logger.error(f"Unexpected error: {e}, retrying...")
                 retries += 1
                 time.sleep(2 ** retries + random.uniform(0, 1))
         except Exception as e:
