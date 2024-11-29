@@ -41,26 +41,36 @@ class WorkflowFramework:
         try:
             # Register signal handler for SIGINT
             signal.signal(signal.SIGINT, self.handle_sigint)
+            logger.info("Signal handler registered")
 
             rounds_count = int(self.config.get("DEFAULT", "rounds_count", fallback=1))
+            logger.info(f"Rounds count: {rounds_count}")
 
             for i in range(1, rounds_count + 1):
+                logger.info(f"Starting round {i}")
                 self.sast.run_all() if i == 1 else self.sast.run_all(is_initial_round=False)
+                logger.info("SAST run completed")
 
-            if not self.sast_rerun:
-                self.security_classifier.classify()
-                # self.symbolic_execution.analyze()
+                if not self.sast_rerun:
+                    self.security_classifier.classify()
+                    logger.info("Security classification completed")
+                    # self.symbolic_execution.analyze()
+                    # logger.info("Symbolic execution completed")
 
-                warnings_dict_original = self.issues_merger.run()
+                    warnings_dict_original = self.issues_merger.run()
+                    logger.info("Issues merger run completed")
 
-                if not self.skip_patches and not self.sast_rerun:
-                    patch_generator = PatchGenerator(self.config, warnings_dict_original, i)
-                    patch_generator.main()
+                    if not self.skip_patches and not self.sast_rerun:
+                        patch_generator = PatchGenerator(self.config, warnings_dict_original, i)
+                        patch_generator.main()
+                        logger.info("Patch generation completed")
 
-                self.json_converter.process()
+                    self.json_converter.process()
+                    logger.info("JSON conversion completed")
 
-                if self.automatic_application:
-                    PatchApplier(self.config).apply_patches()
+                    if self.automatic_application:
+                        PatchApplier(self.config).apply_patches()
+                        logger.info("Patch application completed")
 
         except KeyboardInterrupt:
             logger.info("SIGINT received. Gracefully stopping workflow.")
