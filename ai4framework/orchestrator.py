@@ -1,3 +1,13 @@
+import sys
+import time
+import signal
+import argparse
+
+from utils.logger import logger
+from utils.issues_merger import JSONCombiner
+from config.common_config import ConfigManager
+from sast.sast_orchestrator import SASTOrchestrator
+from utils.plugin_json_converter import JsonPluginConverter
 from symbolic_execution.execution import SymbolicExecution
 from config.common_config import ConfigManager
 from utils.logger import logger
@@ -7,11 +17,8 @@ from patch_generation.patch_generator import PatchGenerator
 from utils.issues_merger import JSONCombiner
 from utils.plugin_json_converter import JsonPluginConverter
 from patch_generation.patch_applier import PatchApplier
-import time
-import argparse
-import signal
-import sys
-
+from patch_generation.patch_generator import PatchGenerator
+from classification.security_classifier import SecurityClassifier
 
 
 class WorkflowFramework:
@@ -30,7 +37,7 @@ class WorkflowFramework:
 
         self.sast = SASTOrchestrator(self.config)
         self.security_classifier = SecurityClassifier(self.config)
-        # self.symbolic_execution = SymbolicExecution(self.config)
+        self.symbolic_execution = SymbolicExecution(self.config)
         self.issues_merger = JSONCombiner(self.config)
         self.json_converter = JsonPluginConverter(self.config)
 
@@ -53,9 +60,7 @@ class WorkflowFramework:
 
                 if not self.sast_rerun:
                     self.security_classifier.classify()
-                    logger.info("Security classification completed")
-                    # self.symbolic_execution.analyze()
-                    # logger.info("Symbolic execution completed")
+                    self.symbolic_execution.analyze()
 
                     warnings_dict_original = self.issues_merger.run()
                     logger.info("Issues merger run completed")
