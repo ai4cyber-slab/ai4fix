@@ -43,8 +43,10 @@ import { applyPatchToFile } from "./patch";
 import { getSafeFsPath } from "./path";
 import { initActionCommands } from "./language/codeActions";
 import * as child_process from 'child_process';
+import * as readline from 'readline';
 
 import * as cp from "child_process";
+import { spawn } from "child_process";
 
 
 const parseJson = require("parse-json");
@@ -158,8 +160,11 @@ export async function refreshDiagnosticsWithoutAnalysis(context: vscode.Extensio
 
 export function init(
   context: vscode.ExtensionContext,
-  jsonOutlineProvider: any
+  jsonOutlineProvider: any,
+  analysisStatusBarItem: vscode.StatusBarItem
 ) {
+  let isAnalyzing = false;
+  let analysisCancellationTokenSource: vscode.CancellationTokenSource | null = null;
   // Set working directory as PROJECT_FOLDER if no path was given in config:
   if (!PROJECT_FOLDER) {
     if (
@@ -238,7 +243,11 @@ export function init(
     ),
     vscode.commands.registerCommand("aifix4seccode-vscode_extension.openJsonSelection", (range) =>
       jsonOutlineProvider.select(range)
-    )
+    ),
+    vscode.commands.registerCommand(
+      'aifix4seccode-vscode.cancelAnalysis',
+      cancelAnalysis
+    ),
   );
 
   vscode.commands.executeCommand("setContext", "patchApplyEnabled", false);
@@ -267,19 +276,50 @@ export function init(
   }
 
   async function getOutputFromAnalyzer() {
-    logging.LogInfo("===== Analysis started from command. =====");
+    if (isAnalyzing) {
+      vscode.window.showWarningMessage('Analysis is already running.');
+      return;
+    }
 
-    vscode.window.withProgress(
-      {
-        location: vscode.ProgressLocation.Notification,
-        title: "Analyzing project!",
-        cancellable: false,
-      },
-      async () => {
-        return runOrchestratorScript();
-      }
-    );
+    isAnalyzing = true;
+    analysisCancellationTokenSource = new vscode.CancellationTokenSource();
+
+    analysisStatusBarItem.text = '$(sync~spin) Analyzing... (Click to Cancel)';
+    analysisStatusBarItem.command = 'aifix4seccode-vscode.cancelAnalysis'; // Set to cancelAnalysis
+
+    logging.LogInfo('===== Analysis started from command. =====');
+
+    try {
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'Analyzing project!',
+          cancellable: false,
+        },
+        async () => {
+          await runOrchestratorScript(analysisCancellationTokenSource!.token);
+        }
+      );
+    } catch (error) {
+      logging.LogError(`Error during analysis: ${error}`);
+    } finally {
+      isAnalyzing = false;
+      analysisCancellationTokenSource = null;
+      analysisStatusBarItem.text = '$(symbol-misc) Start Analysis';
+      analysisStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzer';
+    }
   }
+
+  // Implement cancelAnalysis
+  function cancelAnalysis() {
+    if (analysisCancellationTokenSource) {
+      analysisCancellationTokenSource.cancel();
+      logging.LogInfo('Analysis cancellation requested by user.');
+    }
+  }
+
+
+
 
   async function getDiagnosticsAfterPatch() {
     logging.LogInfo("===== Analysis started from command. =====");
@@ -361,110 +401,167 @@ export function init(
     }
   }
 
-  function runOrchestratorScript() {
-    let issuesPath = ISSUES_PATH;
+  async function runOrchestratorScript(cancellationToken: vscode.CancellationToken) {
+    const issuesPath = ISSUES_PATH;
+
+    // Step 1: Clear the issuesPath file
     try {
-      writeFileSync(issuesPath, "", "utf8");
+      writeFileSync(issuesPath, '', 'utf8');
       logging.LogInfo(`Cleared content of the file at ${issuesPath}`);
     } catch (error) {
-      logging.LogErrorAndShowErrorMessage(`Failed to clear content of the file at ${issuesPath}:`, error as any);
+      logging.LogErrorAndShowErrorMessage(
+        `Failed to clear content of the file at ${issuesPath}:`,
+        error as any
+      );
+      vscode.window.showErrorMessage(`Failed to clear issues path file: ${error}`);
+      throw error; // Stop execution if we cannot clear the issues file
     }
-    
-    let jsonFilePaths: string[] = [];
 
-    return new Promise<void>((resolve, reject) => {
-      const scriptPath = upath.normalize(upath.join(SCRIPT_PATH, 'orchestrator.py'));
-  
-      const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
-      const command = `${pythonCommand} ${scriptPath} -r ${PROJECT_FOLDER}`;
-  
-      const options: child_process.ExecOptions = {
-        cwd: PROJECT_FOLDER,
-        shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/sh',
-      };
-  
-      logging.LogInfo(`Running orchestrator in: ${PROJECT_FOLDER}`);
-  
-      // Execute the command
-      const childProc = child_process.exec(command, options, (error, stdout, stderr) => {
-        if (error) {
-          logging.LogErrorAndShowErrorMessage("Error running orchestrator.py", error.message);
+    // Step 2: Define the path to orchestrator.py
+    const scriptPath = upath.normalize(upath.join(SCRIPT_PATH, 'orchestrator.py'));
+
+    // Determine the Python command based on the platform
+    const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
+
+    // Define arguments for the script
+    const args = [scriptPath, '-r', PROJECT_FOLDER];
+
+    // Define spawn options
+    const options: child_process.SpawnOptions = {
+      cwd: PROJECT_FOLDER,
+      shell: false, // Avoid using shell to prevent command injection
+      env: {
+        ...process.env,
+        PYTHONUNBUFFERED: '1', // Disable output buffering
+      },
+    };
+
+    logging.LogInfo(`Running orchestrator in: ${PROJECT_FOLDER}`);
+
+    // Step 3: Spawn the orchestrator.py process
+    const childProc = spawn(pythonCommand, args, options);
+
+    // Handle cancellation
+    cancellationToken.onCancellationRequested(() => {
+      logging.LogInfo('Cancellation requested. Terminating orchestrator.py...');
+      childProc.kill('SIGINT'); // Send SIGINT to trigger KeyboardInterrupt
+    });
+    
+    // Set up readline to process stdout line by line
+    const rl = readline.createInterface({
+      input: childProc.stdout,
+      crlfDelay: Infinity,
+    });
+
+    // Listen for lines from stdout
+    rl.on('line', (line: string) => {
+      logging.LogInfo(`orchestrator.py: ${line}`);
+
+      // Parse progress updates in the format "PROGRESS_UPDATE: x/y"
+      const progressMatch = line.match(/^PROGRESS_UPDATE:\s*(\d+)\/(\d+)/);
+      if (progressMatch) {
+        const current = parseInt(progressMatch[1], 10);
+        const total = parseInt(progressMatch[2], 10);
+        analysisStatusBarItem.text = `$(sync~spin) Patch generation ${current}/${total} (Click to Cancel)`;
+      }
+    });
+
+    // Listen for errors on stderr
+    childProc.stderr.on('data', (data: Buffer) => {
+      const message = data.toString();
+      logging.LogInfo(`orchestrator.py: ${message}`);
+    });
+
+    // Handle process exit
+    const processExitPromise = new Promise<void>((resolve, reject) => {
+      childProc.on('close', (code, signal) => {
+        if (cancellationToken.isCancellationRequested) {
+          logging.LogInfo('Process was cancelled by the user.');
+          resolve(); // Resolve since cancellation is expected
+        } else if (code === 0) {
+          logging.LogInfo(`orchestrator.py completed successfully with exit code ${code}`);
+          resolve();
+        } else {
+          const error = new Error(`orchestrator.py exited with code ${code}`);
+          logging.LogError(error.message);
+          vscode.window.showErrorMessage(`Analysis failed: ${error.message}`);
           reject(error);
-          return;
         }
-  
-        if (stderr) {
-          logging.LogError(`orchestrator.py stderr: ${stderr}`);
-        }
-  
-        //logging.LogInfo(`orchestrator.py output: ${stdout}`);
-        resolve();
       });
-  
-      childProc.stdout?.on('data', (data) => {
-        logging.LogInfo(`orchestrator.py: ${data}`);
+
+      childProc.on('error', (error) => {
+        logging.LogError(`Failed to start orchestrator.py: ${error.message}`);
+        vscode.window.showErrorMessage(`Failed to start analysis: ${error.message}`);
+        reject(error);
       });
-    })
-      .then(() => {
-    // var currentFilePath = upath.normalize(vscode.window.activeTextEditor!.document.uri.path);
-    // if (process.platform === "win32" && currentFilePath.startsWith("/")) {
-    //   currentFilePath = currentFilePath.substring(1);
-    // }
+    });
 
     try {
-      const data = readFileSync(issuesPath, "utf8");
-      let lines = data.split("\n");
+      // Await the process to complete or be cancelled
+      await processExitPromise;
 
-      jsonFilePaths = lines.filter((line: string) => line.trim().endsWith('.json'));
-
-      if (jsonFilePaths.length === 0) {
-        logging.LogError("No JSON file paths found in the issuesPath file.");
+      if (cancellationToken.isCancellationRequested) {
+        logging.LogInfo('Analysis was cancelled by the user.');
+        getDiagnosticsAfterPatch();
         return;
       }
-    } catch (err) {
-      logging.LogError("Error reading the issuesPath file: " + err);
-      return;
-    }
 
-    return new Promise<void>((resolve) => {
-      // // Get Output from analyzer:
-      // let output = fakeAiFixCode.getIssuesSync();
-      // logging.LogInfo("issues got from analyzer output: " + JSON.stringify(output));
+      // Proceed with post-analysis steps if not cancelled
+      // Step 4: Read the issuesPath file
+      let jsonFilePaths: string[] = [];
+      try {
+        const data = readFileSync(issuesPath, 'utf8');
+        const lines = data.split('\n');
+        jsonFilePaths = lines.filter((line: string) => line.trim().endsWith('.json'));
 
-      // Show issues treeView:
-      testView = new TestView(context);
-      groupedTestView= new GroupedTestView(context);
+        if (jsonFilePaths.length === 0) {
+          logging.LogError('No JSON file paths found in the issuesPath file.');
+          vscode.window.showErrorMessage('No issues found after analysis.');
+          return;
+        }
+      } catch (err) {
+        logging.LogError(`Error reading the issuesPath file: ${err}`);
+        vscode.window.showErrorMessage(`Failed to read issues file: ${err}`);
+        return;
+      }
 
-      // Initialize action commands of diagnostics made after analysis:
+      // Step 5: Initialize and display the issues tree views
+      const testView = new TestView(context);
+      const groupedTestView = new GroupedTestView(context);
+
+      // Step 6: Initialize action commands related to diagnostics
       initActionCommands(context);
 
-      vscode.window.withProgress(
+      // Step 7: Refresh diagnostics with a progress indicator
+      await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: "Loading Diagnostics...",
+          title: 'Loading Diagnostics...',
         },
         async () => {
-          await refreshDiagnostics(vscode.window.activeTextEditor!.document, analysisDiagnostics);
+          await refreshDiagnostics(
+            vscode.window.activeTextEditor!.document,
+            analysisDiagnostics
+          );
         }
       );
 
-            
-      let output = fakeAiFixCode.getIssuesSync();
-      logging.LogInfo(
-        "issues got from analyzer output: " + JSON.stringify(output)
-    );
+      // Step 8: Get issues from the analyzer
+      const output = fakeAiFixCode.getIssuesSync();
+      logging.LogInfo(`Issues got from analyzer output: ${JSON.stringify(output)}`);
 
-      resolve();
+      // Step 9: Show finished analysis message
       logging.LogInfoAndShowInformationMessage(
-        "===== Finished analysis. =====",
-        "Finished analysis of project!"
+        '===== Finished analysis. =====',
+        'Finished analysis of project!'
       );
-    });
-    })
-     .catch((err) => {
-      logging.LogError(`Error during analysis: ${err}`);
-    });
+    } catch (error) {
+      // Handle any errors that occurred during the analysis
+      logging.LogError(`Error during analysis: ${error}`);
+      throw error; // Rethrow to be caught in getOutputFromAnalyzer
+    }
   }
+
 
   async function getOutputFromAnalyzerOfAFile() {
     logging.LogInfo("===== Analysis of a file started from command. =====");
@@ -1695,7 +1792,7 @@ export function init(
         for (const issue of issues[key]) {
           for (const patch of issue.patches) {
             if (patch.path === patchPath || patchPath.includes(patch.path)) {
-              logging.LogInfoAndShowInformationMessage("Removing issue with id: ", issue.id);
+              logging.LogInfo(`Removing issue with id: ${issue.id}`);
               const warning_id = issue.id;
               issues[key].splice(issues[key].indexOf(issue), 1);
               if (warning_id) {
@@ -1749,7 +1846,7 @@ export function init(
       // Write the updated content back to the JSON file
       await fs.writeFile(jsonFilePath, updatedContent, 'utf-8');
   
-      logging.LogInfoAndShowInformationMessage("Successfully removed the object with id:", id);
+      logging.LogInfo(`Successfully removed the object with id: ${id}`);
 
       getDiagnosticsAfterPatch();
   

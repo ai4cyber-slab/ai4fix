@@ -1,3 +1,13 @@
+import sys
+import time
+import signal
+import argparse
+
+from utils.logger import logger
+from utils.issues_merger import JSONCombiner
+from config.common_config import ConfigManager
+from sast.sast_orchestrator import SASTOrchestrator
+from utils.plugin_json_converter import JsonPluginConverter
 from symbolic_execution.execution import SymbolicExecution
 from config.common_config import ConfigManager
 from utils.logger import logger
@@ -7,10 +17,8 @@ from patch_generation.patch_generator import PatchGenerator
 from utils.issues_merger import JSONCombiner
 from utils.plugin_json_converter import JsonPluginConverter
 from patch_generation.patch_applier import PatchApplier
-import time
-import sys
-import argparse
-
+from patch_generation.patch_generator import PatchGenerator
+from classification.security_classifier import SecurityClassifier
 
 
 class WorkflowFramework:
@@ -29,7 +37,7 @@ class WorkflowFramework:
 
         self.sast = SASTOrchestrator(self.config)
         self.security_classifier = SecurityClassifier(self.config)
-        # self.symbolic_execution = SymbolicExecution(self.config)
+        self.symbolic_execution = SymbolicExecution(self.config)
         self.issues_merger = JSONCombiner(self.config)
         self.json_converter = JsonPluginConverter(self.config)
 
@@ -38,32 +46,52 @@ class WorkflowFramework:
         start_time = time.time()
 
         try:
+            # Register signal handler for SIGINT
+            signal.signal(signal.SIGINT, self.handle_sigint)
+            logger.info("Signal handler registered")
+
             rounds_count = int(self.config.get("DEFAULT", "rounds_count", fallback=1))
-        except ValueError:
-            logger.warning("Invalid rounds_count value in configuration, it should be an Integer (eg: rounds_count=3). Using default value of 1.")
-            rounds_count = 1
+            logger.info(f"Rounds count: {rounds_count}")
 
-        for i in range(1, rounds_count + 1):
-            self.sast.run_all() if i == 1 else self.sast.run_all(is_initial_round=False)
+            for i in range(1, rounds_count + 1):
+                logger.info(f"Starting round {i}")
+                self.sast.run_all() if i == 1 else self.sast.run_all(is_initial_round=False)
+                logger.info("SAST run completed")
 
-            if not self.sast_rerun:
-                self.security_classifier.classify()
-                # self.symbolic_execution.analyze()
+                if not self.sast_rerun:
+                    self.security_classifier.classify()
+                    self.symbolic_execution.analyze()
 
+                    warnings_dict_original = self.issues_merger.run()
+                    logger.info("Issues merger run completed")
 
-            warnings_dict_original = self.issues_merger.run()
+                    if not self.skip_patches and not self.sast_rerun:
+                        patch_generator = PatchGenerator(self.config, warnings_dict_original, i)
+                        patch_generator.main()
+                        logger.info("Patch generation completed")
 
-            if not self.skip_patches and not self.sast_rerun:
-                patch_generator = PatchGenerator(self.config, warnings_dict_original, i)
-                patch_generator.main()
+                    self.json_converter.process()
+                    logger.info("JSON conversion completed")
 
-            self.json_converter.process()
+                    if self.automatic_application:
+                        PatchApplier(self.config).apply_patches()
+                        logger.info("Patch application completed")
 
-            if self.automatic_application:
-                PatchApplier(self.config).apply_patches()
-        elapsed_time = time.time() - start_time
-        logger.info(f"Workflow execution completed in {elapsed_time:.2f} seconds")
+        except KeyboardInterrupt:
+            logger.info("SIGINT received. Gracefully stopping workflow.")
+            self.json_converter.process()  # Save progress
+            logger.info("Progress saved successfully.")
+            sys.exit(0)
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
+        finally:
+            elapsed_time = time.time() - start_time
+            logger.info(f"Workflow execution completed in {elapsed_time:.2f} seconds")
 
+    def handle_sigint(self, signal_number, frame):
+        """Handle SIGINT (Ctrl+C) for graceful shutdown."""
+        logger.info("SIGINT signal received. Cancelling workflow...")
+        raise KeyboardInterrupt
 
 
 if __name__ == "__main__":

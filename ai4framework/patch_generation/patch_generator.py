@@ -433,11 +433,8 @@ class PatchGenerator:
             except Exception as e:
                 logger.error(f"Error restoring original content to {self.full_file_path}: {e}")
 
-
-
-        
     def main(self):
-        try: 
+        try:
             self.stats['start_time'] = time.time()
             if self.api_key == '':
                 logger.warning("API key is not set. Skipping patch generation.")
@@ -453,56 +450,55 @@ class PatchGenerator:
             logger.info("Patch Generation Started...")
             start_time = time.time()
 
-
-            for warning in self.warnings:
+            total_warnings = len(self.warnings)
+            for idx, warning in enumerate(self.warnings, start=1):
                 logger.info(f"Processing warning ID {warning['id']}...")
+
+                print(f"PROGRESS_UPDATE: {idx}/{total_warnings}", flush=True)
+
                 try:
                     self.process_warning(warning)
                 except KeyboardInterrupt:
-                    logger.warning("Keyboard interrupt detected. Stopping the script gracefully.")
-                    return
+                    logger.warning("Keyboard interrupt detected. Saving progress and stopping the script gracefully.")
+                    self.save_warnings_json()
+                    raise  # Re-raise to handle in orchestrator.py
                 except Exception as e:
                     logger.error(f"Unexpected error processing warning ID {warning['id']}: {e}")
                     continue
                 logger.info(f"Finished processing warning ID {warning['id']}.")
 
-
-            try:
-                with open(self.json_file_path, 'w') as f:
-                    json.dump(self.warnings, f, indent=4)
-            except Exception as e:
-                logger.error(f"Error saving updated issues JSON: {e}")
+                # **Save progress after processing each warning**
+                self.save_warnings_json()
 
             elapsed_time = time.time() - start_time
             logger.info(f"Patch generation completed in {elapsed_time:.2f} seconds")
-            self.visualizer.update_metrics(self.model_name, {
-                'total_issues': self.stats['total_issues'],
-                'build_failures': self.compilation_or_test_errors,
-                'validation_failures': self.validation_errors,
-                'successful_patches': self.successful_patches,
-                'non_applicabale_diffs': self.non_applicabale_diffs,
-                'warnings_dict': self.warnings_dict,
-                'total_attempts': self.stats['total_attempts'],
-                'prompt_tokens': int(statistics.mean(self.input_tokens)) if self.input_tokens else 0,
-                'response_tokens': int(statistics.mean(self.response_tokens)) if self.response_tokens else 0,
-                'original_warnings_dict': self.mutable_warnings,
-                'elapsed_time': elapsed_time
-            })
-            os.makedirs(self.visualize_path, exist_ok=True)
-            self.visualizer.generate_comparison_charts(self.visualize_path)
-            self.visualizer.save_metrics(os.path.join(self.visualize_path, f'benchmark_metrics_round_{self.num_of_rounds}.json'))
-            logger.info(f"Benchmarking results saved to {self.visualize_path}")
+
+            # Generate visualizations and save metrics
+            self.generate_visualizations_and_metrics(elapsed_time)
+
         except KeyboardInterrupt:
-            logger.error("Keyboard interrupt detected. Stopping the script gracefully.")
-            return
+            logger.error("Keyboard interrupt detected in main. Saving progress and stopping the script gracefully.")
+            self.save_warnings_json()
+            raise  # Re-raise to handle in orchestrator.py
+
         finally:
-            try:
-                logger.info(f"Restoring original content to {self.full_file_path}.")
-                with open(self.full_file_path, 'w') as f:
-                    f.write(self.initial_content)
-            except Exception as e:
-                logger.error(f"Error restoring original content to {self.full_file_path}: {e}")
-                return
+            # Restore the original content if needed
+            if hasattr(self, 'full_file_path') and hasattr(self, 'initial_content'):
+                try:
+                    logger.info(f"Restoring original content to {self.full_file_path}.")
+                    with open(self.full_file_path, 'w') as f:
+                        f.write(self.initial_content)
+                except Exception as e:
+                    logger.error(f"Error restoring original content to {self.full_file_path}: {e}")
+    def save_warnings_json(self):
+        """Save the updated warnings JSON file."""
+        try:
+            with open(self.json_file_path, 'w') as f:
+                json.dump(self.warnings, f, indent=4)
+                logger.info(f"Saved updated warnings JSON to {self.json_file_path}")
+        except Exception as e:
+            logger.error(f"Error saving updated warnings JSON: {e}")
+
         
     def call_ai_with_retries(self, prompt, max_retries=3):
         try:
@@ -552,3 +548,23 @@ class PatchGenerator:
                         target = -1
 
         return "\n".join(updated_diff_lines)
+    
+    def generate_visualizations_and_metrics(self, elapsed_time):
+        """Generate visualizations and save metrics."""
+        self.visualizer.update_metrics(self.model_name, {
+            'total_issues': self.stats['total_issues'],
+            'build_failures': self.compilation_or_test_errors,
+            'validation_failures': self.validation_errors,
+            'successful_patches': self.successful_patches,
+            'non_applicabale_diffs': self.non_applicabale_diffs,
+            'warnings_dict': self.warnings_dict,
+            'total_attempts': self.stats['total_attempts'],
+            'prompt_tokens': int(statistics.mean(self.input_tokens)) if self.input_tokens else 0,
+            'response_tokens': int(statistics.mean(self.response_tokens)) if self.response_tokens else 0,
+            'original_warnings_dict': self.mutable_warnings,
+            'elapsed_time': elapsed_time
+        })
+        os.makedirs(self.visualize_path, exist_ok=True)
+        self.visualizer.generate_comparison_charts(self.visualize_path)
+        self.visualizer.save_metrics(os.path.join(self.visualize_path, f'benchmark_metrics_round_{self.num_of_rounds}.json'))
+        logger.info(f"Benchmarking results saved to {self.visualize_path}")

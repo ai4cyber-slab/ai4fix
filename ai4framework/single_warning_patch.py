@@ -247,6 +247,7 @@ class PatchManager:
                     try:
                         with open(diff_file_path, 'w') as diff_file:
                             diff_file.write(diff_text)
+                        print(f"Patch generated: {diff_file_path}")
                     except Exception as e:
                         print(f"Error writing diff to file {diff_file_path}: {e}")
 

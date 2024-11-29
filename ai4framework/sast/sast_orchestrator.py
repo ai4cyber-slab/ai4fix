@@ -1,4 +1,3 @@
-import os
 import sys
 import subprocess
 
@@ -15,7 +14,6 @@ class SASTOrchestrator:
     This class manages the overall process of running various SAST tools,
     including checking out specific commits, running the tools, and merging reports.
     """
-
     def __init__(self, config):
         """
         Initialize the SASTOrchestrator with configuration settings.
@@ -25,7 +23,7 @@ class SASTOrchestrator:
         """
         self.repo_manager = RepoManager(
             config.get('DEFAULT', 'config.project_root'),
-            config.get('CLASSIFIER', 'commit_sha')
+            config.get('DEFAULT', 'config.commit_sha')
         )
         self.tool_runner = ToolRunner(config, self.repo_manager)
         self.report_merger = ReportMerger(config)
@@ -36,7 +34,7 @@ class SASTOrchestrator:
         Run all configured SAST tools or specific ones based on the provided tool argument.
 
         This method orchestrates the SAST process, including:
-        - Checking out the specified commit
+        - Checking out the specified commit (if provided)
         - Running the specified tools (PMD, SpotBugs)
         - Merging reports from all tools
         
@@ -96,3 +94,4 @@ class SASTOrchestrator:
         except Exception as e:
             logger.error(f"An error occurred during Maven compilation: {str(e)}")
             sys.exit(1)
+            

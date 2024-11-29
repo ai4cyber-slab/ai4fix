@@ -42,10 +42,8 @@ export async function refreshDiagnostics(
 
     logging.LogInfo("Finished diagnosis.");
   } catch (error) {
-    console.error("Unable to run diagnosis on file:", error);
-    logging.LogErrorAndShowErrorMessage(
-      "Unable to run diagnosis on file: " + error,
-      "Unable to run diagnosis on file: " + error
+    logging.LogError(
+      "Unable to run diagnosis on file"
     );
   }
 }
