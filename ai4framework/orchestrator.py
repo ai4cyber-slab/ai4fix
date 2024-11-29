@@ -33,16 +33,15 @@ class WorkflowFramework:
         self.symbolic_execution = SymbolicExecution(self.config)
         self.issues_merger = JSONCombiner(self.config)
         self.json_converter = JsonPluginConverter(self.config)
+        signal.signal(signal.SIGINT, self.handle_signal)
+        signal.signal(signal.SIGTERM, self.handle_signal)
+        logger.info("Signal handlers for SIGINT and SIGTERM registered.")
 
     def execute_workflow(self):
         logger.info("Starting workflow execution")
         start_time = time.time()
 
         try:
-            # Register signal handler for SIGINT
-            signal.signal(signal.SIGINT, self.handle_sigint)
-            logger.info("Signal handler registered")
-
             rounds_count = int(self.config.get("DEFAULT", "config.rounds_count", fallback=1))
             logger.info(f"Rounds count: {rounds_count}")
 
@@ -54,6 +53,7 @@ class WorkflowFramework:
                 if not self.sast_rerun:
                     self.security_classifier.classify()
                     self.symbolic_execution.analyze()
+                    logger.info("Analysis completed")
 
                     warnings_dict_original = self.issues_merger.run()
                     logger.info("Issues merger run completed")
@@ -72,7 +72,7 @@ class WorkflowFramework:
 
         except KeyboardInterrupt:
             logger.info("SIGINT received. Gracefully stopping workflow.")
-            self.json_converter.process()  # Save progress
+            self.json_converter.process()
             logger.info("Progress saved successfully.")
             sys.exit(0)
         except Exception as e:
@@ -80,11 +80,12 @@ class WorkflowFramework:
         finally:
             elapsed_time = time.time() - start_time
             logger.info(f"Workflow execution completed in {elapsed_time:.2f} seconds")
-
-    def handle_sigint(self, signal_number, frame):
-        """Handle SIGINT (Ctrl+C) for graceful shutdown."""
-        logger.info("SIGINT signal received. Cancelling workflow...")
-        raise KeyboardInterrupt
+    def handle_signal(self, signal_number, frame):
+        """Handle termination signals (SIGINT, SIGTERM) for graceful shutdown."""
+        logger.info(f"Signal {signal_number} received. Gracefully stopping workflow.")
+        self.json_converter.process()  # Save progress
+        logger.info("Progress saved successfully.")
+        sys.exit(0)
 
 
 if __name__ == "__main__":
