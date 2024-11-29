@@ -66,14 +66,14 @@ class PatchGenerator:
     def run_maven_test(self):
         """Run 'mvn test' command and return the result."""
         with subprocess.Popen(
-            ['mvn','clean', 'test'],
+            ['mvn', 'clean', 'test', '-Dmaven.compiler.incremental=true', '-T', str(os.cpu_count())],
             cwd=self.project_path,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
         ) as process:
             stdout, stderr = process.communicate()
-            result = subprocess.CompletedProcess(args=['mvn', 'clean', 'test'], returncode=process.returncode, stdout=stdout, stderr=stderr)
+            result = subprocess.CompletedProcess(args=['mvn', 'clean', 'test', '-Dmaven.compiler.incremental=true', '-T', str(os.cpu_count())], returncode=process.returncode, stdout=stdout, stderr=stderr)
         return result
 
     def analyze_maven_output(self, result):

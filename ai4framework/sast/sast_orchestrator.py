@@ -78,7 +78,7 @@ class SASTOrchestrator:
             logger.info("Maven compilation started...")
 
             with subprocess.Popen(
-                ['mvn', 'compile', '-Dmaven.compiler.incremental=true', '-DskipTests'],
+                ['mvn', 'compile', '-Dmaven.compiler.incremental=true', '-DskipTests', '-T', str(os.cpu_count())],
                 cwd=self.project_path,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
             ) as process:
