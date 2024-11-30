@@ -546,8 +546,6 @@ export function init(
         }
       } catch (err) {
         logging.LogError(`Error reading the issuesPath file: ${err}`);
-        vscode.window.showErrorMessage(`Failed to read issues file: ${err}`);
-        return;
       }
 
       // Step 5: Initialize and display the issues tree views
