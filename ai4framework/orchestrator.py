@@ -4,13 +4,13 @@ import signal
 import argparse
 
 from utils.logger import logger
-from utils.issues_merger import JSONCombiner
 from config.common_config import ConfigManager
-from sast.sast_orchestrator import SASTOrchestrator
-from utils.plugin_json_converter import JsonPluginConverter
 from symbolic_execution.execution import SymbolicExecution
+from sast.sast_orchestrator import SASTOrchestrator
+from utils.issues_merger import JSONCombiner
+from utils.plugin_json_converter import JsonPluginConverter
 from patch_generation.patch_applier import PatchApplier
-from patch_generation.patch_generator import PatchGenerator
+from patch_generation.patch_generation_v2 import PatchGenerator
 from classification.security_classifier import SecurityClassifier
 
 
@@ -48,10 +48,9 @@ class WorkflowFramework:
             for i in range(1, rounds_count + 1):
                 logger.info(f"Starting round {i}")
                 self.sast.run_all() if i == 1 else self.sast.run_all(is_initial_round=False)
-                logger.info("SAST run completed")
 
                 if not self.sast_rerun:
-                    self.security_classifier.classify()
+                    # self.security_classifier.classify()
                     self.symbolic_execution.analyze()
                     logger.info("Analysis completed")
 
