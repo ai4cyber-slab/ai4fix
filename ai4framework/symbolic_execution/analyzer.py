@@ -4,6 +4,7 @@ import sys
 import time
 import subprocess
 from utils.logger import logger
+from management.repo_manager import RepoManager
 
 
 class Analyzer:
@@ -26,7 +27,20 @@ class Analyzer:
         self.project_path = project_path
         self.results_path = results_path
         self.filter = os.path.join(os.path.dirname(self.results_path), 'filter.txt')
-
+        self.repo_manager = RepoManager(project_path)
+        self.javaFilepaths = self.repo_manager.get_files_to_analyze(self.project_path, '')
+        
+        try:
+            if self.javaFilepaths:
+                with open(self.filter, 'w') as filter_file:
+                    if len(self.javaFilepaths) > 500:
+                        filter_file.write("+.*\n")
+                    else:
+                        filter_file.write("-.*\n")
+                        for javaFilePath in self.javaFilepaths:
+                            filter_file.write(f"+.*{javaFilePath}\n")
+        except Exception as e:
+            logger.error(f"An error occurred while writing to the filter file: {e}")
 
     def run_analysis(self):
         """

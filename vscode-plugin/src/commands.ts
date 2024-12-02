@@ -427,7 +427,7 @@ export function init(
     const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
   
     // Define arguments for the script
-    const args = [scriptPath, '-r', PROJECT_FOLDER];
+    const args = [scriptPath];
   
     // Define spawn options
     const options: child_process.SpawnOptions = {
@@ -1882,11 +1882,21 @@ export function init(
   }
   
 
-function createJsonFilePath(currentFilePath: string): string {
-  const SRC_PATH = currentFilePath.substring(currentFilePath.indexOf('src'));
-  const json_file_path = path.join(path.dirname(PATCH_FOLDER), 'validation', 'jsons', SRC_PATH) + '.json';
-  return json_file_path;
-}
+  function createJsonFilePath(currentFilePath: string): string {
+    const SRC_PATH_INDEX = currentFilePath.indexOf('src');
+    const PROJECT_RELATIVE_PATH = path.relative(
+      path.dirname(PATCH_FOLDER),
+      currentFilePath
+    );
+    const jsonFilePath = path.join(
+      path.dirname(PATCH_FOLDER),
+      'validation',
+      'jsons',
+      'jsons', // for some reason some path should be here otherwise the 'jsons' won't be included in the final jsonFilePath
+      PROJECT_RELATIVE_PATH
+    ) + '.json';
+    return jsonFilePath;
+  }
 
 async function saveFileAndFixesToState(filePath: string) {
   // Normalize the path correctly

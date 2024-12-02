@@ -1,6 +1,5 @@
 import os
 import sys
-import uuid
 import subprocess
 import xml.etree.ElementTree as ET
 from utils.logger import logger
@@ -102,7 +101,7 @@ class SpotBugsRunner:
 
         for bug_instance in spotbugs_root.findall('.//BugInstance'):
             issue = {
-                "id": str(uuid.uuid4().int)[:5],
+                "id": f"SB-{str(len(issues) + 1).zfill(4)}",
                 "name": bug_instance.get('type', '').strip(),
                 "explanation": (bug_instance.find('LongMessage').text or "No detailed explanation available.").strip(),
                 "tags": "SB",

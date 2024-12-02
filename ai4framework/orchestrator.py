@@ -10,7 +10,7 @@ from sast.sast_orchestrator import SASTOrchestrator
 from utils.issues_merger import JSONCombiner
 from utils.plugin_json_converter import JsonPluginConverter
 from patch_generation.patch_applier import PatchApplier
-from patch_generation.patch_generation_v2 import PatchGenerator
+from patch_generation.patch_generation import PatchGenerator
 from classification.security_classifier import SecurityClassifier
 
 

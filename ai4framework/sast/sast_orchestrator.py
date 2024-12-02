@@ -55,7 +55,8 @@ class SASTOrchestrator:
 
             if tool is None or tool.upper() == "SB":
                 self.tool_runner.run_spotbugs()
-
+                
+            logger.info("SAST run completed")
             return self.report_merger.merge_reports(
                 self.tool_runner.pmd_runner if tool is None or tool.upper() == "PMD" else None,
                 self.tool_runner.spotbugs_runner if tool is None or tool.upper() == "SB" else None,

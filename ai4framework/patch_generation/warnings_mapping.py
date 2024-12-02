@@ -1,4 +1,4 @@
-SAST_WARNINGS = {
+ALL_WARNINGS = {
     "AtLeastOneConstructor": "Add one empty constructor to the class.",
     "AvoidDollarSigns": "Remove any dollar signs from variable or class names.",
     "AvoidProtectedFieldInFinalClass": "Change protected fields in final classes to private or package-private.",
@@ -47,7 +47,7 @@ SAST_WARNINGS = {
     "UnnecessaryFullyQualifiedName": "Use the simple class name instead of the fully qualified name when possible.",
     "UnnecessaryImport": "Remove all import statements that are not being used in the code.",
     "UnnecessaryLocalBeforeReturn": "Inline local variables that are immediately returned without further usage.",
-    "UnnecessaryModifier": "Remove modifiers that are not necessary, such as 'public' in interface methods.",
+    "UnnecessaryModifier": "Remove the mentioned modifier only, nothing more.",
     "UnnecessaryReturn": "Remove 'return' statements that are not needed, such as 'return' at the end of a void method.",
     "UnnecessarySemicolon": "Remove unnecessary semicolons from the code.",
     "UseDiamondOperator": "Use the diamond operator '<>' for type inference in generic instance creation.",
@@ -169,15 +169,14 @@ SAST_WARNINGS = {
     "UseLocaleWithCaseConversions": "Specify a Locale when performing case conversions to avoid locale-related issues.",
     "UseProperClassLoader": "Use the appropriate class loader for loading classes dynamically.",
     "AbstractClassWithoutAnyMethod": "Add at least one abstract or concrete method to the abstract class.",
-    "AvoidCatchingGenericException": "Catch specific exception types instead of generic ones like Exception or Throwable.",
     "AvoidDeeplyNestedIfStmts": "Refactor the code to reduce nesting, possibly by using guard clauses or extracting methods.",
     "AvoidRethrowingException": "Handle exceptions without rethrowing them immediately; add meaningful actions or wrap them in custom exceptions.",
     "AvoidThrowingNewInstanceOfSameException": "Reuse the original exception instead of creating a new instance.",
     "AvoidThrowingNullPointerException": "Do not throw NullPointerException explicitly; use appropriate null checks instead.",
-    "AvoidThrowingRawExceptionTypes": "Throw specific exception types instead of generic ones like Exception or RuntimeException.",
+    "AvoidCatchingGenericException": "Catch Throwable instead of Exception",
     "AvoidUncheckedExceptionsInSignatures": "Avoid declaring unchecked exceptions in method signatures.",
     "ClassWithOnlyPrivateConstructorsShouldBeFinal": "Mark the class as final since it only has private constructors and cannot be subclassed.",
-    "CognitiveComplexity": "Simplify the code to reduce its cognitive complexity, possibly by breaking it into smaller methods.",
+    "CognitiveComplexity": "Refactor the method by breaking it into smaller, well-named helper methods to reduce complexity. Keep the functionality intact and retain the original name for the main method while delegating specific tasks to the helper methods.",
     "CollapsibleIfStatements": "Merge nested if statements with identical conditions or actions.",
     "CouplingBetweenObjects": "Reduce the number of classes that a class depends on to decrease coupling.",
     "CyclomaticComplexity": "Simplify the code to reduce the number of decision points.",
@@ -492,7 +491,7 @@ SAST_WARNINGS = {
     "OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE": "Use a try/finally block to ensure resource cleanup even if an exception is thrown.",
     "LG_LOST_LOGGER_DUE_TO_WEAK_REFERENCE": "Maintain a strong reference to loggers to avoid losing logger configuration due to garbage collection.",
     "DM_CONVERT_CASE": "Avoid using default encoding when converting strings to upper or lower case. Specify a charset explicitly.",
-    "DM_DEFAULT_ENCODING": "Specify the charset explicitly when converting between byte and String to avoid platform-specific behavior.",
+    "DM_DEFAULT_ENCODING": "For any relevant variables or candidates, use new String(candidate.toByteArray(), java.nio.charset.StandardCharsets.UTF_8) (or another appropriate charset if applicable) directly in the same line to explicitly specify the charset, without assuming prior import.",
     "DP_DO_INSIDE_DO_PRIVILEGED": "Invoke the method requiring security permission inside a doPrivileged block if it might be invoked by code without security permissions.",
     "DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED": "Create the classloader inside a doPrivileged block if it might be invoked by code without security permissions.",
     "FI_PUBLIC_SHOULD_BE_PROTECTED": "Change the access modifier of the finalize() method from public to protected.",
@@ -692,5 +691,5 @@ SAST_WARNINGS = {
     "NP_METHOD_PARAMETER_TIGHTENS_ANNOTATION": "Ensure that the overriding method follows the contract of the method it overrides by not tightening @Nullable to @Nonnull.",
     "OGNL_INJECTION": "Add validation to the method to check for OGNL syntax (like ${). If found, return the original input; otherwise, proceed with the existing functionality",
     "CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE": "Update the clone method to throw a CloneNotSupportedException instead of returing a clone.",
-    "NULL POINTER DEREFERENCE": "add a condition to make a null check for the variable/value/field before invoking it on that line only and that's it."
+    "NULL POINTER DEREFERENCE": "Before accessing any methods or properties of a variable/value/field, ensure a separate and dedicated `if` condition is added at the top to check if it is null. This null check should be independent and outside of any existing logic or conditions. If the value is null, handle it appropriately or skip further execution for that block to avoid null pointer dereference."
 }

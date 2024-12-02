@@ -6,6 +6,8 @@ import json
 import random
 import statistics
 import subprocess
+import commentjson as cjson
+import difflib
 
 from dotenv import load_dotenv, find_dotenv
 from utils.logger import logger
@@ -14,8 +16,7 @@ from sast.sast_orchestrator import SASTOrchestrator
 from config.llm_configuration import llm_response
 from patch_generation.mesure import BenchmarkVisualizer
 from symbolic_execution.execution import SymbolicExecution
-from patch_generation.sast_mapping import SAST_WARNINGS
-
+from ai4fix.ai4framework.patch_generation.warnings_mapping import ALL_WARNINGS
 
 class PatchGenerator:
     def __init__(self, config, warning_dict, num_of_rounds):
@@ -27,7 +28,7 @@ class PatchGenerator:
         self.model = self.config.get('API', 'config.model')
         self.api_key = self.config.get('API', 'config.key', fallback='')
         if self.api_key == '':
-            print("API key not found. Please set it in the configuration.")
+            logger.warning("API key not found. Please set it in the configuration.")
             sys.exit(1)
 
         self.project_path = self.config.get('DEFAULT', 'config.project_root')
@@ -73,14 +74,14 @@ class PatchGenerator:
     def run_maven_test(self):
         """Run 'mvn test' command and return the result."""
         with subprocess.Popen(
-            ['mvn', 'clean', 'test', '-Dmaven.compiler.incremental=true', '-T', str(os.cpu_count())],
+            ['mvn', 'test', '-Dmaven.compiler.incremental=true', '-T', str(os.cpu_count())],
             cwd=self.project_path,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
         ) as process:
             stdout, stderr = process.communicate()
-            result = subprocess.CompletedProcess(args=['mvn', 'clean', 'test', '-Dmaven.compiler.incremental=true', '-T', str(os.cpu_count())], returncode=process.returncode, stdout=stdout, stderr=stderr)
+            result = subprocess.CompletedProcess(args=['mvn', 'test', '-Dmaven.compiler.incremental=true', '-T', str(os.cpu_count())], returncode=process.returncode, stdout=stdout, stderr=stderr)
         return result
 
     def analyze_maven_output(self, result):
@@ -112,86 +113,50 @@ class PatchGenerator:
         extracted_dict = dict(list(lines_dict.items())[start_index:end_index + 1])
         extracted_json = json.dumps(extracted_dict, indent=2)
         return extracted_json
-    
-    def apply_patch_from_text(self, file_path, patch_text, extractedJson):
-        """Apply a patch to a file using the `patch` command with patch content provided as text."""
+
+
+    def update_java_file(self, java_file_path, initial_json, updated_json):
+        """
+        Updates the Java file based on the initial JSON and the updated JSON.
+
+        :param java_file_path: Path to the Java file to modify.
+        :param initial_json: Initial JSON string with lines to be updated.
+        :param updated_json: Updated JSON string with new or modified lines.
+        :return: True if the update is successful, False otherwise.
+        """
         try:
-            patch_text_ = self.update_json_with_diff(extractedJson, patch_text)
-            result = subprocess.run(
-                ['patch', '-f', '--fuzz=3', '--ignore-whitespace', '--no-backup-if-mismatch', '--reject-file=/dev/null', file_path],
-                input=patch_text,
-                text=True,
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
-            logger.info("Patch applied successfully.")
+            if isinstance(initial_json, str):
+                initial_json = cjson.loads(initial_json)
+            if isinstance(updated_json, str):
+                updated_json = cjson.loads(updated_json)
+
+            initial_lines_set = {int(key.split(":")[1]) for key in initial_json.keys()}
+            updated_lines = {int(key.split(":")[1]): value for key, value in updated_json.items()}
+
+            max_initial_line = max(initial_lines_set)
+
+            with open(java_file_path, 'r') as file:
+                lines = file.readlines()
+            new_lines = lines.copy()
+            lines_inserted = 0
+            for line_number in sorted(updated_lines.keys()):
+                content = updated_lines[line_number]
+
+                if line_number <= max_initial_line:
+                    if 1 <= line_number <= len(new_lines):
+                        new_lines[line_number - 1] = (content + '\n') if content else '\n'
+                    else:
+                        raise IndexError(f"Line number {line_number} is out of range for the file.")
+                else:
+                    insert_position = max_initial_line + lines_inserted
+                    new_lines.insert(insert_position, (content + '\n') if content else '\n')
+                    lines_inserted += 1
+            with open(java_file_path, 'w') as file:
+                file.writelines(new_lines)
             return True
-        except subprocess.CalledProcessError as e:
-            logger.error("Failed to apply patch.")
+        except Exception as e:
             return False
-        
-    def adjust_patch_content(self, patch_content):
-        updated_patch_lines = []
-        lines = patch_content.splitlines()
-        
-        hunk_header_pattern = re.compile(r'@@ -(\d+),(\d+) \+(\d+),(\d+) @@')
-        current_hunk_lines = []
-        inside_hunk = False
-        header_info = None
-        
-        for line in lines:
-            match = hunk_header_pattern.match(line)
-            if match:
-
-                if inside_hunk:
-                    updated_patch_lines.extend(self.process_hunk(current_hunk_lines, header_info))
-                    current_hunk_lines = []
-                
- 
-                header_info = match.groups()
-                inside_hunk = True
-            elif inside_hunk:
-                current_hunk_lines.append(line)
-
-                if line.startswith('@@') or line == lines[-1]:
-                    inside_hunk = False
-                    updated_patch_lines.extend(self.process_hunk(current_hunk_lines, header_info))
-                    current_hunk_lines = []
-                    if line != lines[-1]:
-                        updated_patch_lines.append(line)
-            else:
-                updated_patch_lines.append(line)
-        
-
-        if inside_hunk:
-            updated_patch_lines.extend(self.process_hunk(current_hunk_lines, header_info))
-        
-        return '\n'.join(updated_patch_lines)
-
-    def process_hunk(self, hunk_lines, header_info):       
-        context_lines = 0
-        added_lines = 0
-        removed_lines = 0
-        
-        for line in hunk_lines:
-            if line.startswith('-'):
-                removed_lines += 1
-            elif line.startswith('+'):
-                added_lines += 1
-            else:
-                context_lines += 1
-        
-
-        new_original_line_count = context_lines + removed_lines
-        new_new_line_count = context_lines + added_lines
-
-        updated_header = f"@@ -{header_info[0]},{new_original_line_count} +{header_info[2]},{new_new_line_count} @@"
-        
-
-        return [updated_header] + hunk_lines + ['']
     
-
 
     def process_warning(self, warning):
         """Process each warning, generate patches, and update JSON."""
@@ -205,6 +170,9 @@ class PatchGenerator:
             file_path = textrange['file']
             startLine = textrange['startLine']
             endLine = textrange['endLine']
+            self.applicable_patch = True
+            self.validation_passed = True
+            self.mvn_test_passed = True
             
             full_file_path = os.path.join(self.base_dir, file_path)
             self.full_file_path = full_file_path
@@ -224,10 +192,10 @@ class PatchGenerator:
             attempt = 0
             patch_applied = False
             previous_generated_patch = None
-            SOLVE_COMMAND = SAST_WARNINGS.get(name, explanation)
+            SOLVE_COMMAND = ALL_WARNINGS.get(name, explanation)
             METHOD_INFO, METHOD_START, METHOD_END = get_method_info_if_any(code_in_json_format, startLine, endLine)
-            adjusted_start_line = int(startLine) - 1
-            adjusted_end_line = int(endLine) + 1
+            adjusted_start_line = int(startLine) - 5
+            adjusted_end_line = int(endLine) + 5
             if f"Line:{adjusted_start_line}" in code_in_json_format and f"Line:{adjusted_end_line}" in code_in_json_format:
                 extract_json_section = self.extract_json_section(code_in_json_format, f"Line:{adjusted_start_line}", f"Line:{adjusted_end_line}")
             else:
@@ -240,38 +208,72 @@ class PatchGenerator:
                 attempt += 1
                 logger.info(f"Attempt {attempt} for warning ID {warning['id']}...")
                 if attempt == 1:
+                    input_example = {
+                        "Line:34": "public void exampleMethod() {",
+                        "Line:35": "    System.out.println(\"Hello, World!\");",
+                        "Line:36": "}"
+                    }
+                    ouput_example = {
+                        "Line:34": "public void exampleMethod() {",
+                        "Line:35": "    System.out.println(\"Updated Message!\");",
+                        "Line:36": "}"
+                    }
                     prompt = f"""
-                    Please follow these instructions:
-                    1. Patch Output Requirements:
-                    Provide the output in .patch format and only that no further explination is needed.
-                    the hunk header should reflect the line where the change occurs use the json keys which are the correct line numbers of original file, don't use much context only content with - or +.
-                    Ensure each hunk starts with the correct hunk header in the format: @@ -<line_number>,<context_lines> +<line_number>,<context_lines> @@.
-                    Also patch should start with the source and destination paths which are the same that will have the change with +++ and --- only and no extra metadata: {file_path}
-                    2. Change Request:
-                    Please fix this warning coming from static analysis tool in a creative logical way like a sofwtare engineer with +15 years of experience but Provide only the updated lines with + or - signs and no additional context lines: {explanation}
-                    The issue starts from line {startLine} and ends in line {endLine}.
-                    Solve that issue by: {SOLVE_COMMAND} {METHOD_INFO}
-                    Format the patch strictly according to the specified guidelines.
+                    You are a GPT that generates programmatic solutions to fix Java code issues. Your task is to modify the provided JSON content to resolve the issue. Follow these guidelines:
+
+                    1. **Objective**:
+                    - Update the provided JSON content to fix the issue as specified in the problem description.
+
+                    2. **Modification Rules**:
+                    - Replace any incorrect or problematic lines in the JSON content with the corrected lines.
+                    - If necessary, remove redundant lines or add new lines to ensure the solution is valid and complete.
+                    - Ensure the updated JSON contains all required lines and remains syntactically valid Java code.
+
+                    3. **Output Requirements**:
+                    - Return the full modified JSON content, structured similarly to the input JSON.
+                    - Preserve the format of the original JSON, including keys like `Line:<line_number>` and their corresponding values.
+
+                    4. **Validation**:
+                    - Ensure the updated JSON represents valid, compilable Java code.
+                    - Avoid redundant or conflicting changes.
+                    - If no valid solution is possible, respond with `"I DO NOT KNOW"`.
+
+                    5. **Input Context**:
+                    - Use the provided JSON snippet as the basis for your solution update it entirely:
+                        ```json
+                        {extract_json_section}
+                        ```
+
+                    6. **Example**:
+                    Input JSON:
                     ```json
-                    {extract_json_section}
+                    {input_example}
                     ```
-                    Please validate the patch for syntax correctness if the patch is applied before providing it.
-                    Make sure If any part of a method needs updating if it relates to the warning, please remove the entire method using - signs and add the updated method with + signs, ensuring it is surrounded by parentheses.
+
+                    Updated JSON:
+                    ```json
+                    {ouput_example}
+                    ```
+
+                    7. **Change Request**:
+                    - Fix the static analysis tool warning: `{explanation}` as follows {SOLVE_COMMAND}:
+                        - The issue starts at line {startLine} and ends at line {endLine}.
+                        - Solve the issue by performing the required changes to the JSON content directly.
+                    - If no valid solution is possible, respond with `"I DO NOT KNOW"`.
                     """
                 else:
-                    prompt = f"""The previous attempt to fix the issue did not resolve it.
-                    Here is the patch you gave me in last attempt:
+                    prompt = f"""
+                    The previous attempt to fix the issue did not resolve it.
+                    Here is the strategy you gave me in last attempt:
                     {previous_generated_patch}
                     Explanation of the issue: {explanation}
                     the issue is between line {startLine} and line {endLine}
-                    Here is the full original file code in json format with lines as the keys use them when providing the patch accurately:
+                    Here is the full original file code in json format with lines as the keys use them when providing the strategy accurately:
                     {extract_json_section}
                     Instructions:
-                    Analyze the previous attempt and identify why it did not fix the issue.
-                    Solve it by: {SOLVE_COMMAND} {METHOD_INFO}
-                    The patch should start with the source and destination paths which are the same that will have the change with +++ and --- only and no extra metadata: {file_path}
-                    Modify only the parts necessary to fix the issue described use the keys from the json.
-                    Provide the output in .patch format and only that no further explination is needed.
+                    Analyze the previous attempt and identify why it did result in incorrect java code.
+                    Solve it by: {SOLVE_COMMAND}
+                    Provide the output in same format and only that no further explination is needed.
                     """
                     
                 os.makedirs(self.diffs_output_dir, exist_ok=True)
@@ -284,7 +286,7 @@ class PatchGenerator:
                 generated_patch = self.extract_patch_from_response(response['message'])
                 previous_generated_patch = generated_patch
                 try:
-                    if not self.apply_patch_from_text(self.full_file_path, self.adjust_patch_content(generated_patch), extract_json_section):
+                    if not self.update_java_file(self.full_file_path, extract_json_section , generated_patch):
                         self.applicable_patch = False
                         self.validation_passed = True
                         self.mvn_test_passed = True
@@ -298,8 +300,7 @@ class PatchGenerator:
                     logger.error(e)
                     continue
 
-
-
+            
                 logger.info(f"Running 'mvn test' for warning ID {warning['id']}...")
                 result = self.run_maven_test()
                 error_detected = self.analyze_maven_output(result)
@@ -325,11 +326,29 @@ class PatchGenerator:
                     self.mvn_test_passed = True
                     self.input_tokens.append(response['input_tokens'])
                     self.response_tokens.append(response['output_tokens'])
+
+                    try:
+                        with open(full_file_path, 'r') as f:
+                            new_file_content = f.readlines()
+                            updated_content = ''.join(new_file_content)
+                    except Exception as e:
+                        logger.error(f"Error reading file {full_file_path}: {e}")
+                        continue
+
+                    diff = difflib.unified_diff(
+                        self.initial_content.splitlines(keepends=True),
+                        updated_content.splitlines(keepends=True),
+                        fromfile=file_path,
+                        tofile=file_path,
+                        n=len(self.initial_content.splitlines()) + len(updated_content.splitlines())
+                    )
+                    diff_text = ''.join(diff)
+
                     diff_file_name = f"{os.path.splitext(os.path.basename(full_file_path))[0]}_patch_{warning['id']}_attempt_{attempt}.diff"
                     diff_file_path = os.path.join(self.diffs_output_dir, diff_file_name)
                     try:
                         with open(diff_file_path, 'w') as diff_file:
-                            diff_file.write(generated_patch)
+                            diff_file.write(diff_text)
                     except Exception as e:
                         logger.error(f"Error writing diff to file {diff_file_path}: {e}")
 
@@ -425,14 +444,6 @@ class PatchGenerator:
             logger.error(f"Error running validation: {e}")
             return False
 
-        finally:
-            try:
-                with open(self.full_file_path, 'w') as f:
-                    f.write(self.initial_content)
-                logger.info(f"Original content restored to {self.full_file_path}.")
-            except Exception as e:
-                logger.error(f"Error restoring original content to {self.full_file_path}: {e}")
-
     def main(self):
         try:
             self.stats['start_time'] = time.time()
@@ -461,28 +472,27 @@ class PatchGenerator:
                 except KeyboardInterrupt:
                     logger.warning("Keyboard interrupt detected. Saving progress and stopping the script gracefully.")
                     self.save_warnings_json()
-                    raise  # Re-raise to handle in orchestrator.py
+                    raise
                 except Exception as e:
                     logger.error(f"Unexpected error processing warning ID {warning['id']}: {e}")
                     continue
                 logger.info(f"Finished processing warning ID {warning['id']}.")
 
-                # **Save progress after processing each warning**
+  
                 self.save_warnings_json()
 
             elapsed_time = time.time() - start_time
             logger.info(f"Patch generation completed in {elapsed_time:.2f} seconds")
 
-            # Generate visualizations and save metrics
+
             self.generate_visualizations_and_metrics(elapsed_time)
 
         except KeyboardInterrupt:
             logger.error("Keyboard interrupt detected in main. Saving progress and stopping the script gracefully.")
             self.save_warnings_json()
-            raise  # Re-raise to handle in orchestrator.py
+            raise
 
         finally:
-            # Restore the original content if needed
             if hasattr(self, 'full_file_path') and hasattr(self, 'initial_content'):
                 try:
                     logger.info(f"Restoring original content to {self.full_file_path}.")
@@ -507,7 +517,7 @@ class PatchGenerator:
             while retries < max_retries:
                 try:
                     messages = [
-                        {"role": "system", "content": "You are a helpful assistant that can fix code issues."},
+                        {"role": "system", "content": "You are a helpful assistant that can fix code issues and returns only a json block and no further explination."},
                         {"role": "user", "content": prompt},
                     ]
                     response = llm_response(self.provider, self.model, self.api_key, messages)
@@ -530,16 +540,12 @@ class PatchGenerator:
 
         for line in diff_lines:
             updated_diff_lines.append(line)
-
-
             for key in empty_lines.keys():
-
                 previous_line = lines_dict.get(f"Line:{int(key.split(':')[1]) - 1}", "").strip()
                 next_line = lines_dict.get(f"Line:{int(key.split(':')[1]) + 1}", "").strip()
 
                 if line.startswith('-') and previous_line == line.replace('-', '').strip():
                     target = len(updated_diff_lines)
-
 
                 if target != -1 and line.startswith('-') and next_line == line.replace('-', '').strip():
                     if key not in added_empty_lines:

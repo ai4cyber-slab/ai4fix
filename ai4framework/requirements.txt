@@ -9,3 +9,4 @@ javalang
 groq
 matplotlib
 anthropic
+commentjson
