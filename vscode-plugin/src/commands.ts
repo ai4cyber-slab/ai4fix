@@ -413,21 +413,19 @@ export function init(
       writeFileSync(issuesPath, '', 'utf8');
       logging.LogInfo(`Cleared content of the file at ${issuesPath}`);
     } catch (error) {
-      logging.LogErrorAndShowErrorMessage(
-        `Failed to clear content of the file at ${issuesPath}:`,
+      logging.LogInfoAndShowInformationMessage(
+        `Couldn't clear ${issuesPath}:`,
         error as any
       );
-      vscode.window.showErrorMessage(`Failed to clear issues path file: ${error}`);
     }
   
     // Step 2: Define the path to orchestrator.py
     const scriptPath = upath.normalize(upath.join(SCRIPT_PATH, 'orchestrator.py'));
   
-    // Determine the Python command based on the platform
     const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
   
     // Define arguments for the script
-    const args = [scriptPath, '-r', PROJECT_FOLDER];
+    const args = [scriptPath];
   
     // Define spawn options
     const options: child_process.SpawnOptions = {
@@ -541,8 +539,7 @@ export function init(
         jsonFilePaths = lines.filter((line: string) => line.trim().endsWith('.json'));
 
         if (jsonFilePaths.length === 0) {
-          logging.LogError('No JSON file paths found in the issuesPath file.');
-          vscode.window.showErrorMessage('No issues found after analysis.');
+          logging.LogInfo('No JSON file paths found in the issuesPath file.');
         }
       } catch (err) {
         logging.LogError(`Error reading the issuesPath file: ${err}`);
@@ -608,8 +605,11 @@ export function init(
   
     // Correct the file path for Windows systems
     if (process.platform === "win32") {
-      // Remove any leading '/c:/' or '\\c:\\'
-      lastFilePath = lastFilePath.replace(/^([/\\])?c:[/\\]/i, 'C:\\');
+      const driveLetterMatch = lastFilePath.match(/^([/\\])?([a-zA-Z]):[/\\]/);
+      if (driveLetterMatch) {
+        const driveLetter = driveLetterMatch[2].toUpperCase();
+        lastFilePath = lastFilePath.replace(/^([/\\])?[a-zA-Z]:[/\\]/, `${driveLetter}:\\`);
+      }
     }
   
     // Normalize the path after the correction
@@ -1892,25 +1892,25 @@ async function saveFileAndFixesToState(filePath: string) {
   // Normalize the path correctly
   let normalizedFilePath = filePath;
 
-  // For Windows, remove '/c:/' if it's part of the file path
   if (process.platform === "win32") {
-    if (normalizedFilePath.startsWith('/c:/')) {
-      normalizedFilePath = normalizedFilePath.replace('/c:/', 'C:\\');
-    } else if (normalizedFilePath.startsWith('C:') && normalizedFilePath.includes('/')) {
-      // Handle mixed slashes (both C: and /)
-      normalizedFilePath = upath.toUnix(normalizedFilePath).replace('/c:/', 'C:\\');
+    const driveLetterRegex = /^\/([a-zA-Z]):\//;
+    if (driveLetterRegex.test(normalizedFilePath)) {
+      normalizedFilePath = normalizedFilePath.replace(driveLetterRegex, (match, driveLetter) => {
+        return `${driveLetter.toUpperCase()}:\\`;
+      });
+    } else if (/^[a-zA-Z]:/.test(normalizedFilePath) && normalizedFilePath.includes('/')) {
+      normalizedFilePath = upath.toUnix(normalizedFilePath).replace(driveLetterRegex, (match: any, driveLetter: string) => {
+        return `${driveLetter.toUpperCase()}:\\`;
+      });
     }
   } else {
-    // For Unix systems, normalize as needed
     normalizedFilePath = upath.normalize(filePath);
   }
 
   logging.LogInfo("Final normalized file path: " + normalizedFilePath);
 
-  // Now, use the corrected file path to read the file contents
   let jsonFilePath = createJsonFilePath(normalizedFilePath);
 
-  // Now, using the corrected file path to read the file contents
   var originalFileContent = readFileSync(normalizedFilePath, "utf8");
   var originalIssuesContent = readFileSync(jsonFilePath, "utf8");
     context.workspaceState.update(
