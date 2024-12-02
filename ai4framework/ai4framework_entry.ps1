@@ -33,13 +33,15 @@ if (-not $LOCAL_PROJECT_PATH -or -not $CONTAINER_PROJECT_PATH) {
 
 
 if (-not (Test-Path $LOCAL_PROJECT_PATH)) {
-    Write-Host "Error: The local project path '$LOCAL_PROJECT_PATH' does not exist." -ForegroundColor Red
-    Show-Usage
+    Write-Host "Error: The local project path '$LOCAL_PROJECT_PATH' is not a directory. Check your enviroment variable." -ForegroundColor Red
+    exit 1
 }
 
-if ($CONTAINER_PROJECT_PATH -notmatch "^/") {
-    Write-Host "Error: CONTAINER_PROJECT_PATH must be an absolute path (e.g., '/sample_project')." -ForegroundColor Red
-    Show-Usage
+
+ if ($CONTAINER_PROJECT_PATH -notmatch "^/") {
+    Write-Host "Relative path detected for CONTAINER_PROJECT_PATH: $CONTAINER_PROJECT_PATH"
+    $CONTAINER_PROJECT_PATH = "/$CONTAINER_PROJECT_PATH"
+    Write-Host "Converted to absolute path: $CONTAINER_PROJECT_PATH"
 }
 
 
@@ -53,12 +55,6 @@ function Show-Banner {
 }
 
 
-
-if ($CONTAINER_PROJECT_PATH -notmatch "^/") {
-    Write-Host "Relative path detected for CONTAINER_PROJECT_PATH: $CONTAINER_PROJECT_PATH"
-    $CONTAINER_PROJECT_PATH = "/$CONTAINER_PROJECT_PATH"
-    Write-Host "Converted to absolute path: $CONTAINER_PROJECT_PATH"
-}
 Show-Banner
 Write-Host "Building the Docker image..."
 docker build -t code-analyzer-vs-version .

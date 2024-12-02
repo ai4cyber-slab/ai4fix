@@ -19,7 +19,6 @@ Welcome to **AI4Framework**! This guide will walk you through setting up and usi
     - [Orchestrator.py Script Options](#orchestratorpy-script-options)
 6. [Example Scenario: Running AI4Framework on macOS in Headless Mode](#example-scenario-running-ai4framework-on-macos-in-headless-mode)
     - [Reviewing and Retrieving the Results](#reviewing-and-retrieving-the-results)
-    - [Getting Your Results Back](#getting-your-results-back)
 7. [Need Support?](#need-support)
 
 ---
@@ -90,7 +89,7 @@ cd ai4framework
 
 Press `Win + X` and select **Windows PowerShell**.
 
-#### Step 2: Run the Script
+#### Step 2: Run the following command
 
 Replace placeholders with your information:
 
@@ -106,7 +105,7 @@ Replace placeholders with your information:
 
 #### Step 1: Open Terminal
 
-#### Step 2: Run the Script
+#### Step 2: Run the following command
 
 Replace placeholders with your information:
 
@@ -122,7 +121,7 @@ bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAI
 
 ## Analyzing Your Project
 
-After running the script, AI4Framework sets up a Docker container where your project will be analyzed.
+After running the above command, AI4Framework sets up a Docker container where your project will be analyzed.
 
 You have two options to proceed:
 
@@ -132,7 +131,7 @@ This method lets you use a web-based code editor similar to Visual Studio Code.
 
 #### Step 1: Access the Web Editor
 
-- After running the script, look for a message like:
+- After running Docker, look for a message like:
 
   ```
   Container is running with code-server support. Navigate to http://localhost:XXXX/?folder=/*
@@ -156,9 +155,9 @@ This method lets you use a web-based code editor similar to Visual Studio Code.
 
 ### Option 2: Using Command Line Access (Headless Mode)
 
-If you prefer using the command line without the web editor, run the script with an additional argument to get direct access to the container's terminal.
+If you prefer using the command line without the web editor, run Docker with an additional argument to get direct access to the container's terminal.
 
-#### Step 1: Run the Script with Bash Access
+#### Step 1: Run Docker with Bash Access
 
 **On Windows:**
 
@@ -197,7 +196,7 @@ config.rounds_count=1 # Number of times to run the process. Useful for auto patc
 
 [API]
 config.provider=openai # Service to use ('groq', 'openai', 'claude')
-config.key=your_api_key  # Enter your API key directly
+config.key=your_api_key # Enter your API key directly
 config.model=gpt-4o # Desired model name
 config.temperature=0 # Desired temperature
 
@@ -210,7 +209,7 @@ config.pmd_ruleset=/app/utils/PMD-config.xml # Leave as default or change if nee
 config.analyzer=/opt/AI4VULN/Java/AnalyzerJava # Path as specified in the Dockerfile
 
 [PLUGIN]
-plugin.use_diff_mode=view Diffs
+plugin.use_diff_mode=view Diffs # Do not change
 plugin.script_path=/app # Do not change
 plugin.test_folder_log=src/test # Path of the test folder in your project
 ```
@@ -291,16 +290,16 @@ cd ai4framework
 
 #### Step 3: Prepare Your Project
 
-Ensure your project is a **Maven-structured project** located at `/Users/yourusername/projects/myproject`.
+Ensure your project is a **Maven-structured project**, in this case, located at `/path/to/your/project`.
 
 #### Step 4: Create the `config.properties` File
 
-In your project's root folder (`myproject`), create a file named `config.properties`. See the [Configuration File](#configuration-file) section for details.
+In your project's root folder, create a file named `config.properties`. See the [Configuration File](#configuration-file) section for details.
 
-#### Step 5: Run the Script with Bash Access and Custom Port
+#### Step 5: Run Docker with Bash Access and Custom Port
 
 ```bash
-bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/Users/yourusername/projects/myproject" --CONTAINER_PROJECT_PATH "/project" --PORT 9090 --RunWithBash
+bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 9090 --RunWithBash
 ```
 
 #### Step 6: Run the Analysis Inside the Container
@@ -311,7 +310,7 @@ python /app/orchestrator.py
 
 ### Reviewing and Retrieving the Results
 
-After the analysis, AI4Framework creates a hidden folder `.ai4framework` in your project directory containing:
+After the analysis, AI4Framework creates a hidden `.ai4framework` folder in your project directory containing:
 
 - **patches**: Validated `.diff` files with suggested fixes.
 - **symbolic_results**: Issues found by the symbolic execution tool.
@@ -321,7 +320,7 @@ After the analysis, AI4Framework creates a hidden folder `.ai4framework` in your
 - **sast_issues**: Issues found by static analysis tools.
 - **jsons.lists**: Paths to the validated JSON files.
 
-Back in your Mac terminal (outside the container), copy the results from the container to your local project folder.
+Back in your Mac terminal (outside the container), copy the results from the container to your local computer.
 First, find the container ID by running:
 
 ```bash
@@ -330,35 +329,13 @@ docker ps -a
 
 Note the container ID associated with AI4Framework.
 
-Copy the `.ai4framework` folder from the container to your project directory:
+Copy the `.ai4framework` folder from the container to your chosen directory:
 
 ```bash
-docker cp <container_id>:/project/.ai4framework "/Users/yourusername/projects/myproject"
+docker cp <container_id>:/project/.ai4framework "/Users/username/path/to/chosen/directory"
 ```
 
 Replace `<container_id>` with the actual container ID.
-
-### Getting Your Results Back
-
-Before finishing, copy the results from the Docker container to your computer.
-
-#### Step 1: Find Your Container ID
-
-Run:
-
-```bash
-docker ps -a
-```
-
-Note the container ID associated with AI4Framework.
-
-#### Step 2: Copy the Results
-
-```bash
-docker cp <container_id>:/project/.ai4framework /path/to/your/project
-```
-
-Replace `<container_id>` with the actual container ID and `/path/to/your/project` with your local project path.
 
 ---
 

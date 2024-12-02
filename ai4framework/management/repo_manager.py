@@ -78,7 +78,7 @@ class RepoManager:
             list: A list of file paths to be analyzed.
         """
         try:
-            if self.repo and self.commit_hash:
+            if self.repo and self.commit_hash != '':
                 all_files = list(self.repo.commit(self.commit_hash).stats.files.keys())
             else:
                 all_files = [
