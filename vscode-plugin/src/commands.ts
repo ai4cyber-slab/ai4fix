@@ -150,7 +150,7 @@ export async function refreshDiagnosticsWithoutAnalysis(context: vscode.Extensio
   );
 
   let output = fakeAiFixCode.getIssuesSync();
-  logging.LogInfo("issues got from analyzer output: " + JSON.stringify(output));
+  //logging.LogInfo("issues got from analyzer output: " + JSON.stringify(output));
 
   logging.LogInfoAndShowInformationMessage(
     "===== Finished analysis. =====",
@@ -377,7 +377,7 @@ export function init(
     );
   
     let output = fakeAiFixCode.getIssuesSync();
-    logging.LogInfo("issues got from analyzer output: " + JSON.stringify(output));
+    //logging.LogInfo("issues got from analyzer output: " + JSON.stringify(output));
   
     logging.LogInfoAndShowInformationMessage(
       "===== Finished analysis. =====",
@@ -409,6 +409,15 @@ export function init(
     const issuesPath = ISSUES_PATH;
   
     // Step 1: Clear the issuesPath file
+    // Step 2: Define the path to orchestrator.py
+    // Step 3: Spawn the orchestrator.py process
+    // Step 4: Read the issuesPath file
+    // Step 5: Initialize action commands related to diagnostics
+    // Step 6: Refresh diagnostics with a progress indicator
+    // Step 7: Get issues from the analyzer
+    // Step 8: Show finished analysis message
+
+    // 1.
     try {
       writeFileSync(issuesPath, '', 'utf8');
       logging.LogInfo(`Cleared content of the file at ${issuesPath}`);
@@ -419,27 +428,25 @@ export function init(
       );
     }
   
-    // Step 2: Define the path to orchestrator.py
+    // 2.
     const scriptPath = upath.normalize(upath.join(SCRIPT_PATH, 'orchestrator.py'));
   
     const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
   
-    // Define arguments for the script
     const args = [scriptPath];
   
-    // Define spawn options
     const options: child_process.SpawnOptions = {
       cwd: PROJECT_FOLDER,
       shell: false,
       env: {
         ...process.env,
-        PYTHONUNBUFFERED: '1', // Disable output buffering
+        PYTHONUNBUFFERED: '1',
       },
     };
   
     logging.LogInfo(`Running orchestrator in: ${PROJECT_FOLDER}`);
   
-    // Step 3: Spawn the orchestrator.py process
+    // 3.
     const childProc = spawn(pythonCommand, args, options);
   
     // Handle cancellation
@@ -460,28 +467,26 @@ export function init(
       }
     });
   
-    // Set up readline to process stdout line by line
+    // Listen for lines from stdout
     const rl = readline.createInterface({
       input: childProc.stdout,
       crlfDelay: Infinity,
     });
   
-    // Initialize progress variables
     let totalTasks = 0;
     let completedTasks = 0;
   
-    // Listen for lines from stdout
+    
     rl.on('line', (line: string) => {
       logging.LogInfo(`orchestrator.py: ${line}`);
     
-      // Parse progress updates in the format "PROGRESS_UPDATE: x/y"
       const progressMatch = line.match(/^PROGRESS_UPDATE:\s*(\d+)\/(\d+)/);
       if (progressMatch) {
         completedTasks = parseInt(progressMatch[1], 10);
         totalTasks = parseInt(progressMatch[2], 10);
     
         if (totalTasks > 0) {
-          const increment = (1 / totalTasks) * 100; // Increment for each task
+          const increment = (1 / totalTasks) * 100;
           progress.report({
             message: `Processing issue ${completedTasks}/${totalTasks}`,
             increment: increment,
@@ -490,7 +495,6 @@ export function init(
       }
     });
   
-    // Listen for errors on stderr
     childProc.stderr.on('data', (data: Buffer) => {
       const message = data.toString();
       logging.LogInfo(`orchestrator.py: ${message}`);
@@ -531,7 +535,7 @@ export function init(
       }
 
       // Proceed with post-analysis steps if not cancelled
-      // Step 4: Read the issuesPath file
+      // 4.
       let jsonFilePaths: string[] = [];
       try {
         const data = readFileSync(issuesPath, 'utf8');
@@ -545,14 +549,10 @@ export function init(
         logging.LogError(`Error reading the issuesPath file: ${err}`);
       }
 
-      // Step 5: Initialize and display the issues tree views
-      const testView = new TestView(context);
-      const groupedTestView = new GroupedTestView(context);
-
-      // Step 6: Initialize action commands related to diagnostics
+      // 5.
       initActionCommands(context);
 
-      // Step 7: Refresh diagnostics with a progress indicator
+      // 6.
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
@@ -566,19 +566,18 @@ export function init(
         }
       );
 
-      // Step 8: Get issues from the analyzer
+      // 7.
       const output = fakeAiFixCode.getIssuesSync();
-      logging.LogInfo(`Issues got from analyzer output: ${JSON.stringify(output)}`);
+      //logging.LogInfo(`Issues got from analyzer output: ${JSON.stringify(output)}`);
 
-      // Step 9: Show finished analysis message
+      // 8.
       logging.LogInfoAndShowInformationMessage(
         '===== Finished analysis. =====',
         'Finished analysis of project!'
       );
     } catch (error) {
-      // Handle any errors that occurred during the analysis
       logging.LogError(`Error during analysis: ${error}`);
-      throw error; // Rethrow to be caught in getOutputFromAnalyzer
+      throw error;
     }
   }
 
@@ -614,7 +613,6 @@ export function init(
   
     // Normalize the path after the correction
     lastFilePath = path.normalize(lastFilePath);
-    logging.LogInfo("Corrected file path: " + lastFilePath);
   
     // Get the file content to revert
     const lastFileContent = context.workspaceState.get<string>("lastFileContent")!;
@@ -761,68 +759,6 @@ export function init(
     writeFileSync(patchFilePath, revertedPatch, 'utf8');
   }
 
-  function startAnalyzingProjectSync() {
-    let issuesPath = ISSUES_PATH;
-    let generatedPatchesPath = PATCH_FOLDER;
-    let subjectProjectPath = PROJECT_FOLDER;
-    let jsonFilePaths: string | any[] = [];
-
-    var currentFilePath = upath.normalize(
-      vscode.window.activeTextEditor!.document.uri.path
-    );
-    if (process.platform === "win32" && currentFilePath.startsWith("/")) {
-      currentFilePath = currentFilePath.substring(1);
-    }
-
-    try {
-      const data = readFileSync(issuesPath, "utf8");
-      let lines = data.split("\n");
-
-      jsonFilePaths = lines.filter((line: string) => line.trim().endsWith('.json'));
-
-      if (jsonFilePaths.length === 0) {
-        logging.LogError("No JSON file paths found in the issuesPath file.");
-        return;
-      }
-    } catch (err) {
-      logging.LogError("Error reading the issuesPath file: " + err);
-      return;
-    }
-
-    return new Promise<void>((resolve) => {
-      // Get Output from analyzer:
-      let output = fakeAiFixCode.getIssuesSync();
-      logging.LogInfo("issues got from analyzer output: " + JSON.stringify(output));
-
-      // Show issues treeView:
-      // tslint:disable-next-line: no-unused-expression
-      testView = new TestView(context);
-      groupedTestView= new GroupedTestView(context);
-
-      // Initialize action commands of diagnostics made after analysis:
-      initActionCommands(context);
-
-      vscode.window.withProgress(
-        {
-          location: vscode.ProgressLocation.Notification,
-          title: "Loading Diagnostics...",
-        },
-        async () => {
-          await refreshDiagnostics(
-            vscode.window.activeTextEditor!.document,
-            analysisDiagnostics
-          );
-        }
-      );
-
-      resolve();
-      logging.LogInfoAndShowInformationMessage(
-        "===== Finished analysis. =====",
-        "Finished analysis of project!"
-      );
-      //process.exit();
-    });
-  }
   async function generateTestForCurrentFile() {
     logging.LogInfo("===== Generating test for current file. =====");
     const activeEditor = vscode.window.activeTextEditor;
@@ -1018,9 +954,7 @@ export function init(
       logging.LogInfo("Analyzer executable finished.");
       // Get Output from analyzer:
       let output = fakeAiFixCode.getIssuesSync(currentFilePath);
-      logging.LogInfo(
-        "issues got from analyzer output: " + JSON.stringify(output)
-      );
+      //logging.LogInfo("issues got from analyzer output: " + JSON.stringify(output));
 
       // Show issues treeView:
       // tslint:disable-next-line: no-unused-expression
@@ -1388,8 +1322,6 @@ export function init(
           // Apply the patch
           webview.api.applyPatch();
 
-          
-    
           openFilePath = vscode.Uri.file(
             upath.normalize(String(webview.params.leftPath))
           );
@@ -1549,7 +1481,7 @@ export function init(
           item.patches.forEach((patch: any) => {
             // Skip updating the patch that was just applied (patchFilePath)
             if (patch.path === appliedPatchFilePath || appliedPatchFilePath.includes(patch.path)) {
-              return;  // Skip the applied patch
+              return;
             }
 
             // Apply header updates for other patches
@@ -1575,7 +1507,7 @@ export function init(
 
     parsedPatch.forEach((hunk: { hunks: any[]; }) => {
       // Preserve the source lines (`---` and `+++`) from the diff file.
-      const sourceLines = patchContent.split('\n').slice(0, 2); // First two lines are `---` and `+++`
+      const sourceLines = patchContent.split('\n').slice(0, 2);
       updatedPatch += sourceLines.join('\n') + "\n"; // Add the source lines back into the patch content
 
       // Iterate through each hunk and update its header
@@ -1604,7 +1536,7 @@ export function init(
         // Construct updated patch content by appending the header and chunk lines
         updatedPatch += header + "\n";
         chunk.lines.forEach((line: string) => {
-          updatedPatch += line + "\n";  // Add each line in the chunk
+          updatedPatch += line + "\n";
         });
       });
     });
