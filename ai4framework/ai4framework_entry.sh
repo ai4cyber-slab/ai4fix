@@ -29,7 +29,7 @@ done
 PORT=${PORT:-8080}
 
 
-if [[-z "$LOCAL_PROJECT_PATH" || -z "$CONTAINER_PROJECT_PATH" ]]; then
+if [[ -z "$LOCAL_PROJECT_PATH" || -z "$CONTAINER_PROJECT_PATH" ]]; then
     echo "Error: Missing required parameters."
     show_usage
 fi

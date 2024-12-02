@@ -6,16 +6,16 @@ based on their potential security impact. It uses various LLMs to analyze
 diff files and determine if security testing should be re-run.
 
 Usage:
-    python classifier.py -r <project_root> -f <filter> -c <commit_sha> -m <model> -t <temperature> -p <provider> -k <api_key>
+    python classifier.py -r <project_root> -c <commit_sha> -f <filter> -p <provider> -k <api_key> -m <model> -t <temperature>
 
 Arguments:
     -r, --project_root: Path to the root of the project that is under analysis
-    -f, --filter: List of words to filter the modified files
     -c, --commit_sha: Commit hash to analyze
+    -f, --filter: List of words to filter the modified files
+    -p, --provider: The LLM provider
+    -k, --key: The API key
     -m, --model: Model to use
     -t, --temperature: Temperature setting for the model
-    -p, --provider: The LLM provider
-    -k, --key: API key
 
 The script outputs results to both a text log file and a JSON file in the 'out' directory.
 """
@@ -42,12 +42,12 @@ parser = argparse.ArgumentParser(description="Classifier script with arguments",
 
 # Adding the arguments
 parser.add_argument("-r", "--project_root", type=str, help="Path to the root of the project that is under analysis")
-parser.add_argument("-f", "--filter", type=str, help="List of words to filter the modified files")
 parser.add_argument("-c", "--commit_sha", type=str, help="The hash of the commit")
-parser.add_argument("-m", "--model", type=str, help="The name of the model")
-parser.add_argument("-t", "--temperature", type=str, help="The temperature of the model")
+parser.add_argument("-f", "--filter", type=str, help="List of words to filter the modified files")
 parser.add_argument("-p", "--provider", type=str, help="The LLM provider")
 parser.add_argument("-k", "--key", type=str, help="Your API key")
+parser.add_argument("-m", "--model", type=str, help="The name of the model")
+parser.add_argument("-t", "--temperature", type=str, help="The temperature of the model")
 
 # Parsing the arguments
 args = parser.parse_args()
