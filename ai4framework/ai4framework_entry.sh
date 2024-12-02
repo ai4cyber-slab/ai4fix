@@ -36,7 +36,7 @@ fi
 
 
 if [[ ! -d "$LOCAL_PROJECT_PATH" ]]; then
-    echo "Error: The local project path '$LOCAL_PROJECT_PATH' does not exist."
+    echo "Error: The local project path '$LOCAL_PROJECT_PATH' is not a directory. Check your enviroment variable."
     exit 1
 fi
 
