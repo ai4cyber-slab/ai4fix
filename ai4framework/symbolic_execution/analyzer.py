@@ -106,7 +106,7 @@ class Analyzer:
                             logger.error(clean_error)
 
         except Exception as e:
-            logger.error(f"An error occurred: {e}")
+            logger.warning(f"Symbolic execution failed. Your hardware may not support symbolic execution. Skipping analysis. {e}")
             raise
         finally:
             end_time = time.time()

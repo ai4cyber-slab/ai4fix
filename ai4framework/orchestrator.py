@@ -23,7 +23,11 @@ class WorkflowFramework:
     """
 
     def __init__(self, commit_sha, skip_patches=False, sast_rerun=False, automatic_application=False):
-        self.config = ConfigManager.get_config(commit_sha)
+        try:
+            self.config = ConfigManager.get_config(commit_sha)
+        except Exception as e:
+            logger.error(f"Please create and fill correctly your config.properties file and set it under the root of your project. To fix: {e}")
+            sys.exit(1)
         self.sast_rerun = sast_rerun
         self.skip_patches = skip_patches
         self.automatic_application = automatic_application
@@ -109,5 +113,6 @@ if __name__ == "__main__":
         logger.info("Operation cancelled by user.")
     except Exception as e:
         logger.error("An unexpected error occurred. Please try again or contact support.")
+        print(e)
     finally:
         sys.exit(0)

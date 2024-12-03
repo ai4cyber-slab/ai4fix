@@ -91,8 +91,8 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Project copied successfully to the container."
 
 if ($RunWithBash) {
-    Write-Host "Attaching to the container with bash in $CONTAINER_PROJECT_PATH..."
-    docker exec -it -w "$CONTAINER_PROJECT_PATH" $ContainerID bash
+    Write-Host "Attaching to the container, running orchestrator.py in $CONTAINER_PROJECT_PATH..."
+    docker exec -it -w "$CONTAINER_PROJECT_PATH" $ContainerID bash -c "python /app/orchestrator.py; exec bash"
 } else {
     Write-Host "Container is running with code-server support. Navigate to http://localhost:$PORT/?folder=$CONTAINER_PROJECT_PATH"
 }

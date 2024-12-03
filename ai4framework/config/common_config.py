@@ -17,6 +17,7 @@ class ConfigManager:
     def get_config(cls, commit_sha):
         """
         Load configuration settings from a specified file, ignoring comments and comment-only lines.
+        Ensure the API key and config.properties file exist, otherwise terminate and notify the user.
 
         Args:
             commit_sha (str): The hash of the commit, with the modified files to be analyzed.
@@ -27,10 +28,6 @@ class ConfigManager:
         
         project_root = os.getenv("PROJECT_PATH")
 
-        if not project_root:
-            logger.warning("PROJECT_PATH environment variable is missing. Terminating.")
-            sys.exit(1)
-
         project_name = project_root.replace('/', '')
 
         if commit_sha == None:
@@ -38,12 +35,21 @@ class ConfigManager:
 
         cls._config = configparser.ConfigParser()
 
+
+        if not project_root:
+            logger.error("PROJECT_PATH environment variable is missing. Please set it.")
+            sys.exit(1)
+        
         cls._config.set('DEFAULT', 'config.project_name', project_name)
         cls._config.set('DEFAULT', 'config.project_root', project_root)
         cls._config.set('DEFAULT', 'config.commit_sha', commit_sha)
 
-        cleaned_lines = []
         config_file = os.path.join(project_root, 'config.properties')
+        if not os.path.exists(config_file):
+            logger.error("config.properties file is missing. Please ensure it exists.")
+            sys.exit(1)
+
+        cleaned_lines = []
         with open(config_file, 'r') as file:
             for line in file:
                 stripped_line = line.strip()
@@ -59,6 +65,23 @@ class ConfigManager:
         cls._config.read_string('\n'.join(cleaned_lines))
 
         cls.adjust_config_paths(project_root)
+
+
+        api_key = cls._config.get('API', 'config.key')
+        if not api_key:
+            logger.error("API key is missing in the config file. Please set it. eg: config.key=example-key")
+            sys.exit(1)
+
+        provider = cls._config.get('API', 'config.provider')
+        model = cls._config.get('API', 'config.model')
+
+        if not provider:
+            logger.error("Service provider is missing in the config file. Please set it. eg: config.provider")
+            sys.exit(1)
+
+        if not model:
+            logger.error("Desired llm model name is missing in the config file. Please set it. eg: config.model=gpt-4o-mini")
+            sys.exit(1)
 
         return cls._config
 

@@ -559,10 +559,7 @@ export function init(
           title: 'Loading Diagnostics...',
         },
         async () => {
-          await refreshDiagnostics(
-            vscode.window.activeTextEditor!.document,
-            analysisDiagnostics
-          );
+          await refreshDiagnosticsWithoutAnalysis()
         }
       );
 
