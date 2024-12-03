@@ -32,7 +32,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // Initialize other status bar items similarly
   analyzeCurrentFileStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
   analyzeCurrentFileStatusBarItem.command = "aifix4seccode-vscode.getOutputFromAnalyzerPerFile";
-  analyzeCurrentFileStatusBarItem.text = "$(symbol-keyword) Analyze Current File";
+  analyzeCurrentFileStatusBarItem.text = "$(symbol-keyword) Scan Current File";
   analyzeCurrentFileStatusBarItem.show();
   context.subscriptions.push(analyzeCurrentFileStatusBarItem);
 
@@ -42,11 +42,11 @@ export async function activate(context: vscode.ExtensionContext) {
   undoFixStatusBarItem.show();
   context.subscriptions.push(undoFixStatusBarItem);
 
-  generateTestForCurrentFileStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-  generateTestForCurrentFileStatusBarItem.command = 'aifix4seccode-vscode.generateTestForCurrentFile';
-  generateTestForCurrentFileStatusBarItem.text = "$(beaker) Generate Test for Current File";
-  generateTestForCurrentFileStatusBarItem.show();
-  context.subscriptions.push(generateTestForCurrentFileStatusBarItem);
+  // generateTestForCurrentFileStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+  // generateTestForCurrentFileStatusBarItem.command = 'aifix4seccode-vscode.generateTestForCurrentFile';
+  // generateTestForCurrentFileStatusBarItem.text = "$(beaker) Generate Test for Current File";
+  // generateTestForCurrentFileStatusBarItem.show();
+  // context.subscriptions.push(generateTestForCurrentFileStatusBarItem);
 
   // Initialize commands with the analysisStatusBarItem
   init(context, jsonOutlineProvider, analysisStatusBarItem);

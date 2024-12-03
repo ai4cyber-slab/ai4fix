@@ -1,5 +1,7 @@
 import git
 from pathlib import Path
+import os
+import re
 from utils.logger import logger
 
 
@@ -72,13 +74,13 @@ class RepoManager:
 
         Args:
             project_root (str): The path to the project root.
-            filter (str): A comma-separated list of words to filter the files.
+            filter (str): A comma-separated list of package names to filter the files.
 
         Returns:
             list: A list of file paths to be analyzed.
         """
         try:
-            if self.repo and self.commit_hash != '':
+            if self.repo and self.commit_hash and self.commit_hash != '':
                 all_files = list(self.repo.commit(self.commit_hash).stats.files.keys())
             else:
                 all_files = [
@@ -87,11 +89,15 @@ class RepoManager:
                     if not file.name.startswith('.')
                 ]
 
-            if filter != '':
-                filter_words = {word.strip() for word in filter.split(',')}
+            if filter != '' and filter is not None:
+                filter_packages = {word.strip() for word in filter.split(',')}
+                filter_patterns = [
+                    re.compile(rf"{re.escape(os.path.sep)}{re.escape(pkg)}{re.escape(os.path.sep)}")
+                    for pkg in filter_packages
+                ]
                 files_to_analyze = [
                     file for file in all_files
-                    if not any(word in file for word in filter_words)
+                    if not any(pattern.search(file) for pattern in filter_patterns)
                 ]
             else:
                 files_to_analyze = all_files
@@ -103,7 +109,7 @@ class RepoManager:
             return files_to_analyze
 
         except Exception as e:
-            logger.error(f"Error while getting files to analyze: {str(e)}")
+            logger.error(f"Error in get_files_to_analyze: {e}")
             return []
 
     def get_parent_commit(self):

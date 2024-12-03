@@ -50,7 +50,7 @@ class WorkflowFramework:
                 self.sast.run_all() if i == 1 else self.sast.run_all(is_initial_round=False)
 
                 if not self.sast_rerun:
-                    # self.security_classifier.classify()
+                    self.security_classifier.classify()
                     self.symbolic_execution.analyze()
                     logger.info("Analysis completed")
 
@@ -82,7 +82,7 @@ class WorkflowFramework:
     def handle_signal(self, signal_number, frame):
         """Handle termination signals (SIGINT, SIGTERM) for graceful shutdown."""
         logger.info(f"Signal {signal_number} received. Gracefully stopping workflow.")
-        self.json_converter.process()  # Save progress
+        self.json_converter.process()
         logger.info("Progress saved successfully.")
         sys.exit(0)
 

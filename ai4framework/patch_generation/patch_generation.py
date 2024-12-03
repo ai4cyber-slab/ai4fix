@@ -16,7 +16,7 @@ from sast.sast_orchestrator import SASTOrchestrator
 from config.llm_configuration import llm_response
 from patch_generation.mesure import BenchmarkVisualizer
 from symbolic_execution.execution import SymbolicExecution
-from ai4fix.ai4framework.patch_generation.warnings_mapping import ALL_WARNINGS
+from patch_generation.warnings_mapping import ALL_WARNINGS
 
 class PatchGenerator:
     def __init__(self, config, warning_dict, num_of_rounds):
@@ -66,6 +66,7 @@ class PatchGenerator:
         }
         self.num_of_rounds = num_of_rounds
         self.visualizer = BenchmarkVisualizer(num_of_rounds)
+        self.start_time = time.time()
 
 
         self.warnings_dict = warning_dict
@@ -114,10 +115,10 @@ class PatchGenerator:
         extracted_json = json.dumps(extracted_dict, indent=2)
         return extracted_json
 
-
     def update_java_file(self, java_file_path, initial_json, updated_json):
         """
-        Updates the Java file based on the initial JSON and the updated JSON.
+        Updates the Java file based on the initial JSON and the updated JSON,
+        filling missing lines with empty content only for lines between the first and last line of the initial JSON.
 
         :param java_file_path: Path to the Java file to modify.
         :param initial_json: Initial JSON string with lines to be updated.
@@ -131,27 +132,32 @@ class PatchGenerator:
                 updated_json = cjson.loads(updated_json)
 
             initial_lines_set = {int(key.split(":")[1]) for key in initial_json.keys()}
-            updated_lines = {int(key.split(":")[1]): value for key, value in updated_json.items()}
-
+            min_initial_line = min(initial_lines_set)
             max_initial_line = max(initial_lines_set)
+            updated_lines = {int(key.split(":")[1]): value for key, value in updated_json.items()}
+            
+            for line_number in range(min_initial_line, max_initial_line + 1):
+                if line_number not in updated_lines:
+                    updated_lines[line_number] = ""
 
             with open(java_file_path, 'r') as file:
                 lines = file.readlines()
-            new_lines = lines.copy()
-            lines_inserted = 0
-            for line_number in sorted(updated_lines.keys()):
-                content = updated_lines[line_number]
 
-                if line_number <= max_initial_line:
-                    if 1 <= line_number <= len(new_lines):
-                        new_lines[line_number - 1] = (content + '\n') if content else '\n'
-                    else:
-                        raise IndexError(f"Line number {line_number} is out of range for the file.")
-                else:
-                    insert_position = max_initial_line + lines_inserted
-                    new_lines.insert(insert_position, (content + '\n') if content else '\n')
-                    lines_inserted += 1
             with open(java_file_path, 'w') as file:
+                new_lines = lines.copy()
+                lines_inserted = 0
+                for line_number in sorted(updated_lines.keys()):
+                    content = updated_lines[line_number]
+
+                    if line_number <= max_initial_line:
+                        if 1 <= line_number <= len(new_lines):
+                            new_lines[line_number - 1] = (content + '\n') if content else '\n'
+                        else:
+                            raise IndexError(f"Line number {line_number} is out of range for the file.")
+                    else:
+                        insert_position = max_initial_line + lines_inserted
+                        new_lines.insert(insert_position, (content + '\n') if content else '\n')
+                        lines_inserted += 1
                 file.writelines(new_lines)
             return True
         except Exception as e:
@@ -340,7 +346,7 @@ class PatchGenerator:
                         updated_content.splitlines(keepends=True),
                         fromfile=file_path,
                         tofile=file_path,
-                        n=len(self.initial_content.splitlines()) + len(updated_content.splitlines())
+                        n=2
                     )
                     diff_text = ''.join(diff)
 
@@ -459,7 +465,7 @@ class PatchGenerator:
                 return
 
             logger.info("Patch Generation Started...")
-            start_time = time.time()
+            self.start_time = time.time()
 
             total_warnings = len(self.warnings)
             for idx, warning in enumerate(self.warnings, start=1):
@@ -477,15 +483,8 @@ class PatchGenerator:
                     logger.error(f"Unexpected error processing warning ID {warning['id']}: {e}")
                     continue
                 logger.info(f"Finished processing warning ID {warning['id']}.")
-
-  
                 self.save_warnings_json()
 
-            elapsed_time = time.time() - start_time
-            logger.info(f"Patch generation completed in {elapsed_time:.2f} seconds")
-
-
-            self.generate_visualizations_and_metrics(elapsed_time)
 
         except KeyboardInterrupt:
             logger.error("Keyboard interrupt detected in main. Saving progress and stopping the script gracefully.")
@@ -493,6 +492,12 @@ class PatchGenerator:
             raise
 
         finally:
+            elapsed_time = time.time() - self.start_time
+            logger.info(f"Patch generation completed in {elapsed_time:.2f} seconds")
+            try:
+                self.generate_visualizations_and_metrics(elapsed_time)
+            except Exception as e:
+                logger.error(f"Error generating visualizations and metrics: {e}")
             if hasattr(self, 'full_file_path') and hasattr(self, 'initial_content'):
                 try:
                     logger.info(f"Restoring original content to {self.full_file_path}.")
@@ -500,6 +505,7 @@ class PatchGenerator:
                         f.write(self.initial_content)
                 except Exception as e:
                     logger.error(f"Error restoring original content to {self.full_file_path}: {e}")
+
     def save_warnings_json(self):
         """Save the updated warnings JSON file."""
         try:
@@ -528,32 +534,6 @@ class PatchGenerator:
                 time.sleep(2 ** retries + random.uniform(0, 1))
         except Exception as e:
             return None
-        
-
-    def update_json_with_diff(self, json_content, diff_content):
-        lines_dict = json.loads(json_content)
-        empty_lines = {key: value.strip() for key, value in lines_dict.items() if value.strip() == ""}
-        updated_diff_lines = []
-        diff_lines = diff_content.splitlines()
-        target = -1
-        added_empty_lines = set()
-
-        for line in diff_lines:
-            updated_diff_lines.append(line)
-            for key in empty_lines.keys():
-                previous_line = lines_dict.get(f"Line:{int(key.split(':')[1]) - 1}", "").strip()
-                next_line = lines_dict.get(f"Line:{int(key.split(':')[1]) + 1}", "").strip()
-
-                if line.startswith('-') and previous_line == line.replace('-', '').strip():
-                    target = len(updated_diff_lines)
-
-                if target != -1 and line.startswith('-') and next_line == line.replace('-', '').strip():
-                    if key not in added_empty_lines:
-                        updated_diff_lines.insert(target, "- ")
-                        added_empty_lines.add(key)
-                        target = -1
-
-        return "\n".join(updated_diff_lines)
     
     def generate_visualizations_and_metrics(self, elapsed_time):
         """Generate visualizations and save metrics."""
