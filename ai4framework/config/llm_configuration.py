@@ -8,11 +8,11 @@ from utils.logger import logger
 
 def llm_response(provider, model, api_key, messages):
     try:
-        if provider == 'openai':
+        if provider.lower() == 'openai':
             return client_response(OpenAI(api_key=api_key), model, messages)
-        elif provider == 'groq':
+        elif provider.lower() == 'groq':
             return client_response(Groq(api_key=api_key), model, messages)
-        elif provider == 'claude':
+        elif provider.lower() == 'claude':
             client = Anthropic(
                 api_key=api_key,
             )

@@ -29,6 +29,7 @@ class SASTOrchestrator:
         self.tool_runner = ToolRunner(config, self.repo_manager)
         self.report_merger = ReportMerger(config)
         self.project_path = config.get('DEFAULT', 'config.project_root')
+        self.build_tool = config.get('DEFAULT', 'config.build_tool').lower()
 
     def run_all(self, validation=False, tool=None, is_initial_round=True):
         """
@@ -51,7 +52,7 @@ class SASTOrchestrator:
                 self.tool_runner.run_pmd()
 
             if not validation and (tool is None or tool.upper() == "SB"):
-                self.run_maven_compile(validation=validation)
+                self.run_compile(self.build_tool, validation=validation)
 
             if tool is None or tool.upper() == "SB":
                 self.tool_runner.run_spotbugs()
@@ -67,33 +68,49 @@ class SASTOrchestrator:
         finally:
             pass
 
-    def run_maven_compile(self, validation=False):
+    def run_compile(self, build_tool, validation=False):
         """
-        Run Maven compile command for the project.
+        Run the compile task using the specified build tool (Maven or Gradle).
 
-        This method attempts to compile the project using Maven,
-        skipping tests to focus on compilation only.
+        Args:
+            build_tool (str): The build tool to use ('maven' or 'gradle').
+            validation (bool): If True, suppress output during the build.
+
+        Raises:
+            ValueError: If an unsupported build tool is provided.
         """
         try:
-            logger.info("Maven compilation started...")
+            logger.info(f"{build_tool.capitalize()} compile started...")
+
+            if build_tool.lower() == 'maven':
+                command = ['mvn', 'compile', '-Dmaven.compiler.incremental=true', '-DskipTests', '-T', str(os.cpu_count())]
+
+            elif build_tool.lower() == 'gradle':
+                command = ['gradle', 'classes', '--no-daemon', '--parallel', f'-Dorg.gradle.workers.max={os.cpu_count()}']
+
+            else:
+                raise ValueError(f"Unsupported build tool: {build_tool}")
 
             with subprocess.Popen(
-                ['mvn', 'compile', '-Dmaven.compiler.incremental=true', '-DskipTests', '-T', str(os.cpu_count())],
+                command,
                 cwd=self.project_path,
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
             ) as process:
                 for line in process.stdout:
                     if not validation:
-                        print(line.strip()) 
+                        print(line.strip())
                 process.wait()
 
             if process.returncode == 0:
-                logger.info("Maven compile successful")
+                logger.info(f"{build_tool.capitalize()} compile successful")
             else:
-                logger.error(f"Maven compile failed with return code {process.returncode}")
+                logger.error(f"{build_tool.capitalize()} compile failed with return code {process.returncode}")
                 sys.exit(process.returncode)
 
         except Exception as e:
-            logger.error(f"An error occurred during Maven compilation: {str(e)}")
+            logger.error(f"An error occurred during {build_tool.capitalize()} compile: {str(e)}")
             sys.exit(1)
             

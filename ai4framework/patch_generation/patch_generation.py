@@ -24,9 +24,10 @@ class PatchGenerator:
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
         self.config = config
-        self.provider = self.config.get('API', 'config.provider')
+        self.provider = self.config.get('API', 'config.provider').lower()
         self.model = self.config.get('API', 'config.model')
         self.api_key = self.config.get('API', 'config.key', fallback='')
+        self.build_tool = self.config.get('DEFAULT', 'config.build_tool', fallback='maven').lower()
         if self.api_key == '':
             logger.warning("API key not found. Please set it in the configuration.")
             sys.exit(1)
@@ -72,28 +73,72 @@ class PatchGenerator:
         self.warnings_dict = warning_dict
         self.mutable_warnings = warning_dict.copy()
 
-    def run_maven_test(self):
-        """Run 'mvn test' command and return the result."""
-        with subprocess.Popen(
-            ['mvn', 'test', '-Dmaven.compiler.incremental=true', '-T', str(os.cpu_count())],
-            cwd=self.project_path,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        ) as process:
-            stdout, stderr = process.communicate()
-            result = subprocess.CompletedProcess(args=['mvn', 'test', '-Dmaven.compiler.incremental=true', '-T', str(os.cpu_count())], returncode=process.returncode, stdout=stdout, stderr=stderr)
-        return result
+    def run_tests(self, build_tool):
+        """
+        Run the test command using the specified build tool (Maven or Gradle) and return the result.
 
-    def analyze_maven_output(self, result):
-        """Analyze the Maven output to detect and categorize errors."""
+        Args:
+            build_tool (str): The build tool to use ('maven' or 'gradle').
+
+        Returns:
+            subprocess.CompletedProcess: The result of the test execution.
+        """
+        try:
+            if build_tool.lower() == 'maven':
+                command = ['mvn', 'test', '-Dmaven.compiler.incremental=true', '-T', str(os.cpu_count())]
+            elif build_tool.lower() == 'gradle':
+                command = ['gradle', 'test', '--no-daemon', '--parallel', f'-Dorg.gradle.workers.max={os.cpu_count()}']
+            else:
+                raise ValueError(f"Unsupported build tool: {build_tool}")
+
+            with subprocess.Popen(
+                command,
+                cwd=self.project_path,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            ) as process:
+                stdout, stderr = process.communicate()
+                result = subprocess.CompletedProcess(
+                    args=command, 
+                    returncode=process.returncode, 
+                    stdout=stdout, 
+                    stderr=stderr
+                )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"An error occurred while running tests with {build_tool}: {str(e)}")
+            raise
+
+
+    def analyze_build_output(self, build_tool, result):
+        """
+        Analyze the build tool output to detect and categorize errors.
+
+        Args:
+            build_tool (str): The build tool used ('maven' or 'gradle').
+            result (CompletedProcess): The result object containing the build output.
+
+        Returns:
+            bool: True if an error is detected, False otherwise.
+        """
         error_detected = False
 
+        if build_tool.lower() == 'maven':
+            error_keywords = ["BUILD FAILURE", "[ERROR] COMPILATION ERROR :"]
+        elif build_tool.lower() == 'gradle':
+            error_keywords = ["BUILD FAILED", "Compilation failed"]
+        else:
+            raise ValueError(f"Unsupported build tool: {build_tool}")
+
         for line in result.stdout.split("\n"):
-            if "BUILD FAILURE" in line or "[ERROR] COMPILATION ERROR :" in line:
+            if any(keyword in line for keyword in error_keywords):
                 error_detected = True
+
         return error_detected
-    
+
 
     def extract_patch_from_response(self, response_text):
         """Extract content from any block in triple backticks from the AI response."""
@@ -306,15 +351,19 @@ class PatchGenerator:
                     logger.error(e)
                     continue
 
-            
-                logger.info(f"Running 'mvn test' for warning ID {warning['id']}...")
-                result = self.run_maven_test()
-                error_detected = self.analyze_maven_output(result)
+
+                logger.info(f"Running '{self.build_tool} test' for warning ID {warning['id']}...")
+                if self.build_tool in ['maven', 'gradle']:
+                    result = self.run_tests(self.build_tool)
+                    error_detected = self.analyze_build_output(self.build_tool, result)
+                else:
+                    raise ValueError(f"Unsupported build tool: {self.build_tool}")
+                
                 if error_detected:
                     self.applicable_patch = True
                     self.validation_passed = True
                     self.mvn_test_passed = False
-                    logger.warning(f"Maven tests failed. Retrying...")
+                    logger.warning(f"{self.build_tool} tests failed. Retrying...")
                     try:
                         with open(full_file_path, 'w') as f:
                             f.write(initial_content)
@@ -323,7 +372,7 @@ class PatchGenerator:
                         logger.error(f"Error restoring original content to {full_file_path}: {e}")
                     continue
 
-                logger.info(f"Maven tests passed.")
+                logger.info(f"{self.build_tool} tests passed.")
                 
                 self.validation_passed = self.tools_validation(name, tag)
                 if self.validation_passed:
@@ -471,9 +520,8 @@ class PatchGenerator:
             for idx, warning in enumerate(self.warnings, start=1):
                 logger.info(f"Processing warning ID {warning['id']}...")
 
-                print(f"PROGRESS_UPDATE: {idx}/{total_warnings}", flush=True)
-
                 try:
+                    print(f"PROGRESS UPDATE: {idx}/{total_warnings}", flush=True)
                     self.process_warning(warning)
                 except KeyboardInterrupt:
                     logger.warning("Keyboard interrupt detected. Saving progress and stopping the script gracefully.")
@@ -537,20 +585,24 @@ class PatchGenerator:
     
     def generate_visualizations_and_metrics(self, elapsed_time):
         """Generate visualizations and save metrics."""
-        self.visualizer.update_metrics(self.model_name, {
-            'total_issues': self.stats['total_issues'],
-            'build_failures': self.compilation_or_test_errors,
-            'validation_failures': self.validation_errors,
-            'successful_patches': self.successful_patches,
-            'non_applicabale_diffs': self.non_applicabale_diffs,
-            'warnings_dict': self.warnings_dict,
-            'total_attempts': self.stats['total_attempts'],
-            'prompt_tokens': int(statistics.mean(self.input_tokens)) if self.input_tokens else 0,
-            'response_tokens': int(statistics.mean(self.response_tokens)) if self.response_tokens else 0,
-            'original_warnings_dict': self.mutable_warnings,
-            'elapsed_time': elapsed_time
-        })
-        os.makedirs(self.visualize_path, exist_ok=True)
-        self.visualizer.generate_comparison_charts(self.visualize_path)
-        self.visualizer.save_metrics(os.path.join(self.visualize_path, f'benchmark_metrics_round_{self.num_of_rounds}.json'))
-        logger.info(f"Benchmarking results saved to {self.visualize_path}")
+        try:
+            self.visualizer.update_metrics(self.model_name, {
+                'total_issues': self.stats['total_issues'],
+                'build_failures': self.compilation_or_test_errors,
+                'validation_failures': self.validation_errors,
+                'successful_patches': self.successful_patches,
+                'non_applicabale_diffs': self.non_applicabale_diffs,
+                'warnings_dict': self.warnings_dict,
+                'total_attempts': self.stats['total_attempts'],
+                'prompt_tokens': int(statistics.mean(self.input_tokens)) if self.input_tokens and statistics.mean(self.input_tokens) != None else 0,
+                'response_tokens': int(statistics.mean(self.response_tokens)) if self.response_tokens and statistics.mean(self.response_tokens) != None else 0,
+                'original_warnings_dict': self.mutable_warnings,
+                'elapsed_time': elapsed_time
+            })
+            os.makedirs(self.visualize_path, exist_ok=True)
+            self.visualizer.generate_comparison_charts(self.visualize_path)
+            self.visualizer.save_metrics(os.path.join(self.visualize_path, f'benchmark_metrics_round_{self.num_of_rounds}.json'))
+            logger.info(f"Benchmarking results saved to {self.visualize_path}")
+        except Exception as e:
+            logger.warning(f"Interruption during visualization and metrics generation.")
+            logger.info(f"saving the visualization and metrics ...")

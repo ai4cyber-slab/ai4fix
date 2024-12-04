@@ -99,22 +99,36 @@ class BenchmarkVisualizer:
             colors = ['#66c2a5', '#fc8d62', '#ffd92f', '#8da0cb']
             explode = [0, 0.1, 0.1, 0.1]
 
-            wedges, texts, autotexts = ax2.pie(
-                sizes,
-                autopct='%1.1f%%',
-                startangle=150,
-                colors=colors,
-                explode=explode,
-                wedgeprops=dict(edgecolor='black'),
-                pctdistance=0.70,
-                labeldistance=None  # No labels on the chart
-            )
-            ax2.set_title(f"{model_data.get('model_name', model_name)} Performance Distribution", pad=5)
-
-            legend_labels = [
-                f"{label}: {size}" for label, size in zip(labels, sizes)
+            sizes = [
+                max(0, np.nan_to_num(model_data.get('successful_patches', 0), nan=0.0, posinf=0.0, neginf=0.0)),
+                max(0, np.nan_to_num(model_data.get('build_failures', 0), nan=0.0, posinf=0.0, neginf=0.0)),
+                max(0, np.nan_to_num(model_data.get('validation_failures', 0), nan=0.0, posinf=0.0, neginf=0.0)),
+                max(0, np.nan_to_num(model_data.get('non_applicabale_diffs', 0), nan=0.0, posinf=0.0, neginf=0.0))
             ]
-            ax2.legend(legend_labels, loc="center left", bbox_to_anchor=(1, 0.5))
+
+            if sum(sizes) > 0:
+                wedges, texts, autotexts = ax2.pie(
+                    sizes,
+                    autopct='%1.1f%%',
+                    startangle=150,
+                    colors=colors,
+                    explode=explode,
+                    wedgeprops=dict(edgecolor='black'),
+                    pctdistance=0.70,
+                    labeldistance=None
+                )
+                ax2.set_title(f"{model_data.get('model_name', model_name)} Performance Distribution", pad=5)
+                legend_labels = [
+                    f"{label}: {size}" for label, size in zip(labels, sizes)
+                ]
+                ax2.legend(legend_labels, loc="center left", bbox_to_anchor=(1, 0.5))
+                ax2.set_title(f"{model_data.get('model_name', model_name)} Performance Distribution", pad=5)
+                legend_labels = [
+                f"{label}: {size}" for label, size in zip(labels, sizes)
+                ]
+                ax2.legend(legend_labels, loc="center left", bbox_to_anchor=(1, 0.5))
+            else:
+                logger.warning(f"Skipping pie chart for model '{model_name}' due to zero or invalid data.")
 
             # Subplot 3: Token Counts Comparison
             ax3 = fig.add_subplot(gs[1, :])
@@ -141,7 +155,7 @@ class BenchmarkVisualizer:
             ax3.set_xlabel('Token Type')
             ax3.set_ylabel('Token Count')
             ax3.set_title('Token Counts Comparison')
-            ax3.legend(bar_labels)
+            ax3.legend(bars, bar_labels, loc="upper right")
 
             plt.tight_layout()
 

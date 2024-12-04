@@ -45,6 +45,21 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# Install Gradle 7.6
+ENV GRADLE_VERSION=7.6
+ENV GRADLE_HOME=/opt/gradle
+ENV PATH="/opt/gradle/bin:$PATH"
+
+RUN wget https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip -O /tmp/gradle.zip && \
+    mkdir -p /opt/gradle && \
+    unzip /tmp/gradle.zip -d /opt/gradle && \
+    mv /opt/gradle/gradle-${GRADLE_VERSION}/* /opt/gradle/ && \
+    rm -rf /tmp/gradle.zip /opt/gradle/gradle-${GRADLE_VERSION} && \
+    # Verify Gradle path during build
+    echo "export PATH=/opt/gradle/bin:\$PATH" >> /etc/profile && \
+    echo "export PATH=/opt/gradle/bin:\$PATH" >> /etc/bash.bashrc && \
+    chmod +x /opt/gradle/bin/gradle && \
+    gradle --version
 # Install PMD 7.4.0
 RUN wget https://github.com/pmd/pmd/releases/download/pmd_releases%2F7.4.0/pmd-dist-7.4.0-bin.zip -O /tmp/pmd.zip && \
     unzip /tmp/pmd.zip -d /opt/ && \

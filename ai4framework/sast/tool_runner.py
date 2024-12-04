@@ -26,6 +26,7 @@ class ToolRunner:
         self.repo_manager = repo_manager
         self.pmd_runner = PMDRunner(config)
         self.spotbugs_runner = SpotBugsRunner(config)
+        self.build_tool = self.config.get('DEFAULT', 'config.build_tool', fallback='maven')
 
     def run_tool(self, tool_name, runner_method, files_to_analyze):
         """
@@ -57,6 +58,9 @@ class ToolRunner:
         Retrieves the list of Java files to be analyzed and runs PMD on them.
         """
         files_to_analyze = self.repo_manager.get_files_to_analyze(self.project_root, self.filter)
+        if not files_to_analyze:
+            logger.warning("PMD couldn't find any files to analyze.")
+            return
         self.run_tool("PMD", self.pmd_runner.run, files_to_analyze)
 
     def run_spotbugs(self):
@@ -66,6 +70,9 @@ class ToolRunner:
         Finds the corresponding class files for Java files and runs SpotBugs on them.
         """
         files_to_analyze = self.find_class_changed_files()
+        if not files_to_analyze:
+            logger.warning("Spotbugs couldn't find any files to analyze.")
+            return
         self.run_tool("SpotBugs", self.spotbugs_runner.run, files_to_analyze)
 
     def find_class_changed_files(self):
@@ -78,17 +85,18 @@ class ToolRunner:
         class_files = []
 
         for java_file in self.repo_manager.get_files_to_analyze(self.project_root, self.filter):
-            class_file_path = find_class_file_from_java(java_file)
+            class_file_path = find_class_file_from_java(java_file, self.build_tool)
             if class_file_path:
                 class_files.append(class_file_path)
         return class_files if class_files else []
 
-def find_class_file_from_java(java_file_path):
+def find_class_file_from_java(java_file_path, build_tool):
     """
-    Find the corresponding .class file for a given Java file.
+    Find the corresponding .class file for a given Java file, based on the build tool.
 
     Args:
         java_file_path (str): Path to the Java file.
+        build_tool (str): The build tool being used ('maven' or 'gradle').
 
     Returns:
         str or None: Path to the corresponding .class file if found, None otherwise.
@@ -96,15 +104,38 @@ def find_class_file_from_java(java_file_path):
     start_time = time.time()
     java_file = os.path.normpath(java_file_path)
     
-    
-    if 'src' + os.path.sep + 'test' in java_file:
-        class_path = java_file.replace('src' + os.path.sep + 'test' + os.path.sep + 'java' + os.path.sep, 'target' + os.path.sep + 'test-classes' + os.path.sep)
-    elif 'src' + os.path.sep + 'main' in java_file:
-        class_path = java_file.replace('src' + os.path.sep + 'main' + os.path.sep + 'java' + os.path.sep, 'target' + os.path.sep + 'classes' + os.path.sep)
+    if build_tool.lower() == 'maven':
+        if 'src' + os.path.sep + 'test' in java_file:
+            class_path = java_file.replace(
+                'src' + os.path.sep + 'test' + os.path.sep + 'java' + os.path.sep,
+                'target' + os.path.sep + 'test-classes' + os.path.sep
+            )
+        elif 'src' + os.path.sep + 'main' in java_file:
+            class_path = java_file.replace(
+                'src' + os.path.sep + 'main' + os.path.sep + 'java' + os.path.sep,
+                'target' + os.path.sep + 'classes' + os.path.sep
+            )
+        else:
+            return None
+
+    elif build_tool.lower() == 'gradle':
+        if 'src' + os.path.sep + 'test' in java_file:
+            class_path = java_file.replace(
+                'src' + os.path.sep + 'test' + os.path.sep + 'java' + os.path.sep,
+                'build' + os.path.sep + 'classes' + os.path.sep + 'java' + os.path.sep + 'test' + os.path.sep
+            )
+        elif 'src' + os.path.sep + 'main' in java_file:
+            class_path = java_file.replace(
+                'src' + os.path.sep + 'main' + os.path.sep + 'java' + os.path.sep,
+                'build' + os.path.sep + 'classes' + os.path.sep + 'java' + os.path.sep + 'main' + os.path.sep
+            )
+        else:
+            return None
+
     else:
-        return None
-    
+        raise ValueError(f"Unsupported build tool: {build_tool}")
     class_path = class_path.replace('.java', '.class')
     elapsed_time = time.time() - start_time
     logger.debug(f"Time taken to search for class file: {elapsed_time:.2f} seconds")
+    logger.debug(f"Class file path: {class_path}")
     return class_path

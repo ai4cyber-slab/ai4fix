@@ -72,15 +72,20 @@ class ConfigManager:
             logger.error("API key is missing in the config file. Please set it. eg: config.key=example-key")
             sys.exit(1)
 
-        provider = cls._config.get('API', 'config.provider')
+        provider = cls._config.get('API', 'config.provider').lower()
         model = cls._config.get('API', 'config.model')
+        build_tool = cls._config.get('DEFAULT', 'config.build_tool').lower()
 
-        if not provider:
-            logger.error("Service provider is missing in the config file. Please set it. eg: config.provider")
+        if not provider or provider.lower() not in ['openai', 'groq', 'claude']:
+            logger.error("Service provider Unsupported or missing in the config file. Please set it. eg: config.provider=openai")
             sys.exit(1)
 
         if not model:
             logger.error("Desired llm model name is missing in the config file. Please set it. eg: config.model=gpt-4o-mini")
+            sys.exit(1)
+        
+        if not build_tool or build_tool.lower() not in ['maven', 'gradle']:
+            logger.error("Unsupported or missing build tool in the configuration. Please set it to 'maven' or 'gradle'.")
             sys.exit(1)
 
         return cls._config

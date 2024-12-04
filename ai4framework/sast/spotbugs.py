@@ -20,16 +20,24 @@ class SpotBugsRunner:
         self.config = config
         self.report_path = os.path.join(os.sep, 'app','sast','out','spotbugs.xml')
         self.project_path = self.config.get('DEFAULT', 'config.project_root')
+        self.build_tool = self.config.get('DEFAULT', 'config.build_tool').lower()
 
-    def find_classes_directories(self, root_path):
+    def find_classes_directories(self, root_path, build_tool):
         """
         Find all 'target/classes' directories in a Maven multi-module project.
         """
-        return [
-            os.path.join(dirpath, "classes")
-            for dirpath, dirnames, filenames in os.walk(root_path)
-            if dirpath.endswith("target") and "classes" in dirnames
-        ]
+        if build_tool.lower() == 'maven':
+            return [
+                os.path.join(dirpath, "classes")
+                for dirpath, dirnames, filenames in os.walk(root_path)
+                if dirpath.endswith("target") and "classes" in dirnames
+            ]
+        elif build_tool.lower() == 'gradle':
+            return [
+                os.path.join(dirpath, "classes")
+                for dirpath, dirnames, filenames in os.walk(root_path)
+                if dirpath.endswith("build") and "classes" in dirnames
+            ]
 
     def run(self, files_to_analyze):
         """
@@ -51,7 +59,7 @@ class SpotBugsRunner:
         )
 
         to_analyze = (
-            ' '.join(self.find_classes_directories(self.project_path))
+            ' '.join(self.find_classes_directories(self.project_path, self.build_tool))
             if len(files_to_analyze) > 500 else
             ' '.join(files_to_analyze)
         )
