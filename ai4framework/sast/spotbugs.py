@@ -53,10 +53,7 @@ class SpotBugsRunner:
             logger.warning("There are no files to be analyzed.")
             sys.exit(1)
 
-        spotbugs_bin = self.config.get(
-            'SAST', 'config.spotbugs_bin',
-            fallback=os.path.join(os.sep, 'opt', 'spotbugs-4.8.6', 'bin', 'spotbugs')
-        )
+        spotbugs_bin = os.environ.get('SPOTBUGS_BIN')
 
         to_analyze = (
             ' '.join(self.find_classes_directories(self.project_path, self.build_tool))

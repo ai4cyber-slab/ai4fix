@@ -43,10 +43,7 @@ class PMDRunner:
             else ','.join(files_to_analyze)
         )
 
-        pmd_bin = self.config.get(
-            'SAST', 'config.pmd_bin',
-            fallback=os.path.join(os.sep, 'opt', 'pmd-bin-7.4.0', 'bin', 'pmd')
-        )
+        pmd_bin = os.environ.get('PMD_BIN')
         ruleset_path = self.config.get(
             'SAST', 'config.pmd_ruleset',
             fallback=os.path.join(os.sep, 'app', 'utils', 'PMD-config.xml')
