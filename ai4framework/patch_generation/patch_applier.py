@@ -1,7 +1,7 @@
 import json
 import os
 import subprocess
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from configparser import ConfigParser
 from utils.logger import logger
 import time
@@ -12,22 +12,16 @@ class PatchApplier:
     """
 
     def __init__(self, config: ConfigParser):
-        """
-        Initialize the applier with the path to the JSON file.
-
-        :param config: Configuration dictionary.
-        """
         self.config = config
         self.patches_path = self.config.get("DEFAULT", "config.results_path")
         self.json_path = self.config.get("DEFAULT", "config.issues_path")
         self.project_root = self.config.get("DEFAULT", "project_root", fallback=os.getcwd())
+        self.applied_patches = {}
         self.data = self._load_json()
 
     def _load_json(self) -> List[Dict]:
         """
         Load the JSON data from the provided file.
-
-        :return: Parsed JSON data.
         """
         if not os.path.isfile(self.json_path):
             raise FileNotFoundError(f"JSON file not found: {self.json_path}")
@@ -38,101 +32,100 @@ class PatchApplier:
     def does_patch_file_exist(self, patch_path: str) -> bool:
         """
         Validate if a patch file exists.
-
-        :param patch_path: Path to the patch file.
-        :return: True if the patch file exists, False otherwise.
         """
         return os.path.isfile(patch_path)
 
-    def sanitize_patch_content(self, patch_content: str) -> str:
+    def parse_patch_ranges(self, patch_content: str) -> List[Tuple[int, int]]:
         """
-        Ensure that the patch content uses Unix-style line endings and ends with a newline.
+        Parse the patch content to extract line ranges it modifies.
 
-        :param patch_content: The raw patch content.
-        :return: Sanitized patch content.
+        :param patch_content: The content of the patch file.
+        :return: A list of tuples representing start and end line ranges.
         """
-        sanitized_content = patch_content.replace('\r\n', '\n').replace('\r', '\n')
+        modified_ranges = []
+        for line in patch_content.splitlines():
+            if line.startswith('@@'):
+                parts = line.split(' ')[1]
+                start, length = parts[1:].split(',')
+                modified_ranges.append((int(start), int(start) + int(length) - 1))
+        return modified_ranges
 
-        if not sanitized_content.endswith('\n'):
-            sanitized_content += '\n'
-
-        return sanitized_content
-
-    def normalize_line_endings(self, target_file: str):
+    def is_overlap(self, target_file: str, patch_ranges: List[Tuple[int, int]]) -> bool:
         """
-        Convert all line endings in the target file to Unix-style LF.
+        Check if the patch modifies a range that has already been modified.
 
         :param target_file: Path to the target file.
+        :param patch_ranges: The line ranges the patch modifies.
+        :return: True if there is an overlap, False otherwise.
         """
-        full_path = os.path.join(self.project_root, target_file)
-        if not os.path.isfile(full_path):
-            logger.warning(f"Target file not found for normalization: {full_path}")
-            return
-        try:
-            with open(full_path, 'rb') as f:
-                content = f.read()
-            content = content.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
-            with open(full_path, 'wb') as f:
-                f.write(content)
-        except Exception as e:
-            logger.error(f"Error normalizing line endings for {full_path}: {e}")
+        if target_file not in self.applied_patches:
+            self.applied_patches[target_file] = []
 
-    def normalize_all_line_endings(self):
-        """
-        Normalize line endings for all Java files in the project directory.
-        """
-        for root, dirs, files in os.walk(self.project_root):
-            for file in files:
-                if file.endswith('.java'):
-                    full_path = os.path.join(root, file)
-                    try:
-                        with open(full_path, 'rb') as f:
-                            content = f.read()
-                        content = content.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
-                        with open(full_path, 'wb') as f:
-                            f.write(content)
-                    except Exception as e:
-                        logger.error(f"Error normalizing line endings for {full_path}: {e}")
+        for patch_range in patch_ranges:
+            for applied_range in self.applied_patches[target_file]:
+                if not (patch_range[1] < applied_range[0] or patch_range[0] > applied_range[1]):
+                    return True
+        return False
 
-    def apply_patch(self, patch_content: str, target_file: str) -> bool:
+    def mark_applied_ranges(self, target_file: str, patch_ranges: List[Tuple[int, int]]):
         """
-        Apply a single patch using the `patch` command by passing patch content directly.
+        Mark the line ranges of a successfully applied patch.
 
-        :param patch_content: The patch data as a string.
-        :param target_file: Path to the target file where the patch will be applied.
+        :param target_file: Path to the target file.
+        :param patch_ranges: The line ranges the patch modifies.
+        """
+        if target_file not in self.applied_patches:
+            self.applied_patches[target_file] = []
+        self.applied_patches[target_file].extend(patch_ranges)
+
+    def apply_patch(self, patch_content: str, target_file: str, patch_path: str) -> bool:
+        """
+        Apply a single patch to the target file.
+
+        :param patch_content: The patch content.
+        :param target_file: Path to the target file.
+        :param patch_path: Path to the patch file.
         :return: True if the patch was successfully applied, False otherwise.
         """
         try:
+            patch_ranges = self.parse_patch_ranges(patch_content)
 
-            patch_content = self.sanitize_patch_content(patch_content)
+            if self.is_overlap(target_file, patch_ranges):
+                logger.warning(f"Patch overlaps with existing changes in {target_file}. Skipping.")
+                return False
 
+            temp_patch_path = os.path.join(self.patches_path, "temp.patch")
+            with open(temp_patch_path, "w") as temp_patch_file:
+                temp_patch_file.write(patch_content)
 
-            self.normalize_line_endings(target_file)
-
-            command = [
-                "patch",
-                "-f",
-                "-N",
-                "--fuzz=3",
-                '--ignore-whitespace',
-                '--no-backup-if-mismatch',
-                '--reject-file=/dev/null',
-                target_file
-            ]
-
-
+            command = ["patch", "--dry-run", "-p0", "-i", temp_patch_path]
             result = subprocess.run(
                 command,
-                input=patch_content,
                 cwd=self.project_root,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
             )
 
+            if result.returncode != 0:
+                logger.error(f"Patch validation failed for {target_file}: {result.stderr}")
+                os.remove(temp_patch_path)
+                return False
+
+            command = ["patch", "--no-backup-if-mismatch", "--reject-file=/dev/null", "-p0", "-i", patch_path]
+            result = subprocess.run(
+                command, cwd=self.project_root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            )
+
             if result.returncode == 0:
+                # Mark ranges as applied
+                self.mark_applied_ranges(target_file, patch_ranges)
+                logger.info(f"Successfully applied patch to {target_file}")
+                os.remove(temp_patch_path)
                 return True
             else:
+                logger.error(f"Failed to apply patch to {target_file}: {result.stderr}")
+                os.remove(temp_patch_path)
                 return False
 
         except Exception as e:
@@ -141,10 +134,8 @@ class PatchApplier:
 
     def apply_patches(self):
         """
-        Iterate over the JSON data and apply all patches using their content directly.
+        Iterate over the JSON data and apply all patches.
         """
-
-        self.normalize_all_line_endings()
         start_time = time.time()
 
         for item in self.data:
@@ -158,11 +149,11 @@ class PatchApplier:
                             try:
                                 with open(patch_path, 'r') as pf:
                                     patch_content = pf.read()
-                                self.apply_patch(patch_content, target_file)
+                                self.apply_patch(patch_content, target_file, patch_path)
                             except Exception as e:
-                                logger.error(f"An exception occurred while applying patch to {target_file}: {e}")
+                                logger.error(f"Exception occurred while applying patch to {target_file}: {e}")
                         else:
                             logger.warning(f"Patch file not found: {patch_path}")
 
         logger.info("Automatic patch application finished.")
-        logger.info(f"Total time taken for automatic patch application: {time.time() - start_time} seconds.")
+        logger.info(f"Total time taken: {time.time() - start_time} seconds.")

@@ -1,30 +1,9 @@
-"""
-AI4Framework Classifier Module
-
-This module provides functionality for classifying code changes in a Git repository
-based on their potential security impact. It uses various LLMs to analyze
-diff files and determine if security testing should be re-run.
-
-Usage:
-    python classifier.py -r <project_root> -c <commit_sha> -f <filter> -p <provider> -k <api_key> -m <model> -t <temperature>
-
-Arguments:
-    -r, --project_root: Path to the root of the project that is under analysis
-    -c, --commit_sha: Commit hash to analyze
-    -f, --filter: List of words to filter the modified files
-    -p, --provider: The LLM provider
-    -k, --key: The API key
-    -m, --model: Model to use
-    -t, --temperature: Temperature setting for the model
-
-The script outputs results to both a text log file and a JSON file in the 'out' directory.
-"""
-
 import os
 import sys
 import git
 import json
 import argparse
+import subprocess
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -61,15 +40,15 @@ output_data = {
 }
 
 # Logging basic information into a txt file
-starting_dir = os.path.dirname(os.path.abspath(__file__)) # The directory where the script is located
+starting_dir = os.path.dirname(os.path.abspath(__file__))  # The directory where the script is located
 out_dir = os.path.join(starting_dir, 'out')
 os.makedirs(out_dir, exist_ok=True)
 txt_path = os.path.join(out_dir, args.commit_sha)
 with open(f"{txt_path}.txt", "a") as log_file:
     log_file.write(f"Repository path: {args.project_root}\n"
-                    f"Commmit hash: {args.commit_sha}\n"
-                    f"Model: {args.model}\n"
-                    f"Temperature: {args.temperature}\n\n")
+                   f"Commmit hash: {args.commit_sha}\n"
+                   f"Model: {args.model}\n"
+                   f"Temperature: {args.temperature}\n\n")
 
 
 def error_and_log_handling(message, consol):
@@ -122,16 +101,12 @@ def list_changed_files(repo_path, commit_hash):
     """
     try:
         repo_manager = RepoManager(repo_path, commit_hash)
-        
         changed_files = repo_manager.get_files_to_analyze(args.project_root, args.filter)
-        
         if changed_files:
             error_and_log_handling(f"Changed files in commit {commit_hash}: {changed_files}", True)
         else:
             error_and_log_handling(f"No files changed in commit {commit_hash}.", True)
-        
         return changed_files
-    
     except git.exc.InvalidGitRepositoryError:
         error_and_log_handling(f"The directory {repo_path} is not a valid Git repository.", True)
         sys.exit(1)
@@ -191,7 +166,6 @@ def main():
     Determine the answer considering the immediate implications of the changes on system security, especially for modifications to critical components.
     """
 
-
     # Initializing prompt templates
     class LabelOutput(BaseModel):
         worth_to_re_run: str = Field(
@@ -212,7 +186,6 @@ def main():
         partial_variables={"output_instructions": label_instructions}
     )
 
-
     # Inference
     try:
         changed_files = list_changed_files(args.project_root, args.commit_sha)
@@ -228,23 +201,36 @@ def main():
                     os.remove(filter_path)
 
                 for file in changed_files:
-                    git_diff_file = os.path.join('changes.diff')
+                    git_diff_file = 'changes.diff'
 
                     default_dir = os.getcwd()
                     os.chdir(args.project_root)
 
-                    os.system(f'git diff {parent} {args.commit_sha} -- {file} > {git_diff_file}') # Creating the diff file
-                    error_and_log_handling(f"Successfully created the diff file of {file}.", False)
+                    # Run git diff command using subprocess
+                    command = ['git', 'diff', parent, args.commit_sha, '--', file]
+                    error_and_log_handling(f"Running command: {' '.join(command)}", False)
+                    with open(git_diff_file, 'w') as diff_file:
+                        result = subprocess.run(command, stdout=diff_file, stderr=subprocess.PIPE, text=True)
 
+                    if result.returncode != 0:
+                        error_and_log_handling(f"Failed to create the diff file of {file}. Git diff error: {result.stderr}", True)
+                        os.chdir(default_dir)
+                        continue
+                    else:
+                        error_and_log_handling(f"Successfully created the diff file of {file}.", False)
+
+                    # Read the diff content before changing back to the original directory
                     with open(git_diff_file, 'r', encoding='latin-1') as f:
                         diff_content = f.read()
+
+                    # Remove the diff file
+                    os.remove(git_diff_file)
 
                     os.chdir(default_dir)
 
                     unnecessary_diff = remove_unnecessary_diff(args.project_root, diff_content)
                     if unnecessary_diff:
                         error_and_log_handling(f"The diff of {file} is unnecessary, it has been removed.\n", True)
-                        os.remove(git_diff_file)
                         continue
 
                     try:
@@ -256,7 +242,7 @@ def main():
                         re_run_prompt = classify_prompt.format(diff=diff_content, description=description)
                         re_run_messages = [{"role": "user", "content": re_run_prompt}]
                         re_run_response = llm_response(args.provider, args.model, args.key, re_run_messages)
-                        
+
                         parsed_re_running = label_parser.parse(re_run_response['message'])
                         output = parsed_re_running.worth_to_re_run.strip().lower()
 
@@ -270,7 +256,7 @@ def main():
 
                             # For Symbolic Execution
                             filter_path = os.path.join(args.project_root, '.ai4framework', 'filter.txt')
-                            
+
                             with open(filter_path, 'a') as filter_file:
                                 if filter_file.tell() == 0:
                                     filter_file.write("-.*\n")
@@ -279,12 +265,9 @@ def main():
                             error_and_log_handling(f"{file} was labeled as security relevant.\n", True)
                         else:
                             error_and_log_handling(f"{file} was labeled as not security relevant.\n", True)
-                            
-                        os.remove(git_diff_file)
 
                     except Exception as e:
                         error_and_log_handling(f"An error occurred during the labeling of {file}:\n{e}", True)
-                        os.remove(git_diff_file)
                         continue
             else:
                 error_and_log_handling(f"Couldn't retrieve parent commit. Classification stopped.", True)
@@ -298,12 +281,11 @@ def main():
 
     os.chdir(starting_dir)
 
-
     # Logging the output
     json_path = os.path.join(out_dir, args.commit_sha)
     with open(f"{json_path}.json", "a") as log_file:
         json.dump(output_data, log_file, indent=4)
-    
+        
 
 if __name__ == "__main__":
     main()

@@ -4,6 +4,7 @@ import sys
 import time
 import subprocess
 from utils.logger import logger
+from management.repo_manager import RepoManager
 
 
 class Analyzer:
@@ -11,7 +12,7 @@ class Analyzer:
     A class to run static analysis on a project using a specified analyzer tool.
     """
 
-    def __init__(self, analyzer_path, project_name, project_path, results_path):
+    def __init__(self, analyzer_path, project_name, project_path, results_path, filter_pkgs):
         """
         Initialize the Analyzer with project details and paths.
 
@@ -21,12 +22,26 @@ class Analyzer:
             project_path (str): Path to the project's root directory.
             results_path (str): Path where analysis results will be stored.
         """
+        self.filter_list = filter_pkgs
         self.analyzer = analyzer_path
         self.project_name = project_name
         self.project_path = project_path
         self.results_path = results_path
         self.filter = os.path.join(os.path.dirname(self.results_path), 'filter.txt')
-
+        self.repo_manager = RepoManager(project_path)
+        self.javaFilepaths = self.repo_manager.get_files_to_analyze(self.project_path, self.filter_list)
+        
+        try:
+            if self.javaFilepaths:
+                with open(self.filter, 'w') as filter_file:
+                    if len(self.javaFilepaths) > 500:
+                        filter_file.write("+.*\n")
+                    else:
+                        filter_file.write("-.*\n")
+                        for javaFilePath in self.javaFilepaths:
+                            filter_file.write(f"+.*{javaFilePath}\n")
+        except Exception as e:
+            logger.error(f"An error occurred while writing to the filter file: {e}")
 
     def run_analysis(self):
         """
@@ -91,7 +106,7 @@ class Analyzer:
                             logger.error(clean_error)
 
         except Exception as e:
-            logger.error(f"An error occurred: {e}")
+            logger.warning(f"Symbolic execution failed. Your hardware may not support symbolic execution. Skipping analysis. {e}")
             raise
         finally:
             end_time = time.time()

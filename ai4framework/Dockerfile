@@ -14,7 +14,9 @@ RUN apt-get update && \
         curl \
         apt-transport-https \
         software-properties-common \
-        patch && \
+        patch \
+        vim \
+        nano && \
     # Determine the architecture and set the appropriate JDK download URL
     ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ] || [ "$ARCH" = "amd64" ]; then \

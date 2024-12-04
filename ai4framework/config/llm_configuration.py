@@ -3,6 +3,7 @@ import sys
 from groq import Groq
 from openai import OpenAI
 from anthropic import Anthropic
+from utils.logger import logger
 
 
 def llm_response(provider, model, api_key, messages):
@@ -26,10 +27,10 @@ def llm_response(provider, model, api_key, messages):
                 'output_tokens': response.usage.output_tokens
             }
         else:
-            print("Couldn't find provider. Please check in the configuration.")
+            logger.error("Couldn't find provider. Please check in the configuration.")
             sys.exit(1)
     except Exception as e:  
-        print(f'An error occured while initializing the LLM: {e}')
+        logger.error(f'An error occured while initializing the LLM: {e}')
         sys.exit(1)
 
 

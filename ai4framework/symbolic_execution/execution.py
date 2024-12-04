@@ -27,6 +27,7 @@ class SymbolicExecution:
         self.project_path = self.config.get('DEFAULT', 'config.project_root')
         self.results_path = self.config.get("DEFAULT", "config.analyzer_results_path")
         self.analyzer_path = self.config.get("ANALYZER", "config.analyzer", fallback=os.path.join(os.sep, 'opt','AI4VULN','Java','AnalyzerJava'))
+        self.filter_list = self.config.get('DEFAULT', 'config.filter')
     
     def analyze(self, validation=False):
         """
@@ -51,8 +52,11 @@ class SymbolicExecution:
                 if not "11." in version:
                     logger.warning("Java version over 11 detected. Skipping Symbolic execution analysis.")
                     return
-        analyzer = Analyzer(self.analyzer_path, self.project_name, self.project_path, self.results_path)
-        logger.info("Symbolic Execution Started ...")
-        json_file = analyzer.run_analysis()
-        cleaned_json_file = os.path.join(self.results_path, self.project_name, 'java', 'now', 'ai4vuln_issues.json') if not validation else os.path.join(self.results_path, self.project_name, 'java', 'now', 'ai4vuln_issues_temp.json')
-        return JSONProcessor.extract_and_clean_json(json_file, cleaned_json_file, self.project_path)
+        analyzer = Analyzer(self.analyzer_path, self.project_name, self.project_path, self.results_path, self.filter_list)
+        try:
+            logger.info("Symbolic Execution Started ...")
+            json_file = analyzer.run_analysis()
+            cleaned_json_file = os.path.join(self.results_path, self.project_name, 'java', 'now', 'ai4vuln_issues.json') if not validation else os.path.join(self.results_path, self.project_name, 'java', 'now', 'ai4vuln_issues_temp.json')
+            return JSONProcessor.extract_and_clean_json(json_file, cleaned_json_file, self.project_path)
+        except Exception as e:
+            return {}

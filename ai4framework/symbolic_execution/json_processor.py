@@ -27,8 +27,11 @@ class JSONProcessor:
                 list: A list of cleaned issues. If the file is empty or contains no valid issues,
                       an empty list will be returned.
             """
-            with open(json_file, 'r') as infile:
-                data = json.load(infile)
+            try:
+                with open(json_file, 'r') as infile:
+                    data = json.load(infile)
+            except Exception:
+                return {}
 
             cleaned_issues = []
 
@@ -50,10 +53,13 @@ class JSONProcessor:
         
         issues = extract_issues(input_file)
         
-        with open(output_file, 'w') as file:
-            json.dump(issues, file, indent=4)
-        logger.info(f"Extracted and cleaned JSON saved to {output_file}")
-        return extract_issue_counts(issues)
+        try:
+            with open(output_file, 'w') as file:
+                json.dump(issues, file, indent=4)
+            logger.info(f"Extracted and cleaned JSON saved to {output_file}")
+            return extract_issue_counts(issues)
+        except Exception as e:
+            return {}
 
     
 def extract_issue_counts(data):

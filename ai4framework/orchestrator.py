@@ -4,13 +4,13 @@ import signal
 import argparse
 
 from utils.logger import logger
-from utils.issues_merger import JSONCombiner
 from config.common_config import ConfigManager
-from sast.sast_orchestrator import SASTOrchestrator
-from utils.plugin_json_converter import JsonPluginConverter
 from symbolic_execution.execution import SymbolicExecution
+from sast.sast_orchestrator import SASTOrchestrator
+from utils.issues_merger import JSONCombiner
+from utils.plugin_json_converter import JsonPluginConverter
 from patch_generation.patch_applier import PatchApplier
-from patch_generation.patch_generator import PatchGenerator
+from patch_generation.patch_generation import PatchGenerator
 from classification.security_classifier import SecurityClassifier
 
 
@@ -23,7 +23,11 @@ class WorkflowFramework:
     """
 
     def __init__(self, commit_sha, skip_patches=False, sast_rerun=False, automatic_application=False):
-        self.config = ConfigManager.get_config(commit_sha)
+        try:
+            self.config = ConfigManager.get_config(commit_sha)
+        except Exception as e:
+            logger.error(f"Please create and fill correctly your config.properties file and set it under the root of your project. To fix: {e}")
+            sys.exit(1)
         self.sast_rerun = sast_rerun
         self.skip_patches = skip_patches
         self.automatic_application = automatic_application
@@ -48,7 +52,6 @@ class WorkflowFramework:
             for i in range(1, rounds_count + 1):
                 logger.info(f"Starting round {i}")
                 self.sast.run_all() if i == 1 else self.sast.run_all(is_initial_round=False)
-                logger.info("SAST run completed")
 
                 if not self.sast_rerun:
                     self.security_classifier.classify()
@@ -83,7 +86,7 @@ class WorkflowFramework:
     def handle_signal(self, signal_number, frame):
         """Handle termination signals (SIGINT, SIGTERM) for graceful shutdown."""
         logger.info(f"Signal {signal_number} received. Gracefully stopping workflow.")
-        self.json_converter.process()  # Save progress
+        self.json_converter.process()
         logger.info("Progress saved successfully.")
         sys.exit(0)
 
@@ -110,5 +113,6 @@ if __name__ == "__main__":
         logger.info("Operation cancelled by user.")
     except Exception as e:
         logger.error("An unexpected error occurred. Please try again or contact support.")
+        print(e)
     finally:
         sys.exit(0)
