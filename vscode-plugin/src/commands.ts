@@ -294,10 +294,9 @@ export function init(
         {
           location: vscode.ProgressLocation.Notification,
           title: 'Analyzing project...',
-          cancellable: true, // Make the progress notification cancellable
+          cancellable: true,
         },
         async (progress, cancellationToken) => {
-          // Pass the progress and cancellationToken to runOrchestratorScript
           await runOrchestratorScript(progress, cancellationToken);
         }
       );
@@ -638,23 +637,6 @@ export function init(
             ).then(async () => {
               // Refresh diagnostics after undo
               getDiagnosticsAfterPatch();
-              async () => {
-                vscode.window.withProgress(
-                  {
-                    location: vscode.ProgressLocation.Notification,
-                    title: "Loading Diagnostics...",
-                  },
-                  async () => {
-                    await refreshDiagnostics(
-                      vscode.window.activeTextEditor!.document,
-                      analysisDiagnostics
-                    );
-                  }
-                );
-              }
-              await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-              const document = await vscode.workspace.openTextDocument(lastFilePath as any);
-              await vscode.window.showTextDocument(document);
             });
           }
         } else if (ANALYZER_USE_DIFF_MODE == "view Patch files") {
@@ -667,11 +649,8 @@ export function init(
             patchFilepath,
             lastFilePath
           ).then(async () => {
-            getOutputFromAnalyzerOfAFile();
-            await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-
-            const document = await vscode.workspace.openTextDocument(lastFilePath as any);
-            await vscode.window.showTextDocument(document);
+            //getOutputFromAnalyzerOfAFile();
+            await refreshDiagnosticsWithoutAnalysis();
           });
         }
       });
@@ -1053,7 +1032,7 @@ export function init(
           const document = await vscode.workspace.openTextDocument(openFilePath);
           await vscode.window.showTextDocument(document);
           await setIssueSelectionInEditor(patchPathOrIssue);
-          await refreshDiagnostics(document, analysisDiagnostics);
+          await getDiagnosticsAfterPatch();
         }
       );
     } catch (error) {
@@ -1339,15 +1318,7 @@ export function init(
           await updateIssuesAfterPatch(webview.params.leftPath!, webview.params.patchPath!);
     
           // Refresh diagnostics
-          await vscode.window.withProgress(
-            {
-              location: vscode.ProgressLocation.Notification,
-              title: "Loading Diagnostics...",
-            },
-            async () => {
-              await refreshDiagnosticsWithoutAnalysis();
-            }
-          );
+          
     
           // Close the webview and update context
           activeDiffPanelWebviews.splice(
@@ -1365,6 +1336,7 @@ export function init(
           if ("patchPath" in webview.params && webview.params.patchPath) {
             patchPath = webview.params.patchPath;
           }
+          await getDiagnosticsAfterPatch();
         } catch (error) {
           logging.LogErrorAndShowErrorMessage("Error during patch application:", error as any);
         }
@@ -1429,18 +1401,16 @@ export function init(
 
       updateIssuesAfterPatch(sourceFile, patchFilepath);
 
-      getDiagnosticsAfterPatch()
+      await getDiagnosticsAfterPatch();
 
       // 4.
       vscode.commands.executeCommand("setContext", "patchApplyEnabled", false);
       getOutputFromAnalyzerOfAFile();
 
     }
-    await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+    //await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 
-    const document = await vscode.workspace.openTextDocument(openFilePath as any);
-    await vscode.window.showTextDocument(document);
-    logging.LogInfo("===== Finished applyPatch command. =====");
+    await refreshDiagnosticsWithoutAnalysis();
   }
 
 
