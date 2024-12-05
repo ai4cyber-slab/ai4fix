@@ -61,7 +61,7 @@ function Manage-ConfigProperties {
 [DEFAULT]
 config.filter= # Words to filter files (if present in file paths, those files will be ignored). Leave empty to analyze all files.
 config.rounds_count=1 # Number of times to run the process. Useful for auto patching with '--auto' option.
-config.build_tool=maven # (maven or gradle)
+config.build_tool=maven # (maven, gradle, or javac)
 
 [API]
 config.provider=openai # Service to use ('groq', 'openai', 'claude')
@@ -135,8 +135,8 @@ function Validate-ConfigProperties {
     }
 
     # Validate build_tool
-    if (-not ($buildToolValue -in @('maven', 'gradle'))) {
-        $errors += "Invalid or missing 'config.build_tool'. It must be either 'maven' or 'gradle'."
+    if (-not ($buildToolValue -in @('maven', 'gradle', 'javac'))) {
+        $errors += "Invalid or missing 'config.build_tool'. It must be either 'maven', 'gradle', or 'javac'."
     }
 
     # Validate provider

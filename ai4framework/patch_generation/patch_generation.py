@@ -10,6 +10,7 @@ import commentjson as cjson
 import difflib
 
 from dotenv import load_dotenv, find_dotenv
+from pathlib import Path
 from utils.logger import logger
 from utils.findMethod import get_method_info_if_any
 from sast.sast_orchestrator import SASTOrchestrator
@@ -88,6 +89,10 @@ class PatchGenerator:
                 command = ['mvn', 'test', '-Dmaven.compiler.incremental=true', '-T', str(os.cpu_count())]
             elif build_tool.lower() == 'gradle':
                 command = ['gradle', 'test', '--no-daemon', '--parallel', f'-Dorg.gradle.workers.max={os.cpu_count()}']
+            elif build_tool.lower() == 'javac':
+                java_files = [str(file) for file in Path('src/main/java').rglob('*.java')]
+                if java_files:
+                    command = ['javac', '-d', os.path.join('build', 'classes', 'main', 'java')] + java_files
             else:
                 raise ValueError(f"Unsupported build tool: {build_tool}")
 
@@ -130,10 +135,12 @@ class PatchGenerator:
             error_keywords = ["BUILD FAILURE", "[ERROR] COMPILATION ERROR :"]
         elif build_tool.lower() == 'gradle':
             error_keywords = ["BUILD FAILED", "Compilation failed"]
+        elif build_tool.lower() == 'javac':
+            error_keywords = ["error:"]
         else:
             raise ValueError(f"Unsupported build tool: {build_tool}")
-
-        for line in result.stdout.split("\n"):
+        output_to_analyze = result.stderr if build_tool.lower() == 'javac' else result.stdout
+        for line in output_to_analyze.split("\n"):
             if any(keyword in line for keyword in error_keywords):
                 error_detected = True
 
@@ -353,7 +360,7 @@ class PatchGenerator:
 
 
                 logger.info(f"Running '{self.build_tool} test' for warning ID {warning['id']}...")
-                if self.build_tool in ['maven', 'gradle']:
+                if self.build_tool in ['maven', 'gradle', 'javac']:
                     result = self.run_tests(self.build_tool)
                     error_detected = self.analyze_build_output(self.build_tool, result)
                 else:

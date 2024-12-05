@@ -99,8 +99,8 @@ function validate_config_properties {
     KEY=$(echo "$CONFIG_CONTENT" | grep -E "config.key=" | cut -d'=' -f2 | tr -d ' ')
     MODEL=$(echo "$CONFIG_CONTENT" | grep -E "config.model=" | cut -d'=' -f2 | tr -d ' ')
 
-    if [[ ! "$BUILD_TOOL" =~ ^(maven|gradle)$ ]]; then
-        ERRORS+=("Invalid 'config.build_tool'. Must be 'maven' or 'gradle'.")
+    if [[ ! "$BUILD_TOOL" =~ ^(maven|gradle|javac)$ ]]; then
+        ERRORS+=("Invalid 'config.build_tool'. Must be 'maven', 'gradle', or 'javac'.")
     fi
     if [[ ! "$PROVIDER" =~ ^(openai|groq|claude)$ ]]; then
         ERRORS+=("Invalid 'config.provider'. Must be one of 'openai', 'groq', 'claude'.")

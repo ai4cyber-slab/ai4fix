@@ -38,7 +38,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     JDK_DIR=$(ls /usr/lib/jvm | grep 'jdk-11') && \
     update-alternatives --install /usr/bin/java java /usr/lib/jvm/$JDK_DIR/bin/java 1 && \
     update-alternatives --set java /usr/lib/jvm/$JDK_DIR/bin/java && \
+    update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/$JDK_DIR/bin/javac 1 && \
+    update-alternatives --set javac /usr/lib/jvm/$JDK_DIR/bin/javac && \
     java -version && \
+    javac -version && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN wget https://downloads.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.zip -O /tmp/maven.zip && \

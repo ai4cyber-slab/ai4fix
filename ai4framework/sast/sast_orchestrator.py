@@ -1,6 +1,7 @@
 import sys
 import subprocess
 import os
+from pathlib import Path
 
 from utils.logger import logger
 from .tool_runner import ToolRunner
@@ -87,7 +88,15 @@ class SASTOrchestrator:
 
             elif build_tool.lower() == 'gradle':
                 command = ['gradle', 'classes', '--no-daemon', '--parallel', f'-Dorg.gradle.workers.max={os.cpu_count()}']
-
+            
+            elif build_tool.lower() == 'javac':
+                build_dir = os.path.join('build', 'classes', 'java', 'main')
+                os.makedirs(build_dir, exist_ok=True)
+                java_files = [str(file) for file in Path('src/main/java').rglob('*.java')]
+                if java_files:
+                    command = ['javac', '-d', build_dir] + java_files
+                else:
+                    raise FileNotFoundError(f"Java files to analyze not found under folder src/main/java")
             else:
                 raise ValueError(f"Unsupported build tool: {build_tool}")
 

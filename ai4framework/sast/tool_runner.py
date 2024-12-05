@@ -131,6 +131,16 @@ def find_class_file_from_java(java_file_path, build_tool):
             )
         else:
             return None
+    
+
+    elif build_tool.lower() == 'javac':
+        if 'src' + os.path.sep + 'main' in java_file:
+            class_path = java_file.replace(
+                'src' + os.path.sep + 'main' + os.path.sep + 'java' + os.path.sep,
+                'build' + os.path.sep + 'classes' + os.path.sep + 'java' + os.path.sep + 'main' + os.path.sep
+            )
+        else:
+            return None
 
     else:
         raise ValueError(f"Unsupported build tool: {build_tool}")

@@ -31,7 +31,7 @@ class RepoManager:
         try:
             self.repo = git.Repo(self.repo_path, search_parent_directories=True)
         except git.exc.InvalidGitRepositoryError:
-            if commit_hash != '':
+            if commit_hash:
                 raise ValueError(f"'{repo_path}' is not a valid Git repository. A commit hash requires a valid Git repository.")
             else:
                 logger.debug(f"'{repo_path}' is not a valid Git repository. Analyzing the whole project.")

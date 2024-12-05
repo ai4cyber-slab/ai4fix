@@ -53,7 +53,7 @@ class SecurityClassifier:
         """
         # Check if the API key is available
         if self.api_key == '':
-            logger.info("Commit sha is not set. Skipping the classification process.")
+            logger.info("api key is not set. Skipping the classification process.")
             return
         
         # Check if the commit sha is available

@@ -84,8 +84,8 @@ class ConfigManager:
             logger.error("Desired llm model name is missing in the config file. Please set it. eg: config.model=gpt-4o-mini")
             sys.exit(1)
         
-        if not build_tool or build_tool.lower() not in ['maven', 'gradle']:
-            logger.error("Unsupported or missing build tool in the configuration. Please set it to 'maven' or 'gradle'.")
+        if not build_tool or build_tool.lower() not in ['maven', 'gradle', 'javac']:
+            logger.error("Unsupported or missing build tool in the configuration. Please set it to 'maven' or 'gradle' or 'javac'.")
             sys.exit(1)
 
         return cls._config

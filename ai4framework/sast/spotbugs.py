@@ -38,6 +38,12 @@ class SpotBugsRunner:
                 for dirpath, dirnames, filenames in os.walk(root_path)
                 if dirpath.endswith("build") and "classes" in dirnames
             ]
+        elif build_tool.lower() == 'javac':
+            return [
+                os.path.join(dirpath, "classes")
+                for dirpath, dirnames, filenames in os.walk(root_path)
+                if dirpath.endswith("build") and "classes" in dirnames
+            ]
 
     def run(self, files_to_analyze):
         """
