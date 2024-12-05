@@ -45,6 +45,22 @@ class SpotBugsRunner:
                 if dirpath.endswith("build") and "classes" in dirnames
             ]
 
+    def create_temp_file(self, files):
+        """
+        Create a temporary file containing the list of files to analyze.
+        
+        Args:
+            files (list): List of files to be written to the temp file
+            
+        Returns:
+            str: Path to the created temporary file
+        """
+        temp_file_path = os.path.join(self.project_path, 'spotbugs_files.txt')
+        with open(temp_file_path, 'w') as f:
+            for file in files:
+                f.write(f"{file}\n")
+        return temp_file_path
+
     def run(self, files_to_analyze):
         """
         Run SpotBugs on the specified Java files.
@@ -60,14 +76,8 @@ class SpotBugsRunner:
             sys.exit(1)
 
         spotbugs_bin = os.environ.get('SPOTBUGS_BIN')
-
-        to_analyze = (
-            ' '.join(self.find_classes_directories(self.project_path, self.build_tool))
-            if len(files_to_analyze) > 500 else
-            ' '.join(files_to_analyze)
-        )
-
-        command = f"{spotbugs_bin} -textui -xml:withMessages={self.report_path} {to_analyze}"
+        temp_file = self.create_temp_file(files_to_analyze)
+        command = f"{spotbugs_bin} -textui -xml:withMessages={self.report_path} -analyzeFromFile {temp_file}"
 
         try:
             process = subprocess.run(
@@ -82,6 +92,12 @@ class SpotBugsRunner:
         except Exception as e:
             logger.error(f"An error occurred while running SpotBugs: {str(e)}")
             sys.exit(1)
+        finally:
+            if os.path.exists(temp_file):
+                try:
+                    os.remove(temp_file)
+                except Exception as e:
+                    logger.warning(f"Failed to remove temporary file: {str(e)}")
 
     def get_report(self, validation=False):
         """

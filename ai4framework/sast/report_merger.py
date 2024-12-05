@@ -50,7 +50,7 @@ class ReportMerger:
             Exception: If there's an error during the merging process.
         """
         if not validation:
-            logger.info("Merging reports...")
+            logger.info("Parsing and Merging reports...")
         issues = []
 
         try:

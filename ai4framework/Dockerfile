@@ -14,7 +14,6 @@ ENV SPOTBUGS_BIN=/opt/spotbugs-${SPOTBUGS_VERSION}/bin/spotbugs
 ENV ANALYZER_PATH=/opt/AI4VULN
 ENV ANALYZER_BIN=/opt/AI4VULN/Java/AnalyzerJava
 ENV ANALYZER_RESULTS_PATH=${WORKDIR_PATH}/results
-ENV PATH="$MAVEN_HOME/bin:$GRADLE_HOME/bin:$PATH"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         wget \
@@ -49,6 +48,7 @@ RUN wget https://downloads.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/ap
     unzip /tmp/maven.zip -d /opt && \
     mv /opt/apache-maven-${MAVEN_VERSION} /opt/maven && \
     rm /tmp/maven.zip && \
+    ln -s /opt/maven/bin/mvn /usr/local/bin/mvn && \
     mvn -version
 
 RUN wget https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip -O /tmp/gradle.zip && \
@@ -56,7 +56,10 @@ RUN wget https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.
     unzip /tmp/gradle.zip -d /opt/gradle && \
     mv /opt/gradle/gradle-${GRADLE_VERSION}/* /opt/gradle/ && \
     rm -rf /tmp/gradle.zip /opt/gradle/gradle-${GRADLE_VERSION} && \
+    ln -s /opt/gradle/bin/gradle /usr/local/bin/gradle && \
     gradle --version
+
+ENV PATH="$MAVEN_HOME/bin:$GRADLE_HOME/bin:$PATH"
 
 RUN wget https://github.com/pmd/pmd/releases/download/pmd_releases%2F${PMD_VERSION}/pmd-dist-${PMD_VERSION}-bin.zip -O /tmp/pmd.zip && \
     unzip /tmp/pmd.zip -d /opt && rm /tmp/pmd.zip

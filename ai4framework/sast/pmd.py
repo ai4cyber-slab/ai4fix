@@ -2,6 +2,7 @@ import os
 import sys
 import subprocess
 import xml.etree.ElementTree as ET
+import tempfile
 from utils.logger import logger
 
 
@@ -38,29 +39,29 @@ class PMDRunner:
             logger.warning("No files to analyze.")
             sys.exit(1)
 
-        to_analyze = (
-            self.project_path if len(files_to_analyze) > 500
-            else ','.join(files_to_analyze)
-        )
-
         pmd_bin = os.environ.get('PMD_BIN')
         ruleset_path = self.config.get(
             'SAST', 'config.pmd_ruleset',
             fallback=os.path.join(os.sep, 'app', 'utils', 'PMD-config.xml')
         )
-        command = [
-            pmd_bin, "check",
-            "-d", to_analyze,
-            "-R", ruleset_path,
-            "-f", "xml",
-            "-r", self.report_path,
-            "--no-fail-on-violation",
-            "--no-fail-on-error",
-            "--cache", self.cache_dir,
-            "--threads", str(os.cpu_count())
-        ]
+
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
+            temp_file.write('\n'.join(files_to_analyze))
+            temp_file_path = temp_file.name
 
         try:
+            command = [
+                pmd_bin, "check",
+                "--file-list", temp_file_path,
+                "-R", ruleset_path,
+                "-f", "xml",
+                "-r", self.report_path,
+                "--no-fail-on-violation",
+                "--no-fail-on-error",
+                "--cache", self.cache_dir,
+                "--threads", str(os.cpu_count())
+            ]
+
             result = subprocess.run(
                 command, cwd=self.project_path, text=True,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE
@@ -75,6 +76,12 @@ class PMDRunner:
         except Exception as e:
             logger.error(f"An error occurred while running PMD: {str(e)}")
             sys.exit(1)
+        finally:
+            if os.path.exists(temp_file_path):
+                try:
+                    os.unlink(temp_file_path)
+                except Exception as e:
+                    logger.warning(f"Failed to remove temporary file: {str(e)}")
 
     def get_report(self):
         """

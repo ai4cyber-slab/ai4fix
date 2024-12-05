@@ -34,12 +34,9 @@ class Analyzer:
         try:
             if self.javaFilepaths:
                 with open(self.filter, 'w') as filter_file:
-                    if len(self.javaFilepaths) > 500:
-                        filter_file.write("+.*\n")
-                    else:
-                        filter_file.write("-.*\n")
-                        for javaFilePath in self.javaFilepaths:
-                            filter_file.write(f"+.*{javaFilePath}\n")
+                    filter_file.write("-.*\n")
+                    for javaFilePath in self.javaFilepaths:
+                        filter_file.write(f"+.*{javaFilePath}\n")
         except Exception as e:
             logger.error(f"An error occurred while writing to the filter file: {e}")
 
