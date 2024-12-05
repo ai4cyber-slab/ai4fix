@@ -75,20 +75,62 @@ plugin.use_diff_mode=view Diffs # Do not change
 plugin.script_path=/app # Do not change
 "@
 
-    if (Test-Path $configFilePath) {
+    if (Test-Path $templatePath) {
+        # Use template if it exists
+        Copy-Item -Path $templatePath -Destination $configFilePath -Force
+        Write-Host "Created 'config.properties' from template" -ForegroundColor Green
+    } elseif (Test-Path $configFilePath) {
+        # Keep existing config.properties if no template exists
         Write-Host "Using existing 'config.properties' file at: $configFilePath" -ForegroundColor Green
-    } elseif (Test-Path $templatePath) {
-        Rename-Item -Path $templatePath -NewName "config.properties" -Force
-        Write-Host "Renamed 'config_template.properties' to 'config.properties'" -ForegroundColor Green
     } else {
+        # Create from default content if neither template nor config exists
         Set-Content -Path $configFilePath -Value $defaultContent
         Write-Host "Default 'config.properties' file created at: $configFilePath" -ForegroundColor Green
     }
 
     Start-Process notepad.exe $configFilePath
 
-    Write-Host "Press Enter to continue after editing 'config.properties'..."
-    Read-Host
+    do {
+        Write-Host "Would you like to add config.properties to .gitignore? (Y/N)" -ForegroundColor Yellow -NoNewline
+        $response = Read-Host
+        if ($response -notmatch '^[YyNn]$') {
+            Write-Host "Please enter Y or N only." -ForegroundColor Red
+            continue
+        }
+        if ($response -match '^[Yy]$') {
+            $gitignorePath = Join-Path -Path $LOCAL_PROJECT_PATH -ChildPath ".gitignore"
+            if (-not (Test-Path $gitignorePath)) {
+                New-Item -Path $gitignorePath -ItemType File
+            }
+            Start-Process notepad.exe $gitignorePath
+            Write-Host "Please add 'config.properties' to .gitignore and save the file."
+            do {
+                Write-Host "Have you finished editing .gitignore? (Y/N)" -ForegroundColor Yellow -NoNewline
+                $editDone = Read-Host
+                if ($editDone -notmatch '^[YyNn]$') {
+                    Write-Host "Please enter Y or N only." -ForegroundColor Red
+                }
+            } while ($editDone -notmatch '^[YyNn]$')
+            if ($editDone -match '^[Nn]$') {
+                continue
+            }
+        }
+        break
+    } while ($true)
+
+    do {
+        Write-Host "Have you finished editing 'config.properties'? (Y/N)" -ForegroundColor Yellow -NoNewline
+        $configDone = Read-Host
+        if ($configDone -notmatch '^[YyNn]$') {
+            Write-Host "Please enter Y or N only." -ForegroundColor Red
+            continue
+        }
+        if ($configDone -match '^[Nn]$') {
+            Start-Process notepad.exe $configFilePath
+            continue
+        }
+        break
+    } while ($true)
 
     Validate-ConfigProperties $configFilePath
 }

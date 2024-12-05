@@ -44,9 +44,9 @@ class ConfigManager:
         cls._config.set('DEFAULT', 'config.project_root', project_root)
         cls._config.set('DEFAULT', 'config.commit_sha', commit_sha)
 
-        config_file = os.path.join(project_root, 'config.properties')
+        config_file = os.path.join(os.environ.get('WORKDIR_PATH'), 'config.properties')
         if not os.path.exists(config_file):
-            logger.error("config.properties file is missing. Please ensure it exists.")
+            logger.error("config.properties file is missing. Please ensure it exists, rename and modify the config_template.properties file.")
             sys.exit(1)
 
         cleaned_lines = []

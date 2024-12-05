@@ -73,11 +73,11 @@ config.temperature=0
 plugin.use_diff_mode=view Diffs
 plugin.script_path=/app"
 
-    if [[ -f "$CONFIG_FILE_PATH" ]]; then
+    if [[ -f "$TEMPLATE_PATH" ]]; then
+        cp "$TEMPLATE_PATH" "$CONFIG_FILE_PATH"
+        echo "Created 'config.properties' from template"
+    elif [[ -f "$CONFIG_FILE_PATH" ]]; then
         echo "Using existing 'config.properties' file at: $CONFIG_FILE_PATH"
-    elif [[ -f "$TEMPLATE_PATH" ]]; then
-        mv "$TEMPLATE_PATH" "$CONFIG_FILE_PATH"
-        echo "Renamed 'config_template.properties' to 'config.properties'"
     else
         echo "$DEFAULT_CONTENT" > "$CONFIG_FILE_PATH"
         echo "Default 'config.properties' file created at: $CONFIG_FILE_PATH"
@@ -91,6 +91,64 @@ plugin.script_path=/app"
         echo "Error: No suitable editor found. Install 'nano' or 'vim'." >&2
         exit 1
     fi
+
+    while true; do
+        echo -n "Would you like to add config.properties to .gitignore? (y/n) "
+        read -r response
+        if [[ ! $response =~ ^[YyNn]$ ]]; then
+            echo "Please enter y or n only."
+            continue
+        fi
+        if [[ $response =~ ^[Yy]$ ]]; then
+            GITIGNORE_PATH="$LOCAL_PROJECT_PATH/.gitignore"
+            if [[ ! -f "$GITIGNORE_PATH" ]]; then
+                touch "$GITIGNORE_PATH"
+            fi
+            
+            if command -v nano &> /dev/null; then
+                nano "$GITIGNORE_PATH"
+            elif command -v vim &> /dev/null; then
+                vim "$GITIGNORE_PATH"
+            else
+                echo "Error: No suitable editor found. Install 'nano' or 'vim'." >&2
+                exit 1
+            fi
+            
+            while true; do
+                echo -n "Have you finished editing .gitignore? (y/n) "
+                read -r editDone
+                if [[ ! $editDone =~ ^[YyNn]$ ]]; then
+                    echo "Please enter y or n only."
+                    continue
+                fi
+                if [[ $editDone =~ ^[Nn]$ ]]; then
+                    continue 2
+                fi
+                break
+            done
+        fi
+        break
+    done
+
+    while true; do
+        echo -n "Have you finished editing 'config.properties'? (y/n) "
+        read -r configDone
+        if [[ ! $configDone =~ ^[YyNn]$ ]]; then
+            echo "Please enter y or n only."
+            continue
+        fi
+        if [[ $configDone =~ ^[Nn]$ ]]; then
+            if command -v nano &> /dev/null; then
+                nano "$CONFIG_FILE_PATH"
+            elif command -v vim &> /dev/null; then
+                vim "$CONFIG_FILE_PATH"
+            fi
+            continue
+        fi
+        break
+    done
+
+    validate_config_properties "$CONFIG_FILE_PATH"
 }
 
 function validate_config_properties {
@@ -98,10 +156,28 @@ function validate_config_properties {
     ERRORS=()
     CONFIG_CONTENT=$(cat "$CONFIG_FILE_PATH")
 
-    BUILD_TOOL=$(echo "$CONFIG_CONTENT" | grep -E "config.build_tool=" | cut -d'=' -f2 | tr -d ' ')
-    PROVIDER=$(echo "$CONFIG_CONTENT" | grep -E "config.provider=" | cut -d'=' -f2 | tr -d ' ')
-    KEY=$(echo "$CONFIG_CONTENT" | grep -E "config.key=" | cut -d'=' -f2 | tr -d ' ')
-    MODEL=$(echo "$CONFIG_CONTENT" | grep -E "config.model=" | cut -d'=' -f2 | tr -d ' ')
+    BUILD_TOOL=""
+    PROVIDER=""
+    KEY=""
+    MODEL=""
+
+    while IFS= read -r line; do
+        line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+        if [[ -z "$line" || "$line" == \#* ]]; then
+            continue
+        fi
+
+        if [[ $line =~ ^config\.build_tool= ]]; then
+            BUILD_TOOL=$(echo "${line#*=}" | sed 's/[[:space:]]*#.*//g' | xargs)
+        elif [[ $line =~ ^config\.provider= ]]; then
+            PROVIDER=$(echo "${line#*=}" | sed 's/[[:space:]]*#.*//g' | xargs)
+        elif [[ $line =~ ^config\.key= ]]; then
+            KEY=$(echo "${line#*=}" | sed 's/[[:space:]]*#.*//g' | xargs)
+        elif [[ $line =~ ^config\.model= ]]; then
+            MODEL=$(echo "${line#*=}" | sed 's/[[:space:]]*#.*//g' | xargs)
+        fi
+    done <<< "$CONFIG_CONTENT"
 
     if [[ ! "$BUILD_TOOL" =~ ^(maven|gradle|javac)$ ]]; then
         ERRORS+=("Invalid 'config.build_tool'. Must be 'maven', 'gradle', or 'javac'.")
@@ -129,7 +205,6 @@ function validate_config_properties {
 show_banner
 
 manage_config_properties
-validate_config_properties
 
 echo "Building the Docker image with Maven version $MAVEN_VERSION and Gradle version $GRADLE_VERSION..."
 docker build --build-arg MAVEN_VERSION=$MAVEN_VERSION --build-arg GRADLE_VERSION=$GRADLE_VERSION -t ai4framework-analyzer .

@@ -1,6 +1,7 @@
 FROM python:3.9-slim
 
-WORKDIR /app
+ENV WORKDIR_PATH=/app
+WORKDIR ${WORKDIR_PATH}
 
 ARG MAVEN_VERSION=3.9.5
 ARG GRADLE_VERSION=7.6
@@ -12,7 +13,7 @@ ENV PMD_BIN=/opt/pmd-bin-${PMD_VERSION}/bin/pmd
 ENV SPOTBUGS_BIN=/opt/spotbugs-${SPOTBUGS_VERSION}/bin/spotbugs
 ENV ANALYZER_PATH=/opt/AI4VULN
 ENV ANALYZER_BIN=/opt/AI4VULN/Java/AnalyzerJava
-ENV ANALYZER_RESULTS_PATH=/app/results
+ENV ANALYZER_RESULTS_PATH=${WORKDIR_PATH}/results
 ENV PATH="$MAVEN_HOME/bin:$GRADLE_HOME/bin:$PATH"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -71,10 +72,10 @@ RUN tar -xvzf /opt/slab-9.19-d45fdf7b5.tgz -C /opt/ && \
     rm /opt/slab-9.19-d45fdf7b5.tgz && \
     mv /opt/slab-9.19-d45fdf7b5 /opt/AI4VULN
 
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
+COPY requirements.txt ${WORKDIR_PATH}/requirements.txt
+RUN pip install --no-cache-dir -r ${WORKDIR_PATH}/requirements.txt
 
-COPY . /app
+COPY . ${WORKDIR_PATH}
 
 COPY aifix4seccode-vscode-1.0.39.vsix /opt/
 RUN code-server --install-extension /opt/aifix4seccode-vscode-1.0.39.vsix
