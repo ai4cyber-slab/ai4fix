@@ -56,7 +56,8 @@ function show_banner {
 }
 
 function manage_config_properties {
-    CONFIG_FILE_PATH="$LOCAL_PROJECT_PATH/config.properties"
+    TEMPLATE_PATH="$(dirname "$0")/config_template.properties"
+    CONFIG_FILE_PATH="$(dirname "$0")/config.properties"
     DEFAULT_CONTENT="[DEFAULT]
 config.filter=
 config.rounds_count=1
@@ -72,11 +73,14 @@ config.temperature=0
 plugin.use_diff_mode=view Diffs
 plugin.script_path=/app"
 
-    if [[ ! -f "$CONFIG_FILE_PATH" ]]; then
+    if [[ -f "$CONFIG_FILE_PATH" ]]; then
+        echo "Using existing 'config.properties' file at: $CONFIG_FILE_PATH"
+    elif [[ -f "$TEMPLATE_PATH" ]]; then
+        mv "$TEMPLATE_PATH" "$CONFIG_FILE_PATH"
+        echo "Renamed 'config_template.properties' to 'config.properties'"
+    else
         echo "$DEFAULT_CONTENT" > "$CONFIG_FILE_PATH"
         echo "Default 'config.properties' file created at: $CONFIG_FILE_PATH"
-    else
-        echo "'config.properties' file already exists. Please edit if necessary."
     fi
 
     if command -v nano &> /dev/null; then
@@ -90,7 +94,7 @@ plugin.script_path=/app"
 }
 
 function validate_config_properties {
-    CONFIG_FILE_PATH="$LOCAL_PROJECT_PATH/config.properties"
+    CONFIG_FILE_PATH="$(dirname "$0")/config.properties"
     ERRORS=()
     CONFIG_CONTENT=$(cat "$CONFIG_FILE_PATH")
 

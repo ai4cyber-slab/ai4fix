@@ -56,7 +56,8 @@ function Show-Banner {
 }
 
 function Manage-ConfigProperties {
-    $configFilePath = Join-Path -Path $LOCAL_PROJECT_PATH -ChildPath "config.properties"
+    $templatePath = Join-Path -Path $PSScriptRoot -ChildPath "config_template.properties"
+    $configFilePath = Join-Path -Path $PSScriptRoot -ChildPath "config.properties"
     $defaultContent = @"
 [DEFAULT]
 config.filter= # Words to filter files (if present in file paths, those files will be ignored). Leave empty to analyze all files.
@@ -74,11 +75,14 @@ plugin.use_diff_mode=view Diffs # Do not change
 plugin.script_path=/app # Do not change
 "@
 
-    if (-not (Test-Path $configFilePath)) {
+    if (Test-Path $configFilePath) {
+        Write-Host "Using existing 'config.properties' file at: $configFilePath" -ForegroundColor Green
+    } elseif (Test-Path $templatePath) {
+        Rename-Item -Path $templatePath -NewName "config.properties" -Force
+        Write-Host "Renamed 'config_template.properties' to 'config.properties'" -ForegroundColor Green
+    } else {
         Set-Content -Path $configFilePath -Value $defaultContent
         Write-Host "Default 'config.properties' file created at: $configFilePath" -ForegroundColor Green
-    } else {
-        Write-Host "'config.properties' file already exists. Opening for editing..." -ForegroundColor Yellow
     }
 
     Start-Process notepad.exe $configFilePath
