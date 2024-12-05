@@ -492,11 +492,22 @@ export function init(
           });
         }
       }
+      // Stop progress and throw error if line contains error to stop progress from running indefinitely'
+      if (line.toLowerCase().includes('error:')) {
+        progress.report({ increment: 100 });
+        throw new Error(`Python script error: ${line}`);
+      }
     });
   
     childProc.stderr.on('data', (data: Buffer) => {
       const message = data.toString();
       logging.LogInfo(`orchestrator.py: ${message}`);
+      
+      // same as above but for stderr
+      if (message.toLowerCase().includes('error')) {
+        progress.report({ increment: 100 });
+        throw new Error(`Python script error: ${message}`);
+      }
     });
   
     // Handle process exit
@@ -512,6 +523,7 @@ export function init(
           const error = new Error(`orchestrator.py exited with code ${code}`);
           logging.LogError(error.message);
           vscode.window.showErrorMessage(`Analysis failed: ${error.message}`);
+          progress.report({ increment: 100 });
           reject(error);
         }
       });
@@ -519,6 +531,7 @@ export function init(
       childProc.on('error', (error) => {
         logging.LogError(`Failed to start orchestrator.py: ${error.message}`);
         vscode.window.showErrorMessage(`Failed to start analysis: ${error.message}`);
+        progress.report({ increment: 100 });
         reject(error);
       });
     });
@@ -573,6 +586,7 @@ export function init(
       );
     } catch (error) {
       logging.LogError(`Error during analysis: ${error}`);
+      progress.report({ increment: 100 }); // Complete the progress bar
       throw error;
     }
   }

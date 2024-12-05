@@ -12,8 +12,8 @@ var os = require('os');
 
 
 // EXTENSION SETTINGS:
-
-let configPath = upath.join(vscode.workspace.workspaceFolders![0].uri.fsPath, 'config.properties');
+const dockerWorkdir = process.env.WORKDIR_PATH || '/app';
+let configPath = upath.join(dockerWorkdir, 'config.properties');
 const normalized_configPath = upath.normalize(configPath);
 
 let config: { [section: string]: { [key: string]: string } } = {};
