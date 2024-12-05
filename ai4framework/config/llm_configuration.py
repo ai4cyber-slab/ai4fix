@@ -1,4 +1,5 @@
 import sys
+import re
 
 from groq import Groq
 from openai import OpenAI
@@ -30,7 +31,10 @@ def llm_response(provider, model, api_key, messages):
             logger.error("Couldn't find provider. Please check in the configuration.")
             sys.exit(1)
     except Exception as e:  
-        logger.error(f'An error occured while initializing the LLM: {e}')
+        match = re.search(r"'message': '([^']*)'", str(e))
+        if match:
+            message = match.group(1)
+        logger.error(f'An error occured while initializing the LLM: {message if message != "" else e}')
         sys.exit(1)
 
 

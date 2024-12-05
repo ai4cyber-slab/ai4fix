@@ -26,7 +26,7 @@ class PatchGenerator:
         self.config = config
         self.provider = self.config.get('API', 'config.provider').lower()
         self.model = self.config.get('API', 'config.model')
-        self.api_key = self.config.get('API', 'config.key', fallback='')
+        self.api_key = self.config.get('API', 'config.key', fallback='').strip()
         self.build_tool = self.config.get('DEFAULT', 'config.build_tool', fallback='maven').lower()
         if self.api_key == '':
             logger.warning("API key not found. Please set it in the configuration.")

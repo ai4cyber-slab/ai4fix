@@ -28,18 +28,22 @@ class WorkflowFramework:
         except Exception as e:
             logger.error(f"Please create and fill correctly your config.properties file and set it under the root of your project. To fix: {e}")
             sys.exit(1)
-        self.sast_rerun = sast_rerun
-        self.skip_patches = skip_patches
-        self.automatic_application = automatic_application
+        try:
+            self.sast_rerun = sast_rerun
+            self.skip_patches = skip_patches
+            self.automatic_application = automatic_application
 
-        self.sast = SASTOrchestrator(self.config)
-        self.security_classifier = SecurityClassifier(self.config)
-        self.symbolic_execution = SymbolicExecution(self.config)
-        self.issues_merger = JSONCombiner(self.config)
-        self.json_converter = JsonPluginConverter(self.config)
-        signal.signal(signal.SIGINT, self.handle_signal)
-        signal.signal(signal.SIGTERM, self.handle_signal)
-        logger.info("Signal handlers for SIGINT and SIGTERM registered.")
+            self.sast = SASTOrchestrator(self.config)
+            self.security_classifier = SecurityClassifier(self.config)
+            self.symbolic_execution = SymbolicExecution(self.config)
+            self.issues_merger = JSONCombiner(self.config)
+            self.json_converter = JsonPluginConverter(self.config)
+            signal.signal(signal.SIGINT, self.handle_signal)
+            signal.signal(signal.SIGTERM, self.handle_signal)
+            logger.info("Signal handlers for SIGINT and SIGTERM registered.")
+        except Exception as e:
+            logger.error(f"An error occurred during initialization: {e}")
+            sys.exit(1)
 
     def execute_workflow(self):
         logger.info("Starting workflow execution")
