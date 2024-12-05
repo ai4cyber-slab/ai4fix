@@ -1,96 +1,346 @@
-# AIFix4SecCode
-An automated code repair framework for fixing vulnerabilities. The framework detects vulnerabilities based on static analysis with the help of the [OpenStaticAnalyzer](https://github.com/sed-inf-u-szeged/OpenStaticAnalyzer) tool that integrates [SpotBugs](https://spotbugs.github.io/) as well.
+# AI4Framework Guide
 
-The detected vulnerabilities get automatically patched by an ASG transformation based repair solution implemented in the [CodeRepair](https://github.com/FrontEndART/OpenStaticAnalyzer/tree/CodeRepairTool/java/cl/CodeRepair) code module. Currently, the automatic repair of the following security issues are supported:
-* [EI_EXPOSE_REP2](https://spotbugs.readthedocs.io/en/stable/bugDescriptions.html#ei2-may-expose-internal-representation-by-incorporating-reference-to-mutable-object-ei-expose-rep2)
-* [EI_EXPOSE_REP](https://spotbugs.readthedocs.io/en/stable/bugDescriptions.html#ei-may-expose-internal-representation-by-returning-reference-to-mutable-object-ei-expose-rep)
-* [MS_SHOULD_BE_FINAL](https://spotbugs.readthedocs.io/en/stable/bugDescriptions.html#ms-field-isn-t-final-but-should-be-ms-should-be-final)
-* [NP_NULL_ON_SOME_PATH](https://spotbugs.readthedocs.io/en/stable/bugDescriptions.html#np-possible-null-pointer-dereference-np-null-on-some-path)
-* [NP_NULL_ON_SOME_PATH_EXCEPTION](https://spotbugs.readthedocs.io/en/stable/bugDescriptions.html#np-possible-null-pointer-dereference-in-method-on-exception-path-np-null-on-some-path-exception)
-* [MS_PKGPROTECT](https://spotbugs.readthedocs.io/en/stable/bugDescriptions.html#ms-field-should-be-package-protected-ms-pkgprotect)
-* [MS_MUTABLE_COLLECTION](https://spotbugs.readthedocs.io/en/stable/bugDescriptions.html#ms-field-is-a-mutable-collection-ms-mutable-collection)
-* [FI_PUBLIC_SHOULD_BE_PROTECTED](https://spotbugs.readthedocs.io/en/stable/bugDescriptions.html#fi-finalizer-should-be-protected-not-public-fi-public-should-be-protected)
+## Introduction
 
+AI4Framework is designed to enhance software development processes through the power of artificial intelligence. This framework combines various tools and technologies to provide comprehensive code analysis, vulnerability detection, and automated bug fixing capabilities. By leveraging static code analysis, symbolic execution, and so much more, AI4Framework aims to improve code quality, identify potential security risks, and streamline the development workflow.
 
+![AI4Framework Workflow Diagram](workflow.png)
 
-## How to install
-You can install the framework by cloning its GitHub repository and building it with Maven:
+Key features of AI4Framework include:
+- Automated code analysis using static analysis tools, such as **PMD 7.4.0**, and **Spotbugs 4.8.6**.
+- Vulnerability scanning for both code and dependencies
+- **RTEHunter**, a symbolic execution tool for deep code inspection
+- Integration with many models such as **OpenAI's GPT models** for intelligent code understanding and suggestion generation
+- Customizable configuration to fit various project requirements
+
+This guide provides detailed instructions on how to set up and use the framework. Follow each step carefully to ensure a smooth development process, maximizing the benefits of AI4Framework.
+
+## Table of Contents
+
+1. [Prerequisites](#prerequisites)
+2. [Setting Up the framework](#setting-up-the-framework)
+3. [Configuration File](#configuration-file)
+4. [Running Docker](#running-docker)
+    - [On Windows](#on-windows)
+    - [On Linux or macOS](#on-linux-or-macos)
+5. [Analyzing Your Project](#analyzing-your-project)
+    - [Orchestration](#orchestration)
+    - [Option 1: Using the Built-in Editor](#option-1-using-the-built-in-editor)
+    - [Option 2: Using Command Line Access (Headless Mode)](#option-2-using-command-line-access-headless-mode)
+10. [Example Scenario: Running AI4Framework on macOS in Headless Mode](#example-scenario-running-ai4framework-on-macos-in-headless-mode)
+    - [Reviewing and Retrieving the Results](#reviewing-and-retrieving-the-results)
+11. [Need Support?](#need-support)
+
+---
+
+## Prerequisites
+
+Ensure your system meets the following requirements before proceeding:
+
+- **Operating System**: Windows, Linux, or macOS
+- **Docker**: Installed and running ([Download Docker](https://www.docker.com/get-started))
+- **Git and Git LFS**: Installed ([Download Git](https://git-scm.com/downloads), [Download Git LFS](https://git-lfs.github.com/))
+  - **Important**: AI4Framework contains large files managed by Git LFS. However some files exceed the maximum data quota of the repository. **Make sure to download the `slab-9.19-d45fdf7b5.tgz` file manually, from the latest Release Assets.**
+- **A Maven-Structured Project**: Your project should be organized with Maven (typically contains a `pom.xml` file in the root directory), and should use **Java 11 or above**.
+- **API Key**: At the moment, AI4Framework utilizes OpenAI's GPT models, Groq's models and Anthropic's Claude models, requiring an API key for access. ([OpenAI](https://platform.openai.com/signup), [Groq](https://console.groq.com/login), [Anthropic](https://claude.ai/onboarding))
+
+---
+
+## Setting Up the Framework
+
+### Step 1: Clone the AI4Framework Repository
+
+Ensure Git LFS is installed and initialized:
+
+```bash
+git lfs install
 ```
-git clone https://github.com/FrontEndART/AIFix4SecCode.git
-cd AIFix4SecCode
-mvn install:install-file -Dfile=src\\main\\resources\\CodeRepair-1.0.3-SNAPSHOT-jar-with-dependencies.jar -DgroupId=com.fea -DartifactId=coderepair -Dversion=1.0.1 -Dpackaging=jar -DgeneratePom=true
-mvn package
-python -m pip install -r sorter\\requirements.txt
-cd vscode-plugin
-npm install
+
+Clone the repository:
+
+```bash
+git clone --branch dev --single-branch https://github.com/ai4cyber-slab/ai4fix.git
 ```
-Npm is installed with Node.js. This means that you have to install Node.js to get npm installed on your computer. You can download it from here: https://nodejs.org/
 
-Python 3.10 or higher is required for the Sorter modul to run properly.
+If Git LFS does not retrieve large files automatically, navigate to the `ai4framework` directory and run:
 
-Next, you need to download and extract the [latest release](https://github.com/sed-inf-u-szeged/OpenStaticAnalyzer/releases) of the OpenStaticAnalyzer.
-
-
-## How to use
-Once the framework and the OpenStaticAnalyzer components are installed, you can use the framework by running the ``VulnerabilityRepairDriver`` main class. The program does not require any command-line parameters as it reads all the necessary information from the ``config.properties`` file located in the ``resources`` folder or the one provided via the command line. Therefore, you need to edit this file and enter appropriate data:
-
+```bash
+git lfs pull
 ```
-# General settings
 
-config.project_name=NAME OF THE PROJECT # e.g. test-project
-config.project_path=ABSOLUTE PATH TO THE PROJECT SRC # e.g. d:\\AIFix4SecCode\\test-project
-config.project_source_path=RELATIVE PATH OF THE SOURCE FILES # e.g. src\\main\\java
-config.project_build_tool=NAME OF THE BUILD TOOL # maven / mavenCLI / gradle / ant
-config.project_run_tests=RUN UNIT TESTS OR NOT # true or false
-config.results_path=FOLDER TO PUT ANALYSIS RESULTS # e.g. d:\\AIFix4SecCode\\test-project\\results
-config.validation_results_path=FOLDER TO PUT VALIDATION ANALYSIS RESULTS # e.g. d:\\AIFix4SecCode\\test-project\\validation
-config.archive_enabled=ARCHIVE THE GENERATED RESULTS OR NOT # true or false
-config.archive_path=FOLDER TO PUT ARCHIVED DATA # e.g. d:\\AIFix4SecCode\\test-project\\archive
-config.jsons_listfile=THE PATH OF THE RESULTED LIST FILE # e.g. d:\\AIFix4SecCode\\test-project\\results\\json.list
-config.prioritizer_path=d:\\AIFix4SecCode\\sorter\\sorter.py
-config.prioritizer_mode=word2vec
+**Important**: Some large files exceed the maximum data quota of the repository. Because of that, **make sure to download the `slab-9.19-d45fdf7b5.tgz` file manually, from the latest Release Assets, and copy it into the `ai4framework` folder**.
 
-#Analyzer settings
-config.osa_path=PATH TO THE JAVA OPEN STATIC ANALYZER # e.g. d:\\OpenStaticAnalyzer-4.1.0-x64-Windows\\Java
-config.osa_edition=ANALYZER EDITION # SourceMeter or OpenStaticAnalyzer
-config.spotbugs_bin=PATH TO THE SPOTBUGS ANALYZER #e.g. d:\\OpenStaticAnalyzer-4.1.0-x64-Windows\\Java\\WindowsWrapper\\WrapperBins\\Tools\\spotbugs\\bin\\spotbugs.bat
-config.jan_path=PATHS TO THE JAN ANALYZER # e.g. d:\\OpenStaticAnalyzer-4.1.0-x64-Windows\\Java\\WindowsWrapper\\WrapperBins\\Tools
-config.jan_edition="JAN.jar"
-config.jan_compiler="jdk.compiler.jar"
-config.additional_tools_path=PATHS TO THE OTHER AUXILIARY TOOLS # e.g. d:\\OpenStaticAnalyzer-4.1.0-x64-Windows\\Java\\WindowsTools
-config.jan2changepath_edition=JAN2ChangePath
+Ensure that the files are placed in the correct locations to avoid any issues when running the framework.
 
+### Step 2: Navigate to the AI4Framework Directory
 
-# Repair strategies
-strategy.EI_EXPOSE_REP2=EI_EXPOSE_REP2_ARRAY|EI_EXPOSE_REP2_DATEOBJECT|EI_EXPOSE_REP2
-strategy.EI_EXPOSE_REP=EI_EXPOSE_REP2_ARRAY|EI_EXPOSE_REP2_DATEOBJECT|EI_EXPOSE_REP2
-strategy.MS_SHOULD_BE_FINAL=MS_SHOULD_BE_FINAL
-strategy.NP_NULL_ON_SOME_PATH=NP_NULL_ON_SOME_PATH
-strategy.NP_NULL_ON_SOME_PATH_EXCEPTION=NP_NULL_ON_SOME_PATH_EXCEPTION
-strategy.FI_PUBLIC_SHOULD_BE_PROTECTED=FI_PUBLIC_SHOULD_BE_PROTECTED
-strategy.MS_PKGPROTECT=MS_PKGPROTECT
-strategy.MS_MUTABLE_COLLECTION=MS_MUTABLE_COLLECTION
-
-# Repair strategy descriptions
-desc.EI_EXPOSE_REP2_ARRAY=Repair with Arrays.copyOf
-desc.EI_EXPOSE_REP2_DATEOBJECT=Repair with creating new Date
-desc.EI_EXPOSE_REP2=Repair with clone
-desc.MS_SHOULD_BE_FINAL=Repair with adding final
-desc.NP_NULL_ON_SOME_PATH=Repair with null-check in ternary
-desc.NP_NULL_ON_SOME_PATH_EXCEPTION=Repair with null-check in ternary
-desc.FI_PUBLIC_SHOULD_BE_PROTECTED=Finalize method should be protected
-desc.MS_PKGPROTECT=Field should be package protected
-desc.MS_MUTABLE_COLLECTION=Field is a mutable collection
+```bash
+cd ai4framework
 ```
-If you would still work from a separate config file, use the ``-config=CONFIG_FILE_PATH`` command line argument. 
-Instead of analyzing an entire project, it is also possible to analyze a single compilation unit, in this case use the ``-cu=COMPILATION_UNIT_PATH`` command line argument.
 
-## How to install the plugin to VSCode
-You can install the plugin to visual studio code from the command line:
-```
-code --install-extension <extension-vsix-path>
-```
-You can find the .vsix file in the vscode-plugin subdirectory of the project e.g. d:\\AIFix4SecCode\\vscode-plugin\\aifix4seccode-vscode-1.0.26.vsix
+---
 
-## Acknowledgement
-The development of the AIFix4SecCode framework was supported by the [AssureMOSS](https://assuremoss.eu) (Grant No.952647) EU-funded project.
+## Configuration File
+
+Before you run the Docker container, create a `config.properties` file in your project's root folder with the following content:
+
+```properties
+[DEFAULT]
+config.filter=test # Words to filter files (if present in file paths, those files will be ignored). Leave empty to analyze all files.
+config.rounds_count=1 # Number of times to run the process. Useful for auto patching with '--auto' option.
+config.build_tool=gradle # (maven or gradle)
+
+[API]
+config.provider=openai # Service to use ('groq', 'openai', 'claude')
+config.key=your_api_key # Enter your API key directly
+config.model=gpt-4o # Desired model name
+config.temperature=0 # Desired temperature
+
+[SAST]
+config.pmd_ruleset=/app/utils/PMD-config.xml # Leave as default or change if needed
+
+[PLUGIN]
+plugin.use_diff_mode=view Diffs # Do not change
+plugin.script_path=/app # Do not change
+```
+
+---
+
+## Running Docker
+
+After setting everything up, you are ready to run your Docker container.
+
+### On Windows
+
+#### Step 1: Open PowerShell
+
+Press `Win + X` and select **Windows PowerShell**.
+
+#### Step 2: Run the following command
+
+Replace placeholders with your information:
+
+```powershell
+.\ai4framework_entry.ps1 -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/project" -PORT 8080
+```
+
+- **`C:\path\to\your\project`**: Full path to your project folder.
+- **`/project`**: Path inside the container (you can leave it as `/project`).
+- **`8080`**: Port number (change if needed).
+
+### On Linux or macOS
+
+#### Step 1: Open Terminal
+
+#### Step 2: Run the following command
+
+Replace placeholders with your information:
+
+```bash
+bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 8080
+```
+
+- **`/path/to/your/project`**: Full path to your project folder.
+- **`/project`**: Path inside the container (you can leave it as `/project`).
+- **`8080`**: Port number (change if needed).
+
+---
+
+## Analyzing Your Project
+
+### Orchestration
+
+Before we continue, let's take a look at the analysis script.
+You can customize it by providing various command-line arguments.
+
+#### Usage
+
+```bash
+python /app/orchestrator.py [options]
+```
+
+#### Options
+
+- **`-h`, `--help`**: Show help message and exit.
+- **`-c COMMIT_SHA`, `--commit_sha COMMIT_SHA`**: Analyze only files changed in the specified commit.
+- **`--skip-patches`**: Perform analysis without generating patches.
+- **`--sast-rerun`**: Run static analysis tools only.
+- **`--auto`**: Automatically apply generated patches to your code.
+
+#### Examples
+
+- **Analyze the Entire Project**
+
+  ```bash
+  python /app/orchestrator.py
+  ```
+
+- **Analyze Files Changed in a Specific Commit**
+
+  ```bash
+  python /app/orchestrator.py -c <commit_sha>
+  ```
+
+- **Analyze Without Generating Patches**
+
+  ```bash
+  python /app/orchestrator.py --skip-patches
+  ```
+
+- **Run Static Analysis Tools Only**
+
+  ```bash
+  python /app/orchestrator.py --sast-rerun
+  ```
+
+- **Automatically Apply Patches**
+
+  ```bash
+  python /app/orchestrator.py --auto
+  ```
+
+---
+
+After running the container, you have two options to proceed:
+
+### Option 1: Using the Built-in Editor
+
+This method lets you use a web-based code editor similar to **Visual Studio Code**.
+
+#### Step 1: Access the Web Editor
+
+- After running Docker, look for a message like:
+
+  ```
+  Container is running with code-server support. Navigate to http://localhost:XXXX/?folder=/*
+  ```
+
+- Open your web browser and go to that address.
+
+#### Step 2: Open the Terminal in the Editor
+
+- In the web editor, click on **Terminal** > **New Terminal**.
+
+#### Step 3: Run the Analysis
+
+- In the terminal, type:
+
+  ```bash
+  python /app/orchestrator.py
+  ```
+
+- Press **Enter**.
+
+### Option 2: Using Command Line Access (Headless Mode)
+
+If you prefer using the command line without the web editor, run Docker with an additional argument to get direct access to the container's terminal.
+
+#### Step 1: Run Docker with Bash Access
+
+**On Windows:**
+
+```powershell
+.\ai4framework_entry.ps1 -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/project" -PORT 8080 -RunWithBash
+```
+
+**On Linux or macOS:**
+
+```bash
+bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 8080 --RunWithBash
+```
+
+#### Step 2: Run the Analysis Inside the Container
+
+Once the container starts, you'll be in its command line interface.
+
+- Type:
+
+  ```bash
+  python /app/orchestrator.py
+  ```
+
+- Press **Enter**.
+
+---
+
+## Example Scenario: Running AI4Framework on macOS in Headless Mode
+
+Suppose you want to:
+
+- Use **macOS**.
+- Deploy AI4Framework in headless mode.
+- Analyze the entire project folder.
+- Use port **9090** because port 8080 is already in use.
+- Obtain all **warnings and patches**.
+
+### Steps
+
+#### Step 1: Open Terminal
+
+#### Step 2: Navigate to the AI4Framework Directory
+
+```bash
+cd ai4framework
+```
+
+#### Step 3: Prepare Your Project
+
+Ensure your project is a **Maven-structured project**, in this case, located at `/path/to/your/project`.
+
+#### Step 4: Create the `config.properties` File
+
+In your project's root folder, create a file named `config.properties`. See the [Configuration File](#configuration-file) section for details.
+
+#### Step 5: Run Docker with Bash Access and Custom Port
+
+```bash
+bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 9090 --RunWithBash
+```
+
+#### Step 6: Run the Analysis Inside the Container
+
+```bash
+python /app/orchestrator.py
+```
+
+### Reviewing and Retrieving the Results
+
+After the analysis, AI4Framework creates a hidden `.ai4framework` folder in your project directory containing:
+
+- **patches**: Validated `.diff` files with suggested fixes.
+- **symbolic_results**: Issues found by the symbolic execution tool.
+- **validation**: Details about issues found and suggested patches.
+- **visualizations**: Statistics like the number of issues found/fixed, token consumption, etc.
+- **issues.json**: A file listing all issues and suggested fixes.
+- **sast_issues**: Issues found by static analysis tools.
+- **jsons.lists**: Paths to the validated JSON files.
+
+Back in your Mac terminal (outside the container), copy the results from the container to your local computer.
+First, find the container ID by running:
+
+```bash
+docker ps -a
+```
+
+Note the container ID associated with AI4Framework.
+
+Copy the `.ai4framework` folder from the container to your chosen directory:
+
+```bash
+docker cp <container_id>:/project/.ai4framework "/Users/username/path/to/chosen/directory"
+```
+
+Replace `<container_id>` with the actual container ID.
+
+---
+
+## Need Support?
+
+If you have questions or need help:
+
+- Visit the [GitHub repository](https://github.com/ai4cyber-slab/ai4fix) and check the issues section.
+- Contact the maintainers through the repository.
+
+---
+
+Thank you for choosing **AI4Framework** to improve your code! We're here to help you make your projects better and more secure.
