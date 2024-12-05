@@ -1,23 +1,31 @@
-# Use the official Python 3.9 image as the base
 FROM python:3.9-slim
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Install system dependencies and necessary tools
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+ARG MAVEN_VERSION=3.9.5
+ARG GRADLE_VERSION=7.6
+ENV PMD_VERSION=7.4.0
+ENV SPOTBUGS_VERSION=4.8.6
+ENV MAVEN_HOME=/opt/maven
+ENV GRADLE_HOME=/opt/gradle
+ENV PMD_BIN=/opt/pmd-bin-${PMD_VERSION}/bin/pmd
+ENV SPOTBUGS_BIN=/opt/spotbugs-${SPOTBUGS_VERSION}/bin/spotbugs
+ENV ANALYZER_PATH=/opt/AI4VULN
+ENV ANALYZER_BIN=/opt/AI4VULN/Java/AnalyzerJava
+ENV ANALYZER_RESULTS_PATH=/app/results
+ENV PATH="$MAVEN_HOME/bin:$GRADLE_HOME/bin:$PATH"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
         wget \
-        maven \
-        git \
         unzip \
+        git \
         curl \
         apt-transport-https \
         software-properties-common \
         patch \
         vim \
         nano && \
-    # Determine the architecture and set the appropriate JDK download URL
+    mkdir -p /usr/lib/jvm && \
     ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ] || [ "$ARCH" = "amd64" ]; then \
         JDK_URL="https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.17+8/OpenJDK11U-jdk_x64_linux_hotspot_11.0.17_8.tar.gz"; \
@@ -26,91 +34,52 @@ RUN apt-get update && \
     else \
         echo "Unsupported architecture: $ARCH" && exit 1; \
     fi && \
-    # Download and install OpenJDK based on architecture
-    wget -O /tmp/openjdk11.tar.gz "$JDK_URL" && \
-    mkdir -p /usr/lib/jvm && \
-    tar -xzf /tmp/openjdk11.tar.gz -C /usr/lib/jvm && \
-    rm -f /tmp/openjdk11.tar.gz && \
-    # Identify the extracted JDK directory (handles version updates)
+    wget -q -O - "$JDK_URL" | tar -xzf - -C /usr/lib/jvm && \
     JDK_DIR=$(ls /usr/lib/jvm | grep 'jdk-11') && \
-    if [ -z "$JDK_DIR" ]; then \
-        echo "JDK extraction failed." && exit 1; \
-    fi && \
-    # Update alternatives to use the newly installed JDK
     update-alternatives --install /usr/bin/java java /usr/lib/jvm/$JDK_DIR/bin/java 1 && \
     update-alternatives --set java /usr/lib/jvm/$JDK_DIR/bin/java && \
-    # Verify the Java installation
     java -version && \
-    # Clean up APT cache to reduce image size
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Gradle 7.6
-ENV GRADLE_VERSION=7.6
-ENV GRADLE_HOME=/opt/gradle
-ENV PATH="/opt/gradle/bin:$PATH"
+RUN wget https://downloads.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.zip -O /tmp/maven.zip && \
+    unzip /tmp/maven.zip -d /opt && \
+    mv /opt/apache-maven-${MAVEN_VERSION} /opt/maven && \
+    rm /tmp/maven.zip && \
+    mvn -version
 
 RUN wget https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip -O /tmp/gradle.zip && \
     mkdir -p /opt/gradle && \
     unzip /tmp/gradle.zip -d /opt/gradle && \
     mv /opt/gradle/gradle-${GRADLE_VERSION}/* /opt/gradle/ && \
     rm -rf /tmp/gradle.zip /opt/gradle/gradle-${GRADLE_VERSION} && \
-    # Verify Gradle path during build
-    echo "export PATH=/opt/gradle/bin:\$PATH" >> /etc/profile && \
-    echo "export PATH=/opt/gradle/bin:\$PATH" >> /etc/bash.bashrc && \
-    chmod +x /opt/gradle/bin/gradle && \
     gradle --version
-# Install PMD 7.4.0
-RUN wget https://github.com/pmd/pmd/releases/download/pmd_releases%2F7.4.0/pmd-dist-7.4.0-bin.zip -O /tmp/pmd.zip && \
-    unzip /tmp/pmd.zip -d /opt/ && \
-    rm /tmp/pmd.zip
 
-# Install SpotBugs 4.8.6
-RUN wget https://github.com/spotbugs/spotbugs/releases/download/4.8.6/spotbugs-4.8.6.tgz -O /tmp/spotbugs.tgz && \
-    tar -xzf /tmp/spotbugs.tgz -C /opt/ && \
-    rm /tmp/spotbugs.tgz
+RUN wget https://github.com/pmd/pmd/releases/download/pmd_releases%2F${PMD_VERSION}/pmd-dist-${PMD_VERSION}-bin.zip -O /tmp/pmd.zip && \
+    unzip /tmp/pmd.zip -d /opt && rm /tmp/pmd.zip
 
-# Install code-server
+RUN wget https://github.com/spotbugs/spotbugs/releases/download/${SPOTBUGS_VERSION}/spotbugs-${SPOTBUGS_VERSION}.tgz -O /tmp/spotbugs.tgz && \
+    tar -xzf /tmp/spotbugs.tgz -C /opt && rm /tmp/spotbugs.tgz && \
+    chmod +x /opt/spotbugs-${SPOTBUGS_VERSION}/bin/spotbugs
+
 RUN curl -fsSL https://code-server.dev/install.sh | sh
 
-# Install AI4VULN from the .tgz file
-# Copy the AI4VULN.tgz file into the container
-COPY slab-9.19-d45fdf7b5.tgz /opt/slab-9.19-d45fdf7b5.tgz
-
-# Unzip the AI4VULN.tgz file inside the container and rename the extracted folder to AI4VULN
+COPY slab-9.19-d45fdf7b5.tgz /opt/
 RUN tar -xvzf /opt/slab-9.19-d45fdf7b5.tgz -C /opt/ && \
     rm /opt/slab-9.19-d45fdf7b5.tgz && \
     mv /opt/slab-9.19-d45fdf7b5 /opt/AI4VULN
 
-# Set environment variables for tool paths
-ENV PMD_BIN=/opt/pmd-bin-7.4.0/bin/pmd
-ENV SPOTBUGS_BIN=/opt/spotbugs-4.8.6/bin/spotbugs
-ENV ANALYZER_PATH=/opt/AI4VULN
-ENV ANALYZER_BIN=/opt/AI4VULN/Java/AnalyzerJava
-ENV ANALYZER_RESULTS_PATH=/app/results
-
-# Set permissions for SpotBugs
-RUN chmod +x /opt/spotbugs-4.8.6/bin/spotbugs
-
-# Install Python dependencies
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Copy the application code into the container
 COPY . /app
 
-# Copy the plugin into the container
-COPY aifix4seccode-vscode-1.0.39.vsix /opt/aifix4seccode-vscode-1.0.39.vsix
-
-# Install the VSIX extension using code-server
+COPY aifix4seccode-vscode-1.0.39.vsix /opt/
 RUN code-server --install-extension /opt/aifix4seccode-vscode-1.0.39.vsix
 
-# Expose port 8080 for code-server
 EXPOSE 8080
 
 ENV PROJECT_PATH=''
-
 ENV USER=user
 ENV USERNAME=user
-# Start code-server on container launch and set workspace
+
 CMD ["sh", "-c", "code-server --bind-addr 0.0.0.0:8080 --auth none /"]
