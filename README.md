@@ -18,13 +18,10 @@ This guide provides detailed instructions on how to set up and use the framework
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
-2. [Setting Up the framework](#setting-up-the-framework)
+2. [Setting Up the Framework](#setting-up-the-framework)
 3. [Configuration File](#configuration-file)
-4. [Running Docker](#running-docker)
-    - [On Windows](#on-windows)
-    - [On Linux or macOS](#on-linux-or-macos)
+4. [Orchestration](#orchestration)
 5. [Analyzing Your Project](#analyzing-your-project)
-    - [Orchestration](#orchestration)
     - [Option 1: Using the Built-in Editor](#option-1-using-the-built-in-editor)
     - [Option 2: Using Command Line Access (Headless Mode)](#option-2-using-command-line-access-headless-mode)
 10. [Example Scenario: Running AI4Framework on macOS in Headless Mode](#example-scenario-running-ai4framework-on-macos-in-headless-mode)
@@ -41,7 +38,7 @@ Ensure your system meets the following requirements before proceeding:
 - **Docker**: Installed and running ([Download Docker](https://www.docker.com/get-started))
 - **Git and Git LFS**: Installed ([Download Git](https://git-scm.com/downloads), [Download Git LFS](https://git-lfs.github.com/))
   - **Important**: AI4Framework contains large files managed by Git LFS. However some files exceed the maximum data quota of the repository. **Make sure to download the `slab-9.19-d45fdf7b5.tgz` file manually, from the latest Release Assets.**
-- **A Maven-Structured Project**: Your project should be organized with Maven (typically contains a `pom.xml` file in the root directory), and should use **Java 11 or above**.
+- **A pre prepared Project**: Currently our framework only supports **maven, gradle and javac**. Your project should be organized with one of them, and should use **Java 11 or above**.
 - **API Key**: At the moment, AI4Framework utilizes OpenAI's GPT models, Groq's models and Anthropic's Claude models, requiring an API key for access. ([OpenAI](https://platform.openai.com/signup), [Groq](https://console.groq.com/login), [Anthropic](https://claude.ai/onboarding))
 
 ---
@@ -106,60 +103,18 @@ plugin.script_path=/app # Do not change
 
 ---
 
-## Running Docker
-
-After setting everything up, you are ready to run your Docker container.
-
-### On Windows
-
-#### Step 1: Open PowerShell
-
-Press `Win + X` and select **Windows PowerShell**.
-
-#### Step 2: Run the following command
-
-Replace placeholders with your information:
-
-```powershell
-.\ai4framework_entry.ps1 -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/project" -PORT 8080
-```
-
-- **`C:\path\to\your\project`**: Full path to your project folder.
-- **`/project`**: Path inside the container (you can leave it as `/project`).
-- **`8080`**: Port number (change if needed).
-
-### On Linux or macOS
-
-#### Step 1: Open Terminal
-
-#### Step 2: Run the following command
-
-Replace placeholders with your information:
-
-```bash
-bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 8080
-```
-
-- **`/path/to/your/project`**: Full path to your project folder.
-- **`/project`**: Path inside the container (you can leave it as `/project`).
-- **`8080`**: Port number (change if needed).
-
----
-
-## Analyzing Your Project
-
-### Orchestration
+## Orchestration
 
 Before we continue, let's take a look at the analysis script.
 You can customize it by providing various command-line arguments.
 
-#### Usage
+### Usage
 
 ```bash
 python /app/orchestrator.py [options]
 ```
 
-#### Options
+### Options
 
 - **`-h`, `--help`**: Show help message and exit.
 - **`-c COMMIT_SHA`, `--commit_sha COMMIT_SHA`**: Analyze only files changed in the specified commit.
@@ -167,7 +122,7 @@ python /app/orchestrator.py [options]
 - **`--sast-rerun`**: Run static analysis tools only.
 - **`--auto`**: Automatically apply generated patches to your code.
 
-#### Examples
+### Examples
 
 - **Analyze the Entire Project**
 
@@ -201,13 +156,49 @@ python /app/orchestrator.py [options]
 
 ---
 
-After running the container, you have two options to proceed:
+## Analyzing Your Project
+
+After setting everything up, you are ready to run your Docker container. You have two options to proceed:
 
 ### Option 1: Using the Built-in Editor
 
 This method lets you use a web-based code editor similar to **Visual Studio Code**.
 
-#### Step 1: Access the Web Editor
+#### On Windows
+
+1. Open PowerShell: Press `Win + X` and select **Windows PowerShell**.
+
+2. Run the following command:
+
+```powershell
+.\ai4framework_entry.ps1 -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/project" [-PORT 8080] [-MavenVersion "3.9.5"] [-GradleVersion "7.6"]
+```
+Replace the placeholders with your information:
+- **`-LOCAL_PROJECT_PATH`**: Full path to your project folder.
+- **`-CONTAINER_PROJECT_PATH`**: Path inside the container (you can leave it as `/project`).
+- **`-PORT` (Optional)**: Port number. Defaults to 8080.
+- **`-MavenVersion` (Optional)**: The maven version of your project. Defaults to 3.9.5
+- **`-GradleVersion` (Optional)**: The gradle version of your project. Defaults to 7.6
+
+#### On Linux or macOS
+
+1. Open Terminal
+
+2. Run the following command:
+
+```bash
+bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" [--PORT 8080] [--MavenVersion "3.9.5"] [-GradleVersion "7.6"]
+```
+Replace the placeholders with your information:
+- **`-LOCAL_PROJECT_PATH`**: Full path to your project folder.
+- **`-CONTAINER_PROJECT_PATH`**: Path inside the container (you can leave it as `/project`).
+- **`-PORT` (Optional)**: Port number. Defaults to 8080.
+- **`-MavenVersion` (Optional)**: The maven version of your project. Defaults to 3.9.5
+- **`-GradleVersion` (Optional)**: The gradle version of your project. Defaults to 7.6
+
+**Important**: You only have to provide one of the version arguments. If you decide to use javac, don't provide any of the version parameters, but make sure to organize your java files under a `src/main/java` folder.
+
+#### Access the Web Editor
 
 - After running Docker, look for a message like:
 
@@ -217,11 +208,11 @@ This method lets you use a web-based code editor similar to **Visual Studio Code
 
 - Open your web browser and go to that address.
 
-#### Step 2: Open the Terminal in the Editor
+#### Open the Terminal in the Editor
 
 - In the web editor, click on **Terminal** > **New Terminal**.
 
-#### Step 3: Run the Analysis
+#### Run the Analysis
 
 - In the terminal, type:
 
@@ -230,6 +221,8 @@ This method lets you use a web-based code editor similar to **Visual Studio Code
   ```
 
 - Press **Enter**.
+
+---
 
 ### Option 2: Using Command Line Access (Headless Mode)
 
@@ -240,13 +233,13 @@ If you prefer using the command line without the web editor, run Docker with an 
 **On Windows:**
 
 ```powershell
-.\ai4framework_entry.ps1 -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/project" -PORT 8080 -RunWithBash
+.\ai4framework_entry.ps1 -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/project" -PORT 8080 -MavenVersion "3.9.5" -RunWithBash
 ```
 
 **On Linux or macOS:**
 
 ```bash
-bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 8080 --RunWithBash
+bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 8080 --MavenVersion "3.9.5" --RunWithBash
 ```
 
 #### Step 2: Run the Analysis Inside the Container
@@ -285,11 +278,11 @@ cd ai4framework
 
 #### Step 3: Prepare Your Project
 
-Ensure your project is a **Maven-structured project**, in this case, located at `/path/to/your/project`.
+Ensure your project supports one of the required structure, listed in the [Prerequisites](#prerequisites) section. In this case, your project is located at `/path/to/your/project`.
 
 #### Step 4: Create the `config.properties` File
 
-In your project's root folder, create a file named `config.properties`. See the [Configuration File](#configuration-file) section for details.
+Once you cloned the repository, make sure to create a file named `config.properties` inside the `ai4framework` folder, and copy the config_template.properties file's content into it. Make sure to set every parameter in the configuration. See the [Configuration File](#configuration-file) section for details.
 
 #### Step 5: Run Docker with Bash Access and Custom Port
 
