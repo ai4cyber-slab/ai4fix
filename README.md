@@ -85,7 +85,7 @@ Before you run the Docker container, create a `config.properties` file in your p
 [DEFAULT]
 config.filter=test # Words to filter files (if present in file paths, those files will be ignored). Leave empty to analyze all files.
 config.rounds_count=1 # Number of times to run the process. Useful for auto patching with '--auto' option.
-config.build_tool=gradle # (maven or gradle)
+config.build_tool=maven # (maven, gradle, or javac)
 
 [API]
 config.provider=openai # Service to use ('groq', 'openai', 'claude')
