@@ -474,12 +474,20 @@ export function init(
   
     let totalTasks = 0;
     let completedTasks = 0;
-  
-    
+    let workflowCompleted = false; // Flag to track if workflow is completed
     rl.on('line', (line: string) => {
       logging.LogInfo(`orchestrator.py: ${line}`);
     
-      const progressMatch = line.match(/^PROGRESS_UPDATE:\s*(\d+)\/(\d+)/);
+      if (workflowCompleted) {
+        return; // Stop processing further lines after workflow completion
+      }
+    
+      // Remove ANSI escape sequences
+      const strippedLine = line.replace(
+        /\u001b\[[0-9;]*m/g,
+        ''
+      );
+      const progressMatch = strippedLine.match(/^PROGRESS UPDATE:\s*(\d+)\/(\d+)/);
       if (progressMatch) {
         completedTasks = parseInt(progressMatch[1], 10);
         totalTasks = parseInt(progressMatch[2], 10);
@@ -492,21 +500,27 @@ export function init(
           });
         }
       }
-      // Stop progress and throw error if line contains error to stop progress from running indefinitely'
-      if (line.toLowerCase().includes('error:')) {
+    
+      if (strippedLine.toLowerCase().includes('workflow execution completed')) {
+        logging.LogInfo('Workflow execution completed detected.');
+        workflowCompleted = true;
         progress.report({ increment: 100 });
-        throw new Error(`Python script error: ${line}`);
       }
     });
+    
   
     childProc.stderr.on('data', (data: Buffer) => {
       const message = data.toString();
-      logging.LogInfo(`orchestrator.py: ${message}`);
-      
-      // same as above but for stderr
-      if (message.toLowerCase().includes('error')) {
+      logging.LogInfo(`orchestrator.py (stderr): ${message}`);
+  
+      if (workflowCompleted) {
+        return; // Stop processing further lines after workflow completion
+      }
+  
+      if (message.toLowerCase().includes('workflow execution completed')) {
+        logging.LogInfo('Workflow execution completed detected in stderr.');
+        workflowCompleted = true;
         progress.report({ increment: 100 });
-        throw new Error(`Python script error: ${message}`);
       }
     });
   
@@ -571,7 +585,7 @@ export function init(
           title: 'Loading Diagnostics...',
         },
         async () => {
-          await refreshDiagnosticsWithoutAnalysis()
+          await refreshDiagnosticsWithoutAnalysis();
         }
       );
 
