@@ -2,7 +2,7 @@ import sys
 import time
 import signal
 import argparse
-
+import os
 from utils.logger import logger
 from config.common_config import ConfigManager
 from symbolic_execution.execution import SymbolicExecution
@@ -87,6 +87,17 @@ class WorkflowFramework:
         finally:
             elapsed_time = time.time() - start_time
             logger.info(f"Workflow execution completed in {elapsed_time:.2f} seconds")
+
+            RESET_COLOR = "\033[0m"
+            BOLD_BLUE = "\033[1;34m"
+            BOLD_MAGENTA = "\033[1;35m"
+            print(
+                f"{BOLD_BLUE}To copy the '.ai4framework' folder from the container to your local machine, "
+                f"use the following command in your local terminal (outside the container):\n\n"
+                f"{BOLD_BLUE}docker cp {0 or '<container_id>'}:{os.environ.get('PROJECT_PATH') or '/path/in/container'}/.ai4framework \"{0 or '/path/on/local/machine'}\"\n\n"
+                f"{RESET_COLOR}{BOLD_MAGENTA}Ensure you replace <container_id> with the actual container ID and paths as needed.{RESET_COLOR}"
+            )
+
     def handle_signal(self, signal_number, frame):
         """Handle termination signals (SIGINT, SIGTERM) for graceful shutdown."""
         logger.info(f"Signal {signal_number} received. Gracefully stopping workflow.")

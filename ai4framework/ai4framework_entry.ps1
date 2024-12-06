@@ -76,47 +76,16 @@ plugin.script_path=/app # Do not change
 "@
 
     if (Test-Path $templatePath) {
-        # Use template if it exists
         Copy-Item -Path $templatePath -Destination $configFilePath -Force
         Write-Host "Created 'config.properties' from template" -ForegroundColor Green
     } elseif (Test-Path $configFilePath) {
-        # Keep existing config.properties if no template exists
         Write-Host "Using existing 'config.properties' file at: $configFilePath" -ForegroundColor Green
     } else {
-        # Create from default content if neither template nor config exists
         Set-Content -Path $configFilePath -Value $defaultContent
         Write-Host "Default 'config.properties' file created at: $configFilePath" -ForegroundColor Green
     }
 
     Start-Process notepad.exe $configFilePath
-
-    do {
-        Write-Host "Would you like to add config.properties to .gitignore? (Y/N)" -ForegroundColor Yellow -NoNewline
-        $response = Read-Host
-        if ($response -notmatch '^[YyNn]$') {
-            Write-Host "Please enter Y or N only." -ForegroundColor Red
-            continue
-        }
-        if ($response -match '^[Yy]$') {
-            $gitignorePath = Join-Path -Path $LOCAL_PROJECT_PATH -ChildPath ".gitignore"
-            if (-not (Test-Path $gitignorePath)) {
-                New-Item -Path $gitignorePath -ItemType File
-            }
-            Start-Process notepad.exe $gitignorePath
-            Write-Host "Please add 'config.properties' to .gitignore and save the file."
-            do {
-                Write-Host "Have you finished editing .gitignore? (Y/N)" -ForegroundColor Yellow -NoNewline
-                $editDone = Read-Host
-                if ($editDone -notmatch '^[YyNn]$') {
-                    Write-Host "Please enter Y or N only." -ForegroundColor Red
-                }
-            } while ($editDone -notmatch '^[YyNn]$')
-            if ($editDone -match '^[Nn]$') {
-                continue
-            }
-        }
-        break
-    } while ($true)
 
     do {
         Write-Host "Have you finished editing 'config.properties'? (Y/N)" -ForegroundColor Yellow -NoNewline
@@ -180,27 +149,22 @@ function Validate-ConfigProperties {
         }
     }
 
-    # Validate build_tool
     if (-not ($buildToolValue -in @('maven', 'gradle', 'javac'))) {
         $errors += "Invalid or missing 'config.build_tool'. It must be either 'maven', 'gradle', or 'javac'."
     }
 
-    # Validate provider
     if (-not ($providerValue -in @('openai', 'groq', 'claude'))) {
         $errors += "Invalid or missing 'config.provider'. It must be one of: 'openai', 'groq', 'claude'."
     }
 
-    # Validate key
     if (-not ($keyValue -and -not [string]::IsNullOrWhiteSpace($keyValue) -and $keyValue -ne "None")) {
         $errors += "Invalid 'config.key'. It cannot be empty, whitespace-only, or set to 'None'."
     }
 
-    # Validate model
     if (-not ($modelValue -and -not [string]::IsNullOrWhiteSpace($modelValue) -and $modelValue -ne "None")) {
         $errors += "Invalid 'config.model'. It cannot be empty, whitespace-only, or set to 'None'."
     }
 
-    # Check for errors
     if ($errors.Count -gt 0) {
         Write-Host "Validation errors found in 'config.properties':" -ForegroundColor Red
         $errors | ForEach-Object { Write-Host $_ -ForegroundColor Red }

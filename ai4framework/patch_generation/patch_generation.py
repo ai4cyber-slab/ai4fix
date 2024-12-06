@@ -528,7 +528,9 @@ class PatchGenerator:
                 logger.info(f"Processing warning ID {warning['id']}...")
 
                 try:
-                    print(f"PROGRESS UPDATE: {idx}/{total_warnings}", flush=True)
+                    RESET_COLOR = "\033[0m"
+                    BOLD_MAGENTA = "\033[1;35m"
+                    print(f"{RESET_COLOR}{BOLD_MAGENTA}PROGRESS UPDATE: {idx}/{total_warnings}{RESET_COLOR}", flush=True)
                     self.process_warning(warning)
                 except KeyboardInterrupt:
                     logger.warning("Keyboard interrupt detected. Saving progress and stopping the script gracefully.")

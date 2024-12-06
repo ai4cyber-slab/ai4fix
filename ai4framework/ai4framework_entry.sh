@@ -93,44 +93,6 @@ plugin.script_path=/app"
     fi
 
     while true; do
-        echo -n "Would you like to add config.properties to .gitignore? (y/n) "
-        read -r response
-        if [[ ! $response =~ ^[YyNn]$ ]]; then
-            echo "Please enter y or n only."
-            continue
-        fi
-        if [[ $response =~ ^[Yy]$ ]]; then
-            GITIGNORE_PATH="$LOCAL_PROJECT_PATH/.gitignore"
-            if [[ ! -f "$GITIGNORE_PATH" ]]; then
-                touch "$GITIGNORE_PATH"
-            fi
-            
-            if command -v nano &> /dev/null; then
-                nano "$GITIGNORE_PATH"
-            elif command -v vim &> /dev/null; then
-                vim "$GITIGNORE_PATH"
-            else
-                echo "Error: No suitable editor found. Install 'nano' or 'vim'." >&2
-                exit 1
-            fi
-            
-            while true; do
-                echo -n "Have you finished editing .gitignore? (y/n) "
-                read -r editDone
-                if [[ ! $editDone =~ ^[YyNn]$ ]]; then
-                    echo "Please enter y or n only."
-                    continue
-                fi
-                if [[ $editDone =~ ^[Nn]$ ]]; then
-                    continue 2
-                fi
-                break
-            done
-        fi
-        break
-    done
-
-    while true; do
         echo -n "Have you finished editing 'config.properties'? (y/n) "
         read -r configDone
         if [[ ! $configDone =~ ^[YyNn]$ ]]; then
