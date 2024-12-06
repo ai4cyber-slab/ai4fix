@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import subprocess
+import platform
 from utils.logger import logger
 from management.repo_manager import RepoManager
 
@@ -101,6 +102,7 @@ class Analyzer:
                         if line.strip():
                             clean_error = re.sub(r'^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] ', '', line.strip())
                             logger.error(clean_error)
+                return_code = process.returncode
 
         except Exception as e:
             logger.warning(f"Symbolic execution failed. Your hardware may not support symbolic execution. Skipping analysis. {e}")
@@ -108,7 +110,10 @@ class Analyzer:
         finally:
             end_time = time.time()
             execution_time = end_time - start_time
-            logger.info(f"Symbolic execution completed in {execution_time:.2f} seconds")
+            if return_code == 127:
+                logger.warning(f"Symbolic execution is not supported on the system architecture ({platform.machine()}). Symbolic execution Analysis will be skipped.")
+            else:
+                logger.info(f"Symbolic execution completed in {execution_time:.2f} seconds")
 
         json_file = os.path.join(self.results_path, self.project_name, 'java', 'now', f'{self.project_name}-RTEHunter.json')
         return json_file
