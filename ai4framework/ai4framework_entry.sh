@@ -200,7 +200,7 @@ echo "Project copied successfully to the container."
 
 if [[ "$RUN_WITH_BASH" == true ]]; then
     echo "Attaching to the container with bash in $CONTAINER_PROJECT_PATH..."
-    docker exec -it -w "$CONTAINER_PROJECT_PATH" "$CONTAINER_ID" bash -c "python /app/orchestrator.py"
+    docker exec -it -w "$CONTAINER_PROJECT_PATH" "$CONTAINER_ID" bash -c "python /app/orchestrator.py; exec bash"
 else
     echo "Container is running with code-server support. Navigate to http://localhost:$PORT/?folder=$CONTAINER_PROJECT_PATH"
 fi

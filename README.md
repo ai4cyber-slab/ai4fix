@@ -79,7 +79,9 @@ cd ai4framework
 
 ## Configuration File
 
-Before you run the Docker container, create a `config.properties` file in your project's root folder with the following content:
+You don’t need to manually create the configuration file! Once you run the entry script (`.ps1` or `.sh`), the process will handle everything for you, including creating the required `config.properties` from a template in the root of the `ai4framework` directory. Simply execute the appropriate script for your operating system and follow the instructions provided.
+
+For reference, the content of the `config.properties` template is as follows:
 
 ```properties
 [DEFAULT]
@@ -282,7 +284,7 @@ Ensure your project supports one of the required structure, listed in the [Prere
 
 #### Step 4: Create the `config.properties` File
 
-Once you cloned the repository, make sure to create a file named `config.properties` inside the `ai4framework` folder, and copy the config_template.properties file's content into it. Make sure to set every parameter in the configuration. See the [Configuration File](#configuration-file) section for details.
+The script below eliminates the need for manual copying or file creation. When you run the script, it will automatically create the `config.properties` file inside the `ai4framework` folder based on the `config_template.properties`. You will only need to provide appropriate values for your specific setup when prompted by the script, and that's it. No additional manual steps are required. See the [Configuration File](#configuration-file) section for details.
 
 #### Step 5: Run Docker with Bash Access and Custom Port
 
