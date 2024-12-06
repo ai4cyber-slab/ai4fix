@@ -3,16 +3,18 @@ import time
 import signal
 import argparse
 import os
-from utils.logger import logger
-from config.common_config import ConfigManager
-from symbolic_execution.execution import SymbolicExecution
-from sast.sast_orchestrator import SASTOrchestrator
-from utils.issues_merger import JSONCombiner
-from utils.plugin_json_converter import JsonPluginConverter
-from patch_generation.patch_applier import PatchApplier
-from patch_generation.patch_generation import PatchGenerator
-from classification.security_classifier import SecurityClassifier
-
+try:
+    from utils.logger import logger
+    from config.common_config import ConfigManager
+    from symbolic_execution.execution import SymbolicExecution
+    from sast.sast_orchestrator import SASTOrchestrator
+    from utils.issues_merger import JSONCombiner
+    from utils.plugin_json_converter import JsonPluginConverter
+    from patch_generation.patch_applier import PatchApplier
+    from patch_generation.patch_generation import PatchGenerator
+    from classification.security_classifier import SecurityClassifier
+except KeyboardInterrupt:
+    sys.exit(0)
 
 class WorkflowFramework:
     """
