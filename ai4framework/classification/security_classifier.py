@@ -93,7 +93,6 @@ class SecurityClassifier:
                 logger.info(f"Classification completed in {elapsed_time:.2f} seconds")
             else:
                 logger.error(f"Classifier script failed with return code {process.returncode}")
-                logger.error(f"Error output: {stderr}")
                 logger.error(f"Classification failed after {elapsed_time:.2f} seconds")
 
         except Exception as e:

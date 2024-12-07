@@ -189,6 +189,11 @@ if [[ -z "$CONTAINER_ID" ]]; then
 fi
 echo "Container started successfully with ID: $CONTAINER_ID"
 
+docker exec -it "$CONTAINER_ID" git config --global --add safe.directory '*' > /dev/null 2>&1
+if [[ $? -ne 0 ]]; then
+    echo "If required Run this command inside the container: git config --global --add safe.directory '*'"
+fi
+
 echo "Copying the project to the container..."
 docker cp "$LOCAL_PROJECT_PATH" "$CONTAINER_ID:$CONTAINER_PROJECT_PATH"
 if [[ $? -ne 0 ]]; then

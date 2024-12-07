@@ -55,6 +55,14 @@ function Show-Banner {
     }
 }
 
+function Configure-GitSafeDirectory {
+    try {
+        docker exec -it $ContainerID git config --global --add safe.directory '*' > $null 2>&1
+    } catch {
+        Write-Host "Warning: Failed to configure Git safe directory. run this command inside the container: git config --global --add safe.directory '*'" -ForegroundColor Yellow
+    }
+}
+
 function Manage-ConfigProperties {
     $templatePath = Join-Path -Path $PSScriptRoot -ChildPath "config_template.properties"
     $configFilePath = Join-Path -Path $PSScriptRoot -ChildPath "config.properties"
@@ -203,6 +211,8 @@ if (!$ContainerID) {
     exit 1
 }
 Write-Host "Container started successfully with ID: $ContainerID"
+
+Configure-GitSafeDirectory
 
 Write-Host "Copying the project to the container..."
 docker cp "$LOCAL_PROJECT_PATH" "${ContainerID}:$CONTAINER_PROJECT_PATH"

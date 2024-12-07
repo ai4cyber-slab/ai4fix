@@ -48,6 +48,7 @@ class RepoManager:
             return
         logger.info(f"Checking out commit {self.commit_hash}...")
         try:
+            self.repo.git.fetch('--all')
             self.repo.git.checkout('-f', self.commit_hash)
             logger.info(f"Checked out to commit {self.commit_hash}.")
         except Exception as e:
@@ -81,7 +82,11 @@ class RepoManager:
         """
         try:
             if self.repo and self.commit_hash and self.commit_hash != '':
-                all_files = list(self.repo.commit(self.commit_hash).stats.files.keys())
+                all_files = [
+                    diff_item.b_path
+                    for diff_item in self.repo.commit(self.commit_hash).diff(self.repo.commit(self.commit_hash).parents[0] if self.repo.commit(self.commit_hash).parents else None)
+                    if diff_item.change_type == 'M' and diff_item.b_path.endswith('.java')
+                ]
             else:
                 all_files = [
                     str(file)
