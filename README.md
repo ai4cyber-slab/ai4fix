@@ -38,7 +38,7 @@ Ensure your system meets the following requirements before proceeding:
 - **Docker**: Installed and running ([Download Docker](https://www.docker.com/get-started))
 - **Git and Git LFS**: Installed ([Download Git](https://git-scm.com/downloads), [Download Git LFS](https://git-lfs.github.com/))
   - **Important**: AI4Framework contains large files managed by Git LFS. However some files exceed the maximum data quota of the repository. **Make sure to download the `slab-9.19-d45fdf7b5.tgz` file manually, from the latest Release Assets.**
-- **A pre prepared Project**: Currently our framework only supports **maven, gradle and javac**. Your project should be organized with one of them, and should use **Java 11 or above**.
+- **A pre prepared Project**: Currently our framework only supports **maven, gradle and javac**. Your project should be organized with one of them, and should use **Java 11 or below**.
 - **API Key**: At the moment, AI4Framework utilizes OpenAI's GPT models, Groq's models and Anthropic's Claude models, requiring an API key for access. ([OpenAI](https://platform.openai.com/signup), [Groq](https://console.groq.com/login), [Anthropic](https://claude.ai/onboarding))
 
 ---
@@ -56,7 +56,7 @@ git lfs install
 Clone the repository:
 
 ```bash
-git clone --branch dev --single-branch https://github.com/ai4cyber-slab/ai4fix.git
+git clone --branch release-v1.0.0 --single-branch https://github.com/ai4cyber-slab/ai4fix.git
 ```
 
 If Git LFS does not retrieve large files automatically, navigate to the `ai4framework` directory and run:
