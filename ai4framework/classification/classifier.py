@@ -27,6 +27,8 @@ parser.add_argument("-p", "--provider", type=str, help="The LLM provider")
 parser.add_argument("-k", "--key", type=str, help="Your API key")
 parser.add_argument("-m", "--model", type=str, help="The name of the model")
 parser.add_argument("-t", "--temperature", type=str, help="The temperature of the model")
+parser.add_argument("-az", "--azure_endpoint", type=str, help="The Azure endpoint")
+parser.add_argument("-av", "--api_version", type=str, help="The Azure API version")
 
 # Parsing the arguments
 args = parser.parse_args()
@@ -236,12 +238,12 @@ def main():
                     try:
                         diff_prompt = describe_prompt.format(diff=diff_content)
                         diff_messages = [{"role": "user", "content": diff_prompt}]
-                        diff_response = llm_response(args.provider, args.model, args.key, diff_messages)
+                        diff_response = llm_response(args.provider, args.model, args.key, diff_messages, endpoint=args.azure_endpoint, api_v=args.api_version)
                         description = diff_response['message']
 
                         re_run_prompt = classify_prompt.format(diff=diff_content, description=description)
                         re_run_messages = [{"role": "user", "content": re_run_prompt}]
-                        re_run_response = llm_response(args.provider, args.model, args.key, re_run_messages)
+                        re_run_response = llm_response(args.provider, args.model, args.key, re_run_messages, endpoint=args.azure_endpoint, api_v=args.api_version)
 
                         parsed_re_running = label_parser.parse(re_run_response['message'])
                         output = parsed_re_running.worth_to_re_run.strip().lower()

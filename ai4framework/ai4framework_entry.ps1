@@ -73,7 +73,7 @@ config.rounds_count=1 # Number of times to run the process. Useful for auto patc
 config.build_tool=maven # (maven, gradle, or javac)
 
 [API]
-config.provider=openai # Service to use ('groq', 'openai', 'claude')
+config.provider=openai # Service to use ('groq', 'openai', 'claude', 'azureopenai')
 config.key=your_api_key # Enter your API key directly
 config.model=gpt-4o-mini # Desired model name
 config.temperature=0 # Desired temperature
@@ -161,8 +161,8 @@ function Validate-ConfigProperties {
         $errors += "Invalid or missing 'config.build_tool'. It must be either 'maven', 'gradle', or 'javac'."
     }
 
-    if (-not ($providerValue -in @('openai', 'groq', 'claude'))) {
-        $errors += "Invalid or missing 'config.provider'. It must be one of: 'openai', 'groq', 'claude'."
+    if (-not ($providerValue -in @('openai', 'groq', 'claude', 'azureopenai'))) {
+        $errors += "Invalid or missing 'config.provider'. It must be one of: 'openai', 'groq', 'claude', 'azureopenai'."
     }
 
     if (-not ($keyValue -and -not [string]::IsNullOrWhiteSpace($keyValue) -and $keyValue -ne "None")) {

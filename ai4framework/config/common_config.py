@@ -76,7 +76,7 @@ class ConfigManager:
         model = cls._config.get('API', 'config.model')
         build_tool = cls._config.get('DEFAULT', 'config.build_tool').lower()
 
-        if not provider or provider.lower() not in ['openai', 'groq', 'claude']:
+        if not provider or provider.lower() not in ['openai', 'groq', 'claude', 'azureopenai']:
             logger.error("Service provider Unsupported or missing in the config file. Please set it. eg: config.provider=openai")
             sys.exit(1)
 

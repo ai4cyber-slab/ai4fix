@@ -583,7 +583,7 @@ class PatchGenerator:
                         {"role": "system", "content": "You are a helpful assistant that can fix code issues and returns only a json block and no further explination."},
                         {"role": "user", "content": prompt},
                     ]
-                    response = llm_response(self.provider, self.model, self.api_key, messages)
+                    response = llm_response(provider=self.provider, model=self.model, api_key=self.api_key, messages=messages, endpoint=self.config.get('API', 'config.azure_endpoint'), api_v=self.config.get('API', 'config.azure_api_version'))
                     return response
                 except Exception as e:
                     logger.error(f"Unexpected error: {e}, retrying...")

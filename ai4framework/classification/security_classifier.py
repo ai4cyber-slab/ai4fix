@@ -71,7 +71,9 @@ class SecurityClassifier:
             "-m", self.config.get('API', 'config.model'),
             "-t", self.config.get('API', 'config.temperature'),
             "-p", self.config.get('API', 'config.provider'),
-            "-k", self.api_key
+            "-k", self.api_key,
+            "-az", self.config.get('API', 'config.azure_endpoint'),
+            "-av", self.config.get('API', 'config.azure_api_version')
         ]
 
         try:

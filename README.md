@@ -85,14 +85,16 @@ For reference, the content of the `config.properties` template is as follows:
 
 ```properties
 [DEFAULT]
-config.filter=test # Words to filter files (if present in file paths, those files will be ignored). Leave empty to analyze all files.
+config.filter=test # packages/folders to filter files (if present in file paths, those files will be ignored). Leave empty to analyze all files.
 config.rounds_count=1 # Number of times to run the process. Useful for auto patching with '--auto' option.
 config.build_tool=maven # (maven, gradle, or javac)
 
 [API]
-config.provider=openai # Service to use ('groq', 'openai', 'claude')
+config.provider=azureopenai # Service to use ('groq', 'openai', 'claude', 'azureopenai')
 config.key=your_api_key # Enter your API key directly
-config.model=gpt-4o # Desired model name
+config.azure_endpoint=https://xxxxxx.azure.com/openai/deployments/xxxxxx
+config.azure_api_version=2024-08-01-preview
+config.model=gpt-4 # Desired model name
 config.temperature=0 # Desired temperature
 
 [SAST]
@@ -235,26 +237,30 @@ If you prefer using the command line without the web editor, run Docker with an 
 **On Windows:**
 
 ```powershell
-.\ai4framework_entry.ps1 -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/project" -PORT 8080 -MavenVersion "3.9.5" -RunWithBash
+.\ai4framework_entry.ps1 -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/project" -PORT 8080 -RunWithBash
 ```
 
 **On Linux or macOS:**
 
 ```bash
-bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 8080 --MavenVersion "3.9.5" --RunWithBash
+bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 8080 --RunWithBash
 ```
 
 #### Step 2: Run the Analysis Inside the Container
 
-Once the container starts, you'll be in its command line interface.
+The analysis and process will directly start when the config file is modified, and `y` for yes is typed followed by pressing Enter.
 
-- Type:
+#### Step 3: (Optional) Open Code-Server Support  
 
-  ```bash
-  python /app/orchestrator.py
-  ```
+If you decide to open code-server support after the end of the analysis, you can do so by running the following command inside the container:  
 
-- Press **Enter**.
+```bash
+code-server --bind-addr 0.0.0.0:8080 --auth none /project
+```  
+
+- Replace `8080` with the port already in use if applicable.  
+- `/project` is the path within the container to your project directory.
+
 
 ---
 
@@ -294,9 +300,7 @@ bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAI
 
 #### Step 6: Run the Analysis Inside the Container
 
-```bash
-python /app/orchestrator.py
-```
+The analysis and process will directly start when the config file is modified, and `y` for yes is typed followed by pressing Enter.
 
 ### Reviewing and Retrieving the Results
 

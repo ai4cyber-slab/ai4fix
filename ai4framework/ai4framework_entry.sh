@@ -144,8 +144,8 @@ function validate_config_properties {
     if [[ ! "$BUILD_TOOL" =~ ^(maven|gradle|javac)$ ]]; then
         ERRORS+=("Invalid 'config.build_tool'. Must be 'maven', 'gradle', or 'javac'.")
     fi
-    if [[ ! "$PROVIDER" =~ ^(openai|groq|claude)$ ]]; then
-        ERRORS+=("Invalid 'config.provider'. Must be one of 'openai', 'groq', 'claude'.")
+    if [[ ! "$PROVIDER" =~ ^(openai|groq|claude|azureopenai)$ ]]; then
+        ERRORS+=("Invalid 'config.provider'. Must be one of 'openai', 'groq', 'claude', 'azureopenai'.")
     fi
     if [[ -z "$KEY" || "$KEY" == "None" ]]; then
         ERRORS+=("Invalid 'config.key'. Cannot be empty or 'None'.")
