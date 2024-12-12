@@ -1,7 +1,9 @@
-import git
-from pathlib import Path
 import os
 import re
+import git
+import sys
+
+from pathlib import Path
 from utils.logger import logger
 
 
@@ -26,16 +28,18 @@ class RepoManager:
         self.commit_hash = commit_hash
 
         if not self.repo_path.is_dir():
-            raise FileNotFoundError(f"The repository path '{repo_path}' does not exist.")
+            print(f"The repository path '{repo_path}' does not exist.")
+            sys.exit(1)
 
         try:
             self.repo = git.Repo(self.repo_path, search_parent_directories=True)
         except git.exc.InvalidGitRepositoryError:
             if commit_hash:
-                raise ValueError(f"'{repo_path}' is not a valid Git repository. A commit hash requires a valid Git repository.")
+                print(f"'{repo_path}' is not a valid Git repository. A commit hash requires a valid Git repository.")
+                sys.exit(1)
             else:
-                logger.debug(f"'{repo_path}' is not a valid Git repository. Analyzing the whole project.")
-                self.repo = None
+                logger.debug(f"'{repo_path}' is not a valid Git repository.")
+                sys.exit(1)
 
     def checkout_commit(self):
         """Checkout a specific commit in the repository."""
@@ -81,7 +85,7 @@ class RepoManager:
             list: A list of file paths to be analyzed.
         """
         try:
-            if self.repo and self.commit_hash and self.commit_hash != '':
+            if self.commit_hash:
                 all_files = [
                     diff_item.b_path
                     for diff_item in self.repo.commit(self.commit_hash).diff(self.repo.commit(self.commit_hash).parents[0] if self.repo.commit(self.commit_hash).parents else None)
@@ -94,11 +98,11 @@ class RepoManager:
                     if not file.name.startswith('.')
                 ]
 
-            if filter != '' and filter is not None:
-                filter_packages = {word.strip() for word in filter.split(',')}
+            if filter:
+                filter_list = {word.strip() for word in filter.split(',')}
                 filter_patterns = [
-                    re.compile(rf"{re.escape(os.path.sep)}{re.escape(pkg)}{re.escape(os.path.sep)}")
-                    for pkg in filter_packages
+                    re.compile(rf"{re.escape(os.path.sep)}{re.escape(word)}{re.escape(os.path.sep)}")
+                    for word in filter_list
                 ]
                 files_to_analyze = [
                     file for file in all_files
@@ -124,10 +128,6 @@ class RepoManager:
         Returns:
             str: The hash of the parent commit, or None if retrieval fails.
         """
-        if not self.repo:
-            logger.error("Cannot retrieve parent commit. The repository is not a valid Git repository.")
-            raise ValueError("Repository is not a valid Git repository.")
-
         try:
             parent_commits = self.repo.commit(self.commit_hash).parents
             if parent_commits:

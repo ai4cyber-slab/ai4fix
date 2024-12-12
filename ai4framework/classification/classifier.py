@@ -108,6 +108,7 @@ def list_changed_files(repo_path, commit_hash):
             error_and_log_handling(f"Changed files in commit {commit_hash}: {changed_files}", True)
         else:
             error_and_log_handling(f"No files changed in commit {commit_hash}.", True)
+            sys.exit(1)
         return changed_files
     except git.exc.InvalidGitRepositoryError:
         error_and_log_handling(f"The directory {repo_path} is not a valid Git repository.", True)
@@ -191,95 +192,91 @@ def main():
     # Inference
     try:
         changed_files = list_changed_files(args.project_root, args.commit_sha)
-        if changed_files != []:
-            error_and_log_handling("Successfully retrieved the commit files.", False)
+        error_and_log_handling("Successfully retrieved the commit files.", False)
 
-            repo_manager = RepoManager(args.project_root, args.commit_sha)
-            parent = repo_manager.get_parent_commit()
-            if parent:
-                error_and_log_handling(f"Successfully retrieved the parent commit: {parent}.", False)
-                filter_path = os.path.join(args.project_root, '.ai4framework', 'filter.txt')
-                if os.path.exists(filter_path):
-                    os.remove(filter_path)
+        repo_manager = RepoManager(args.project_root, args.commit_sha)
+        parent = repo_manager.get_parent_commit()
+        if parent:
+            error_and_log_handling(f"Successfully retrieved the parent commit: {parent}.", False)
+            filter_path = os.path.join(args.project_root, '.ai4framework', 'filter.txt')
+            if os.path.exists(filter_path):
+                os.remove(filter_path)
 
-                for file in changed_files:
-                    git_diff_file = 'changes.diff'
+            for file in changed_files:
+                git_diff_file = 'changes.diff'
 
-                    default_dir = os.getcwd()
-                    os.chdir(args.project_root)
+                default_dir = os.getcwd()
+                os.chdir(args.project_root)
 
-                    # Run git diff command using subprocess
-                    command = ['git', 'diff', parent, args.commit_sha, '--', file]
-                    error_and_log_handling(f"Running command: {' '.join(command)}", False)
-                    with open(git_diff_file, 'w') as diff_file:
-                        result = subprocess.run(command, stdout=diff_file, stderr=subprocess.PIPE, text=True)
+                # Run git diff command using subprocess
+                command = ['git', 'diff', parent, args.commit_sha, '--', file]
+                error_and_log_handling(f"Running command: {' '.join(command)}", False)
+                with open(git_diff_file, 'w') as diff_file:
+                    result = subprocess.run(command, stdout=diff_file, stderr=subprocess.PIPE, text=True)
 
-                    if result.returncode != 0:
-                        error_and_log_handling(f"Failed to create the diff file of {file}. Git diff error: {result.stderr}", True)
-                        os.chdir(default_dir)
-                        continue
-                    else:
-                        error_and_log_handling(f"Successfully created the diff file of {file}.", False)
-
-                    # Read the diff content before changing back to the original directory
-                    with open(git_diff_file, 'r', encoding='latin-1') as f:
-                        diff_content = f.read()
-
-                    # Remove the diff file
-                    os.remove(git_diff_file)
-
+                if result.returncode != 0:
+                    error_and_log_handling(f"Failed to create the diff file of {file}. Git diff error: {result.stderr}", True)
                     os.chdir(default_dir)
+                    continue
+                else:
+                    error_and_log_handling(f"Successfully created the diff file of {file}.", False)
 
-                    unnecessary_diff = remove_unnecessary_diff(args.project_root, diff_content)
-                    if unnecessary_diff:
-                        error_and_log_handling(f"The diff of {file} is unnecessary, it has been removed.\n", True)
-                        continue
+                # Read the diff content before changing back to the original directory
+                with open(git_diff_file, 'r', encoding='latin-1') as f:
+                    diff_content = f.read()
 
-                    try:
-                        diff_prompt = describe_prompt.format(diff=diff_content)
-                        diff_messages = [{"role": "user", "content": diff_prompt}]
-                        diff_response = llm_response(args.provider, args.model, args.key, diff_messages, endpoint=args.azure_endpoint, api_v=args.api_version)
-                        description = diff_response['message']
+                # Remove the diff file
+                os.remove(git_diff_file)
 
-                        re_run_prompt = classify_prompt.format(diff=diff_content, description=description)
-                        re_run_messages = [{"role": "user", "content": re_run_prompt}]
-                        re_run_response = llm_response(args.provider, args.model, args.key, re_run_messages, endpoint=args.azure_endpoint, api_v=args.api_version)
+                os.chdir(default_dir)
 
-                        parsed_re_running = label_parser.parse(re_run_response['message'])
-                        output = parsed_re_running.worth_to_re_run.strip().lower()
+                unnecessary_diff = remove_unnecessary_diff(args.project_root, diff_content)
+                if unnecessary_diff:
+                    error_and_log_handling(f"The diff of {file} is unnecessary, it has been removed.\n", True)
+                    continue
 
-                        if 'yes' in output:
-                            line_positions = diff_line_positions(diff_content)
-                            output_dict = {
-                                "file_path": file,
-                                "security_relevant_lines": line_positions
-                            }
-                            output_data['security_relevant_files'].append(output_dict)
+                try:
+                    diff_prompt = describe_prompt.format(diff=diff_content)
+                    diff_messages = [{"role": "user", "content": diff_prompt}]
+                    diff_response = llm_response(args.provider, args.model, args.key, diff_messages, endpoint=args.azure_endpoint, api_v=args.api_version)
+                    description = diff_response['message']
 
-                            # For Symbolic Execution
-                            filter_path = os.path.join(args.project_root, '.ai4framework', 'filter.txt')
+                    re_run_prompt = classify_prompt.format(diff=diff_content, description=description)
+                    re_run_messages = [{"role": "user", "content": re_run_prompt}]
+                    re_run_response = llm_response(args.provider, args.model, args.key, re_run_messages, endpoint=args.azure_endpoint, api_v=args.api_version)
 
-                            with open(filter_path, 'a') as filter_file:
-                                if filter_file.tell() == 0:
-                                    filter_file.write("-.*\n")
-                                filter_file.write(f"+.*{file}\n")
+                    parsed_re_running = label_parser.parse(re_run_response['message'])
+                    output = parsed_re_running.worth_to_re_run.strip().lower()
 
-                            error_and_log_handling(f"{file} was labeled as security relevant.\n", True)
-                        else:
-                            error_and_log_handling(f"{file} was labeled as not security relevant.\n", True)
+                    if 'yes' in output:
+                        line_positions = diff_line_positions(diff_content)
+                        output_dict = {
+                            "file_path": file,
+                            "security_relevant_lines": line_positions
+                        }
+                        output_data['security_relevant_files'].append(output_dict)
 
-                    except Exception as e:
-                        error_and_log_handling(f"An error occurred during the labeling of {file}:\n{e}", True)
-                        continue
-            else:
-                error_and_log_handling(f"Couldn't retrieve parent commit. Classification stopped.", True)
+                        # For Symbolic Execution
+                        filter_path = os.path.join(args.project_root, '.ai4framework', 'filter.txt')
+
+                        with open(filter_path, 'a') as filter_file:
+                            if filter_file.tell() == 0:
+                                filter_file.write("-.*\n")
+                            filter_file.write(f"+.*{file}\n")
+
+                        error_and_log_handling(f"{file} was labeled as security relevant.\n", True)
+                    else:
+                        error_and_log_handling(f"{file} was labeled as not security relevant.\n", True)
+
+                except Exception as e:
+                    error_and_log_handling(f"An error occurred during the labeling of {file}:\n{e}", True)
+                    continue
         else:
-            error_and_log_handling(f'No changed files in commit {args.commit_sha}', True)
-            sys.exit(1)
+            error_and_log_handling("Couldn't retrieve parent commit. Classification stopped.", True)
 
     except Exception as e:
-        error_and_log_handling(f"An error occurred during the inference:\n{e}", True)
-        sys.exit(1)
+        error_and_log_handling(f"An error occurred during the classification inference:\n{e}", True)
+        error_and_log_handling("Classification stopped.", True)
 
     os.chdir(starting_dir)
 

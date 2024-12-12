@@ -1,5 +1,5 @@
-import sys
 import re
+import sys
 
 from groq import Groq
 from openai import OpenAI, AzureOpenAI
@@ -48,7 +48,7 @@ def client_response(client, model, messages):
         )
         # Validate the structure of the response
         if not response.choices or not response.choices[0].message:
-            print(response)
+            print(f"The LLM couldn't provide a valid response. Response:\n{response}")
             sys.exit(1)
 
         # Extract response content safely

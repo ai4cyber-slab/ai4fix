@@ -13,7 +13,7 @@ class Analyzer:
     A class to run static analysis on a project using a specified analyzer tool.
     """
 
-    def __init__(self, analyzer_path, project_name, project_path, results_path, filter_pkgs):
+    def __init__(self, analyzer_path, project_name, project_path, results_path, filter_list):
         """
         Initialize the Analyzer with project details and paths.
 
@@ -22,8 +22,9 @@ class Analyzer:
             project_name (str): Name of the project to be analyzed.
             project_path (str): Path to the project's root directory.
             results_path (str): Path where analysis results will be stored.
+            filter_list (str): Words to filter the file path names.
         """
-        self.filter_list = filter_pkgs
+        self.filter_list = filter_list
         self.analyzer = analyzer_path
         self.project_name = project_name
         self.project_path = project_path

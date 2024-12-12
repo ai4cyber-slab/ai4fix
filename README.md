@@ -79,7 +79,7 @@ cd ai4framework
 
 ## Configuration File
 
-You don’t need to manually create the configuration file! Once you run the entry script (`.ps1` or `.sh`), the process will handle everything for you, including creating the required `config.properties` from a template in the root of the `ai4framework` directory. Simply execute the appropriate script for your operating system and follow the instructions provided.
+You don’t need to manually create the configuration file! After you run the Docker container, the process will handle everything for you, including creating the required `config.properties` from a template in the root of the `ai4framework` directory. Simply execute the appropriate script for your operating system and follow the instructions provided.
 
 For reference, the content of the `config.properties` template is as follows:
 
