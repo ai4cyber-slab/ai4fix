@@ -238,18 +238,20 @@ def process_warning_worker(args):
         # Create a unique temporary directory
         temp_dir = tempfile.mkdtemp(prefix=f"patch_{warning['id']}_")
         process_project_directory_core = temp_dir
-        temp_dir_for_maven = tempfile.mkdtemp(prefix=f"patch_{warning['id']}")
+        
 
         # Copy the project to the temporary directory
         shutil.copytree(base_project_path, temp_dir, dirs_exist_ok=True)
 
         # Update environment variables
         env = os.environ.copy()
-        env["MAVEN_OPTS"] = "-Xms512m -Xmx2048m"
-        env["MAVEN_OPTS"] += f" -Djava.io.tmpdir={temp_dir_for_maven}"
-        env["TMPDIR"] = temp_dir_for_maven
-        env["TEMP"] = temp_dir_for_maven
-        env["TMP"] = temp_dir_for_maven
+        if build_tool.lower() == 'maven':
+            temp_dir_for_maven = tempfile.mkdtemp(prefix=f"patch_{warning['id']}")
+            env["MAVEN_OPTS"] = "-Xms512m -Xmx2048m"
+            env["MAVEN_OPTS"] += f" -Djava.io.tmpdir={temp_dir_for_maven}"
+            env["TMPDIR"] = temp_dir_for_maven
+            env["TEMP"] = temp_dir_for_maven
+            env["TMP"] = temp_dir_for_maven
 
         # Initialize necessary components
         sast = SASTOrchestrator(config)
@@ -483,9 +485,9 @@ def process_warning_worker(args):
     finally:
         shutil.rmtree(temp_dir)
         logger.info(f"Removed temporary directory: {temp_dir}")
-
-        shutil.rmtree(temp_dir_for_maven)
-        logger.info(f"Removed process project directory: {temp_dir_for_maven}")
+        if build_tool.lower() == 'maven':
+            shutil.rmtree(temp_dir_for_maven)
+            logger.info(f"Removed process project directory: {temp_dir_for_maven}")
     return local_stats
 
 
