@@ -181,9 +181,9 @@ def update_java_file_worker(java_file_path, initial_json, updated_json):
 def run_tests_worker(build_tool, cwd, env):
     try:
         if build_tool.lower() == 'maven':
-            command = ['mvn', 'clean', 'test', '-Dmaven.compiler.incremental=true', '-T', str(4)]
+            command = ['mvn', 'clean', 'test', '-Dmaven.compiler.incremental=true', '-T', str(os.cpu_count())]
         elif build_tool.lower() == 'gradle':
-            command = ['gradle', 'clean', 'test', '--no-daemon', '--parallel', f'-Dorg.gradle.workers.max={4}']
+            command = ['gradle', 'clean', 'test', '--no-daemon', '--parallel', f'-Dorg.gradle.workers.max={os.cpu_count()}']
         elif build_tool.lower() == 'javac':
             java_files = [str(file) for file in Path(cwd, 'src', 'main', 'java').rglob('*.java')]
             if java_files:
@@ -374,7 +374,7 @@ def update_build_env_vars(temp_dir_for_build_tool, build_tool):
     return env
 
 
-def remove_file_if_exists(file_path, logger):
+def remove_file_if_exists(file_path):
     if file_path and os.path.exists(file_path):
         try:
             logger.debug(f"Attempting to remove file: {file_path}")
@@ -387,7 +387,6 @@ def remove_file_if_exists(file_path, logger):
 def revert_test_content(context):
     test_file_path = context['test_file_path']
     original_test_content = context['original_test_content']
-    logger = context['logger']
 
     if test_file_path and original_test_content is not None:
         try:
@@ -401,7 +400,6 @@ def revert_test_content(context):
 def revert_patch(context):
     full_file_path = context['full_file_path']
     initial_content = context['initial_content']
-    logger = context['logger']
 
     try:
         with open(full_file_path, 'w') as f:
@@ -416,7 +414,6 @@ def create_diff(context):
     initial_content = context['initial_content']
     file_path = context['file_path']
     diffs_output_dir = context['diffs_output_dir']
-    logger = context['logger']
     warning_id = context['warning_id']
     attempt = context['attempt']
 
@@ -450,7 +447,6 @@ def create_diff(context):
 
 
 def log_retry(message, context):
-    logger = context['logger']
     attempt = context['attempt']
     max_attempts = context['max_attempts']
     warning_id = context['warning_id']
@@ -465,7 +461,6 @@ def handle_test_error(context):
     decisions = context['decisions']
     status = context['status']
     test_file_path = context['test_file_path']
-    logger = context['logger']
     process_project_directory_core = context['process_project_directory_core']
     env = context['env']
     name = context['name']
@@ -481,7 +476,7 @@ def handle_test_error(context):
     if not is_test_error:
         return False
     if not status:
-        remove_file_if_exists(test_file_path, logger)
+        remove_file_if_exists(test_file_path)
     else:
         revert_test_content(context)
 
@@ -513,9 +508,8 @@ def handle_test_error(context):
 def handle_source_error(context):
     status = context['status']
     test_file_path = context['test_file_path']
-    logger = context['logger']
     if not status:
-        remove_file_if_exists(test_file_path, logger)
+        remove_file_if_exists(test_file_path)
     else:
         revert_test_content(context)
     revert_patch(context)
@@ -552,7 +546,6 @@ def handle_test_failures(context):
     decisions = context['decisions']
     status = context['status']
     test_file_path = context['test_file_path']
-    logger = context['logger']
     name = context['name']
     tag = context['tag']
     sast = context['sast']
@@ -581,7 +574,7 @@ def handle_test_failures(context):
 
     if our_test_failed and not another_test_failed:
         if not status:
-            remove_file_if_exists(test_file_path, logger)
+            remove_file_if_exists(test_file_path)
         else:
             revert_test_content(context)
 
@@ -610,7 +603,7 @@ def handle_test_failures(context):
             return False
     else:
         if not status:
-            remove_file_if_exists(test_file_path, logger)
+            remove_file_if_exists(test_file_path)
         else:
             revert_test_content(context)
         revert_patch(context)
@@ -776,7 +769,6 @@ def process_warning_worker(args):
                 context = {
                     'test_file_path': test_file_path,
                     'original_test_content': original_test_content,
-                    'logger': logger,
                     'initial_content': initial_content,
                     'full_file_path': full_file_path,
                     'file_path': file_path,
@@ -837,7 +829,7 @@ def process_warning_worker(args):
     finally:
         if 'test_file_path' in locals() and 'original_test_content' in locals():
             if test_file_path and original_test_content is not None:
-                revert_test_content({'test_file_path': test_file_path, 'original_test_content': original_test_content, 'logger': logger})
+                revert_test_content({'test_file_path': test_file_path, 'original_test_content': original_test_content})
         shutil.rmtree(temp_dir, ignore_errors=True)
         logger.info(f"Removed temporary directory: {temp_dir}")
         if temp_dir_for_build_tool and build_tool == 'maven':
@@ -853,7 +845,7 @@ class PatchGenerator:
         load_dotenv(dotenv_path)
         self.config = config
         self.provider = self.config.get('API', 'config.provider').lower()
-        self.model = self.config.get('API', 'config.model')
+        self.model_name = self.config.get('API', 'config.model')
         self.api_key = self.config.get('API', 'config.key', fallback='').strip()
         self.build_tool = self.config.get('DEFAULT', 'config.build_tool', fallback='maven').lower()
         if self.api_key == '':
@@ -861,24 +853,15 @@ class PatchGenerator:
             sys.exit(1)
 
         self.project_path = self.config.get('DEFAULT', 'config.project_root')
-        self.sast = SASTOrchestrator(self.config)
-        self.symbolic = SymbolicExecution(self.config)
         self.visualize_path = os.path.join(self.project_path, '.ai4framework', 'visualizations')
-        self.base_dir = self.project_path
         self.diffs_output_dir = self.config.get('DEFAULT', 'config.results_path')
         self.json_file_path = self.config.get('DEFAULT', 'config.issues_path')
         self.cores_to_use = self.config.get('DEFAULT', 'config.parallel_workers', fallback='1')
-        self.model_name = self.config.get("API", "config.model")
         self.warnings = []
-        self.full_file_path = ""
-        self.initial_content = ""
         self.compilation_or_test_errors = 0
         self.validation_errors = 0
         self.successful_patches = 0
         self.non_applicabale_diffs = 0
-        self.validation_passed = True
-        self.mvn_test_passed = True
-        self.applicable_patch = True
         self.input_tokens = []
         self.response_tokens = []
 
@@ -961,7 +944,7 @@ class PatchGenerator:
                     self.provider,
                     self.api_key,
                     self.build_tool,
-                    self.base_dir,
+                    self.project_path,
                     self.diffs_output_dir
                 )
                 args_list.append(args)
