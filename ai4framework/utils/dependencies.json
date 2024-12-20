@@ -1,0 +1,343 @@
+{
+    "org.junit.Test": {
+        "groupId": "junit",
+        "artifactId": "junit"
+    },
+    "org.junit.Before": {
+        "groupId": "junit",
+        "artifactId": "junit"
+    },
+    "org.junit.After": {
+        "groupId": "junit",
+        "artifactId": "junit"
+    },
+    "org.junit.BeforeClass": {
+        "groupId": "junit",
+        "artifactId": "junit"
+    },
+    "org.junit.AfterClass": {
+        "groupId": "junit",
+        "artifactId": "junit"
+    },
+    "org.junit.Assert": {
+        "groupId": "junit",
+        "artifactId": "junit"
+    },
+    "org.junit.Ignore": {
+        "groupId": "junit",
+        "artifactId": "junit"
+    },
+    "org.junit.runner.RunWith": {
+        "groupId": "junit",
+        "artifactId": "junit"
+    },
+    "org.junit.Rule": {
+        "groupId": "junit",
+        "artifactId": "junit"
+    },
+    "org.junit.rules.TemporaryFolder": {
+        "groupId": "junit",
+        "artifactId": "junit"
+    },
+
+    "org.junit.jupiter.api.Test": {
+        "groupId": "org.junit.jupiter",
+        "artifactId": "junit-jupiter-api"
+    },
+    "org.junit.jupiter.api.BeforeAll": {
+        "groupId": "org.junit.jupiter",
+        "artifactId": "junit-jupiter-api"
+    },
+    "org.junit.jupiter.api.BeforeEach": {
+        "groupId": "org.junit.jupiter",
+        "artifactId": "junit-jupiter-api"
+    },
+    "org.junit.jupiter.api.AfterAll": {
+        "groupId": "org.junit.jupiter",
+        "artifactId": "junit-jupiter-api"
+    },
+    "org.junit.jupiter.api.AfterEach": {
+        "groupId": "org.junit.jupiter",
+        "artifactId": "junit-jupiter-api"
+    },
+    "org.junit.jupiter.api.Assertions": {
+        "groupId": "org.junit.jupiter",
+        "artifactId": "junit-jupiter-api"
+    },
+    "org.junit.jupiter.api.Assumptions": {
+        "groupId": "org.junit.jupiter",
+        "artifactId": "junit-jupiter-api"
+    },
+    "org.junit.jupiter.api.Disabled": {
+        "groupId": "org.junit.jupiter",
+        "artifactId": "junit-jupiter-api"
+    },
+    "org.junit.jupiter.api.Nested": {
+        "groupId": "org.junit.jupiter",
+        "artifactId": "junit-jupiter-api"
+    },
+    "org.junit.jupiter.api.RepeatedTest": {
+        "groupId": "org.junit.jupiter",
+        "artifactId": "junit-jupiter-api"
+    },
+    "org.junit.jupiter.api.Tag": {
+        "groupId": "org.junit.jupiter",
+        "artifactId": "junit-jupiter-api"
+    },
+    "org.junit.jupiter.params.ParameterizedTest": {
+        "groupId": "org.junit.jupiter",
+        "artifactId": "junit-jupiter-params"
+    },
+    "org.junit.jupiter.params.provider.ValueSource": {
+        "groupId": "org.junit.jupiter",
+        "artifactId": "junit-jupiter-params"
+    },
+    "org.junit.jupiter.params.provider.CsvSource": {
+        "groupId": "org.junit.jupiter",
+        "artifactId": "junit-jupiter-params"
+    },
+    "org.junit.jupiter.params.provider.MethodSource": {
+        "groupId": "org.junit.jupiter",
+        "artifactId": "junit-jupiter-params"
+    },
+    "org.junit.platform.suite.api.SelectPackages": {
+        "groupId": "org.junit.platform",
+        "artifactId": "junit-platform-suite-api"
+    },
+    "org.junit.platform.suite.api.SelectClasses": {
+        "groupId": "org.junit.platform",
+        "artifactId": "junit-platform-suite-api"
+    },
+    "org.junit.platform.suite.api.IncludeClassNamePatterns": {
+        "groupId": "org.junit.platform",
+        "artifactId": "junit-platform-suite-api"
+    },
+
+    "org.mockito.Mockito": {
+        "groupId": "org.mockito",
+        "artifactId": "mockito-core"
+    },
+    "org.mockito.Mock": {
+        "groupId": "org.mockito",
+        "artifactId": "mockito-core"
+    },
+    "org.mockito.InjectMocks": {
+        "groupId": "org.mockito",
+        "artifactId": "mockito-core"
+    },
+    "org.mockito.Spy": {
+        "groupId": "org.mockito",
+        "artifactId": "mockito-core"
+    },
+    "org.mockito.Captor": {
+        "groupId": "org.mockito",
+        "artifactId": "mockito-core"
+    },
+    "org.mockito.junit.MockitoJUnitRunner": {
+        "groupId": "org.mockito",
+        "artifactId": "mockito-core"
+    },
+    "org.mockito.junit.jupiter.MockitoExtension": {
+        "groupId": "org.mockito",
+        "artifactId": "mockito-core"
+    },
+    "org.mockito.stubbing.Answer": {
+        "groupId": "org.mockito",
+        "artifactId": "mockito-core"
+    },
+    "org.mockito.ArgumentMatchers": {
+        "groupId": "org.mockito",
+        "artifactId": "mockito-core"
+    },
+    "org.mockito.ArgumentCaptor": {
+        "groupId": "org.mockito",
+        "artifactId": "mockito-core"
+    },
+
+    "org.hamcrest.MatcherAssert": {
+        "groupId": "org.hamcrest",
+        "artifactId": "hamcrest"
+    },
+    "org.hamcrest.Matchers": {
+        "groupId": "org.hamcrest",
+        "artifactId": "hamcrest"
+    },
+    "org.hamcrest.CoreMatchers": {
+        "groupId": "org.hamcrest",
+        "artifactId": "hamcrest"
+    },
+    "org.hamcrest.collection.IsIterableContainingInAnyOrder": {
+        "groupId": "org.hamcrest",
+        "artifactId": "hamcrest"
+    },
+
+    "org.assertj.core.api.Assertions": {
+        "groupId": "org.assertj",
+        "artifactId": "assertj-core"
+    },
+    "org.assertj.core.api.SoftAssertions": {
+        "groupId": "org.assertj",
+        "artifactId": "assertj-core"
+    },
+
+    "com.fasterxml.jackson.databind.ObjectMapper": {
+        "groupId": "com.fasterxml.jackson.core",
+        "artifactId": "jackson-databind"
+    },
+    "com.fasterxml.jackson.databind.JsonNode": {
+        "groupId": "com.fasterxml.jackson.core",
+        "artifactId": "jackson-databind"
+    },
+
+    "org.apache.commons.lang3.StringUtils": {
+        "groupId": "org.apache.commons",
+        "artifactId": "commons-lang3"
+    },
+    "org.apache.commons.io.IOUtils": {
+        "groupId": "commons-io",
+        "artifactId": "commons-io"
+    },
+
+    "org.testng.annotations.Test": {
+        "groupId": "org.testng",
+        "artifactId": "testng"
+    },
+    "org.testng.annotations.BeforeMethod": {
+        "groupId": "org.testng",
+        "artifactId": "testng"
+    },
+    "org.testng.annotations.AfterMethod": {
+        "groupId": "org.testng",
+        "artifactId": "testng"
+    },
+    "org.testng.annotations.BeforeClass": {
+        "groupId": "org.testng",
+        "artifactId": "testng"
+    },
+    "org.testng.annotations.AfterClass": {
+        "groupId": "org.testng",
+        "artifactId": "testng"
+    },
+    "org.testng.Assert": {
+        "groupId": "org.testng",
+        "artifactId": "testng"
+    },
+    "org.testng.annotations.DataProvider": {
+        "groupId": "org.testng",
+        "artifactId": "testng"
+    },
+
+    "org.powermock.modules.junit4.PowerMockRunner": {
+        "groupId": "org.powermock",
+        "artifactId": "powermock-module-junit4"
+    },
+    "org.powermock.api.mockito.PowerMockito": {
+        "groupId": "org.powermock",
+        "artifactId": "powermock-api-mockito2"
+    },
+
+    "org.easymock.EasyMock": {
+        "groupId": "org.easymock",
+        "artifactId": "easymock"
+    },
+
+    "com.github.stefanbirkner.systemlambda.SystemLambda": {
+        "groupId": "com.github.stefanbirkner",
+        "artifactId": "system-lambda"
+    },
+
+    "com.google.common.collect.ImmutableList": {
+        "groupId": "com.google.guava",
+        "artifactId": "guava"
+    },
+    "com.google.common.base.Preconditions": {
+        "groupId": "com.google.guava",
+        "artifactId": "guava"
+    },
+
+    "org.awaitility.Awaitility": {
+        "groupId": "org.awaitility",
+        "artifactId": "awaitility"
+    },
+
+    "com.github.tomakehurst.wiremock.WireMockServer": {
+        "groupId": "com.github.tomakehurst",
+        "artifactId": "wiremock"
+    },
+    "com.github.tomakehurst.wiremock.client.WireMock": {
+        "groupId": "com.github.tomakehurst",
+        "artifactId": "wiremock"
+    },
+
+    "org.quicktheories.QuickTheory": {
+        "groupId": "org.quicktheories",
+        "artifactId": "quicktheories"
+    },
+
+    "org.junitpioneer.jupiter.CartesianTest": {
+        "groupId": "org.junit-pioneer",
+        "artifactId": "junit-pioneer"
+    },
+    "org.junitpioneer.jupiter.CartesianEnum": {
+        "groupId": "org.junit-pioneer",
+        "artifactId": "junit-pioneer"
+    },
+
+    "org.jmock.Expectations": {
+        "groupId": "org.jmock",
+        "artifactId": "jmock"
+    },
+    "org.jmock.integration.junit4.JUnitRuleMockery": {
+        "groupId": "org.jmock",
+        "artifactId": "jmock-junit4"
+    },
+
+    "org.jmockit.Expectations": {
+        "groupId": "org.jmockit",
+        "artifactId": "jmockit"
+    },
+    "org.jmockit.Verifications": {
+        "groupId": "org.jmockit",
+        "artifactId": "jmockit"
+    },
+
+    "org.slf4j.Logger": {
+        "groupId": "org.slf4j",
+        "artifactId": "slf4j-api"
+    },
+    "org.slf4j.LoggerFactory": {
+        "groupId": "org.slf4j",
+        "artifactId": "slf4j-api"
+    },
+
+    "lombok.Data": {
+        "groupId": "org.projectlombok",
+        "artifactId": "lombok"
+    },
+    "lombok.Getter": {
+        "groupId": "org.projectlombok",
+        "artifactId": "lombok"
+    },
+    "lombok.Setter": {
+        "groupId": "org.projectlombok",
+        "artifactId": "lombok"
+    },
+    "lombok.Builder": {
+        "groupId": "org.projectlombok",
+        "artifactId": "lombok"
+    },
+
+    "org.apache.logging.log4j.LogManager": {
+        "groupId": "org.apache.logging.log4j",
+        "artifactId": "log4j-api"
+    },
+    "org.apache.logging.log4j.Logger": {
+        "groupId": "org.apache.logging.log4j",
+        "artifactId": "log4j-api"
+    },
+
+    "org.opentest4j.AssertionFailedError": {
+        "groupId": "org.opentest4j",
+        "artifactId": "opentest4j"
+    }
+}

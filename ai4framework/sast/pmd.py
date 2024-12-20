@@ -19,8 +19,8 @@ class PMDRunner:
             config: Configuration object containing necessary settings for PMD execution.
         """
         self.config = config
-        self.report_path = os.path.join(os.sep, 'app', 'sast', 'out', 'pmd.xml')
         self.project_path = self.config.get('DEFAULT', 'config.project_root')
+        self.report_path = os.path.join(self.project_path, '.ai4framework','out', 'pmd.xml')
         self.cache_dir = os.path.join(os.sep, 'tmp', 'pmd-cache')
         os.makedirs(os.path.dirname(self.report_path), exist_ok=True)
         os.makedirs(self.cache_dir, exist_ok=True)

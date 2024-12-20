@@ -10,8 +10,8 @@ try:
     from sast.sast_orchestrator import SASTOrchestrator
     from utils.issues_merger import JSONCombiner
     from utils.plugin_json_converter import JsonPluginConverter
-    from patch_generation.patch_applier import PatchApplier
-    from patch_generation.patch_generation import PatchGenerator
+    from generation.patch_applier import PatchApplier
+    from generation.patch_generation import PatchGenerator
     from classification.security_classifier import SecurityClassifier
 except KeyboardInterrupt:
     sys.exit(0)

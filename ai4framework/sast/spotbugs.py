@@ -18,8 +18,8 @@ class SpotBugsRunner:
             config: Configuration object containing necessary settings for SpotBugs execution.
         """
         self.config = config
-        self.report_path = os.path.join(os.sep, 'app','sast','out','spotbugs.xml')
         self.project_path = self.config.get('DEFAULT', 'config.project_root')
+        self.report_path = os.path.join(self.project_path, '.ai4framework','out','spotbugs.xml')
         self.build_tool = self.config.get('DEFAULT', 'config.build_tool').lower()
 
     def find_classes_directories(self, root_path, build_tool):
