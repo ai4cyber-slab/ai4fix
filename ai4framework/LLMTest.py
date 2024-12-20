@@ -4,9 +4,10 @@ import sys
 import glob
 
 from dotenv import load_dotenv, find_dotenv
-from pom_modifier import PomModifier as PM
+from generation.build_dependencies_modifier import BuildDependenciesModifier as DM
 from config.llm_configuration import llm_response
 
+# TODO: Refactor this class it doesn refelet the current state of the framework
 class TestGenerationAI:
     def __init__(self, config=None):
         self.config = config
@@ -97,7 +98,7 @@ class TestGenerationAI:
         diff_content = self.read_file_content(relevant_diff_file_path) if relevant_diff_file_path else ""
         content = self.generate_test_class(java_class_path, diff_content)
         source_file_path = java_class_path[java_class_path.find('src'):]
-        PM.main(project_path)
+        DM.main(project_path)
         test_file_path = self.write_test_to_file(source_file_path, content, project_path)
     
 def rename_aittest_files(directory):
