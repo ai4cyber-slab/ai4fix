@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM eclipse-temurin:11-jdk-jammy
 
 ENV WORKDIR_PATH=/app
 WORKDIR ${WORKDIR_PATH}
@@ -16,33 +16,23 @@ ENV ANALYZER_BIN=/opt/AI4VULN/Java/AnalyzerJava
 ENV ANALYZER_RESULTS_PATH=${WORKDIR_PATH}/results
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        wget \
-        unzip \
-        git \
-        curl \
-        apt-transport-https \
-        software-properties-common \
-        patch \
-        vim \
-        nano && \
-    mkdir -p /usr/lib/jvm && \
-    ARCH=$(uname -m) && \
-    if [ "$ARCH" = "x86_64" ] || [ "$ARCH" = "amd64" ]; then \
-        JDK_URL="https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.17+8/OpenJDK11U-jdk_x64_linux_hotspot_11.0.17_8.tar.gz"; \
-    elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
-        JDK_URL="https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.17+8/OpenJDK11U-jdk_aarch64_linux_hotspot_11.0.17_8.tar.gz"; \
-    else \
-        echo "Unsupported architecture: $ARCH" && exit 1; \
-    fi && \
-    wget -q -O - "$JDK_URL" | tar -xzf - -C /usr/lib/jvm && \
-    JDK_DIR=$(ls /usr/lib/jvm | grep 'jdk-11') && \
-    update-alternatives --install /usr/bin/java java /usr/lib/jvm/$JDK_DIR/bin/java 1 && \
-    update-alternatives --set java /usr/lib/jvm/$JDK_DIR/bin/java && \
-    update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/$JDK_DIR/bin/javac 1 && \
-    update-alternatives --set javac /usr/lib/jvm/$JDK_DIR/bin/javac && \
-    java -version && \
-    javac -version && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    wget \
+    unzip \
+    git \
+    curl \
+    apt-transport-https \
+    software-properties-common \
+    patch \
+    vim \
+    nano \
+    python3.10 \
+    python3.10-dev \
+    python3-pip && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    ln -s /usr/bin/python3.10 /usr/bin/python
+
+COPY requirements.txt ${WORKDIR_PATH}/requirements.txt
+RUN pip3 install --no-cache-dir -r ${WORKDIR_PATH}/requirements.txt
 
 RUN wget https://downloads.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.zip -O /tmp/maven.zip && \
     unzip /tmp/maven.zip -d /opt && \
@@ -74,9 +64,6 @@ COPY slab-9.19-d45fdf7b5.tgz /opt/
 RUN tar -xvzf /opt/slab-9.19-d45fdf7b5.tgz -C /opt/ && \
     rm /opt/slab-9.19-d45fdf7b5.tgz && \
     mv /opt/slab-9.19-d45fdf7b5 /opt/AI4VULN
-
-COPY requirements.txt ${WORKDIR_PATH}/requirements.txt
-RUN pip install --no-cache-dir -r ${WORKDIR_PATH}/requirements.txt
 
 COPY . ${WORKDIR_PATH}
 
