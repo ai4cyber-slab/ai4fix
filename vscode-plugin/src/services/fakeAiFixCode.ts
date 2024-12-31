@@ -1,25 +1,19 @@
-import { access, constants, watch, readFileSync, readFile } from "fs";
-import { dirname, basename } from "path";
-import { updateHeritageClause } from "typescript";
-import { Terminal, window, ProgressLocation, workspace } from "vscode";
+import * as logging from "../services/logging";
+import { IFix } from "../interfaces";
+import { readFileSync } from "fs";
 import {
   ISSUES_PATH,
   PATCH_FOLDER,
   PROJECT_FOLDER,
   utf8Stream,
 } from "../constants";
-import * as logging from "../services/logging";
-import { IFix, Iissue } from "../interfaces";
-import { getSafeFsPath } from "../path";
+
 
 const fs = require("fs");
-const util = require("util");
-const parseJson = require("parse-json");
 var path = require("path");
 var upath = require("upath");
-var isEqual = require('lodash.isequal');
 
-//export let issues = '';
+// export let issues = '';
 let issuesJson: any = {};
 
 export async function getIssues() {
@@ -77,6 +71,7 @@ export async function getIssues2() {
     }
   }
 
+  // console.log("ISSUES:", issuesJson);
   return issuesJson;
 }
 

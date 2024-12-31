@@ -1,24 +1,28 @@
-import { init, refreshDiagnosticsWithoutAnalysis } from './commands';
+import * as path from "path";
 import * as vscode from 'vscode';
-import { log } from './logger';
-import { JsonOutlineProvider } from './providers/jsonOutline';
 import * as logging from './services/logging';
-import { refreshDiagnostics } from "./language/diagnostics";
+
+import { log } from './logger';
 import { exec } from 'child_process';
 import { SCRIPT_PATH } from './constants';
-import * as fs from 'fs';
-import * as upath from "upath";
-import * as path from "path";
+import { refreshDiagnostics } from "./language/diagnostics";
+import { JsonOutlineProvider } from './providers/jsonOutline';
+import { NodeWithIdTreeDataProvider } from './providers/testView';
+import { init, refreshDiagnosticsWithoutAnalysis } from './commands';
+
 
 export let analysisDiagnostics = vscode.languages.createDiagnosticCollection('aifix4seccode');
 
+let undoFixStatusBarItem: vscode.StatusBarItem;
 let analysisStatusBarItem: vscode.StatusBarItem;
 let analyzeCurrentFileStatusBarItem: vscode.StatusBarItem;
-let undoFixStatusBarItem: vscode.StatusBarItem;
-let generateTestForCurrentFileStatusBarItem: vscode.StatusBarItem;
+// let generateTestForCurrentFileStatusBarItem: vscode.StatusBarItem;
 
 export async function activate(context: vscode.ExtensionContext) {
 
+  const testViewProvider = new NodeWithIdTreeDataProvider();
+  vscode.window.registerTreeDataProvider('testView', testViewProvider);
+  
   const jsonOutlineProvider = new JsonOutlineProvider(context);
   vscode.window.registerTreeDataProvider('aifix4seccode-vscode_jsonOutline', jsonOutlineProvider);
 
@@ -38,15 +42,15 @@ export async function activate(context: vscode.ExtensionContext) {
 
   undoFixStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
   undoFixStatusBarItem.command = 'aifix4seccode-vscode.undoLastFix';
-  undoFixStatusBarItem.text = "$(undo) Undo Last Fix";
+  undoFixStatusBarItem.text = "$(undo) Undo Last Fix (for manual apply only)";
   undoFixStatusBarItem.show();
   context.subscriptions.push(undoFixStatusBarItem);
 
-  // generateTestForCurrentFileStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-  // generateTestForCurrentFileStatusBarItem.command = 'aifix4seccode-vscode.generateTestForCurrentFile';
-  // generateTestForCurrentFileStatusBarItem.text = "$(beaker) Generate Test for Current File";
-  // generateTestForCurrentFileStatusBarItem.show();
-  // context.subscriptions.push(generateTestForCurrentFileStatusBarItem);
+  /* generateTestForCurrentFileStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+  generateTestForCurrentFileStatusBarItem.command = 'aifix4seccode-vscode.generateTestForCurrentFile';
+  generateTestForCurrentFileStatusBarItem.text = "$(beaker) Generate Test for Current File";
+  generateTestForCurrentFileStatusBarItem.show();
+  context.subscriptions.push(generateTestForCurrentFileStatusBarItem); */
 
   // Initialize commands with the analysisStatusBarItem
   init(context, jsonOutlineProvider, analysisStatusBarItem);
@@ -100,8 +104,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // Register the generatePatchForSingleWarning command directly here
   vscode.commands.registerCommand('aifix4seccode-vscode.generatePatchForSingleWarning', (warningId, javaFilePath, projectFolder, patchFolder, issues_path) => {
     // Construct the command with arguments for the Python script
-    let pythonScriptPath = SCRIPT_PATH;
-    pythonScriptPath = path.join(pythonScriptPath, 'single_warning_patch.py');
+    let pythonScriptPath = path.join(SCRIPT_PATH, 'single_warning_patch.py');
     const command = `python3 ${pythonScriptPath} -j "${javaFilePath}" -wid "${warningId}" -pp "${projectFolder}" -dod "${patchFolder}" -jl "${issues_path}"`;
 
     // Execute the Python script
@@ -120,8 +123,6 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const diffFilePath = match[1].trim();
-
       vscode.window.showInformationMessage(`Patch Generated with Success!`);
       // Close and reopen the current file
       const editor = vscode.window.activeTextEditor;
@@ -139,4 +140,5 @@ export async function activate(context: vscode.ExtensionContext) {
     });
 
   });
+
 }

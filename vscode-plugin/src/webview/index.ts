@@ -1,16 +1,14 @@
 import { log } from '../logger';
-import { setPanelFocused } from '../context';
-import { applyPatchToFile } from '../patch';
-import { setActiveDiffPanelWebview } from './store';
-import { ExtendedWebview, ExtendedWebviewEnv, IExtendedWebviewEnvDiff } from './extendedWebview';
-import { fileNotSupported } from '../constants';
-import { window, ViewColumn, ExtensionContext, workspace } from 'vscode';
 import { extract } from '../theme/extractor';
 import { getTitle } from './utils';
 import { getIssues } from '../services/fakeAiFixCode';
-var path = require("path");
+import { setPanelFocused } from '../context';
+import { applyPatchToFile } from '../patch';
+import { fileNotSupported } from '../constants';
+import { setActiveDiffPanelWebview } from './store';
+import { window, ViewColumn, ExtensionContext, workspace } from 'vscode';
+import { ExtendedWebview, ExtendedWebviewEnv, IExtendedWebviewEnvDiff } from './extendedWebview';
 
-var stringify = require('json-stringify');
 
 interface IDiffData {
   patchPath?: string;
@@ -71,7 +69,7 @@ export async function showDiff({ patchPath, leftContent, rightContent, leftPath,
         const { right: rightContent } = e.contents;
         const savedLeftPath = await getSaveLeftPath(env.leftPath!);
         const patchPath = env.patchPath!;
-        let output = applyPatchToFile(savedLeftPath, rightContent, patchPath);
+        let output = applyPatchToFile(savedLeftPath, rightContent, patchPath, false);
         extendsWebView.webViewPanel.dispose();
         return output!;
       } catch (error) {

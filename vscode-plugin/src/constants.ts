@@ -1,27 +1,25 @@
-import { ExecSyncOptionsWithStringEncoding } from 'child_process';
-import { workspace } from 'vscode';
-import { getRootPath } from './path';
 import * as fs from 'fs';
 import * as upath from 'upath';
 import * as vscode from 'vscode';
 import * as logging from "./services/logging";
 
-var path = require("path");
+import { getRootPath } from './path';
+import { ExecSyncOptionsWithStringEncoding } from 'child_process';
+
+
 var os = require('os');
-
-
 
 // EXTENSION SETTINGS:
 const dockerWorkdir = process.env.WORKDIR_PATH || '/app';
 let configPath = upath.join(dockerWorkdir, 'config.properties');
 const normalized_configPath = upath.normalize(configPath);
 
-let config: { [section: string]: { [key: string]: string } } = {};
+export let CONFIG: { [section: string]: { [key: string]: string } } = {};
 
 try {
   if (normalized_configPath && fs.existsSync(normalized_configPath)) {
     const configContent = fs.readFileSync(normalized_configPath, 'utf8');
-    config = parseConfig(configContent);
+    CONFIG = parseConfig(configContent);
   } else {
     vscode.window.showErrorMessage('Configuration file not found: ' + normalized_configPath);
   }
@@ -88,17 +86,17 @@ export function SetProjectFolder(path: string) {
 }
 
 // Access values from the parsed config
-export const PATCH_FOLDER = insertHiddenFile(PROJECT_FOLDER, upath.normalize(config['DEFAULT']?.['config.results_path'] || 'patches'));
-export const ISSUES_PATH = insertHiddenFile(PROJECT_FOLDER, upath.normalize(config['DEFAULT']?.['config.jsons_listfile'] || 'jsons.lists'))
-export const ANALYZER_USE_DIFF_MODE = config['PLUGIN']?.['plugin.use_diff_mode'] || 'view Diffs';
+export const PATCH_FOLDER = insertHiddenFile(PROJECT_FOLDER, upath.normalize(CONFIG['DEFAULT']?.['config.results_path'] || 'patches'));
+export const ISSUES_PATH = insertHiddenFile(PROJECT_FOLDER, upath.normalize(CONFIG['DEFAULT']?.['config.jsons_listfile'] || 'jsons.lists'))
+export const ANALYZER_USE_DIFF_MODE = CONFIG['PLUGIN']?.['plugin.use_diff_mode'] || 'view Diffs';
 
-let test_folder_path = config['PLUGIN']?.['plugin.test_folder_log'] || '';
+let test_folder_path = CONFIG['PLUGIN']?.['plugin.test_folder_log'] || '';
 if(!upath.isAbsolute(test_folder_path)) {
   test_folder_path = upath.resolve(PROJECT_FOLDER, test_folder_path);
 }
 export const TEST_FOLDER = test_folder_path;
 
-export const SCRIPT_PATH = config['PLUGIN']?.['plugin.script_path'] || '/app';
+export const SCRIPT_PATH = CONFIG['PLUGIN']?.['plugin.script_path'] || '/app';
 export const ANALYZER_MENTION = 'analyzer_mention';
 export const ISSUE = 'issue';
 
