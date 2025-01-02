@@ -161,7 +161,7 @@ class TestGenerator:
             logger.error(f"AI call failed after retries: {e}")
         return None
 
-    def update_build_dependencies(self, project_root, java_file_path, dependencies_json_path, build_tool):
+    def update_build_dependencies(self, project_root, test_file_path, dependencies_json_path, build_tool):
         """
         Update build dependencies based on the detected build tool.
         Currently only Maven logic is implemented. For other build tools like Gradle,
@@ -170,8 +170,8 @@ class TestGenerator:
         logger.info("Starting the process to update build dependencies based on Java file imports.")
         try:
             if build_tool == 'maven':
-                modifier = BuildDependenciesModifier(project_root, dependencies_json_path, build_tool=build_tool)
-                success = modifier.process_java_file(java_file_path)
+                modifier = BuildDependenciesModifier(project_root, test_file_path, dependencies_json_path, build_tool=build_tool)
+                success = modifier.process_java_file(test_file_path)
                 if success:
                     logger.info("Build dependencies update process completed successfully for Maven.")
                 else:

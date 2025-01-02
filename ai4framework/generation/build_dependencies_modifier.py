@@ -7,13 +7,14 @@ import re
 from utils.logger import logger
 
 class BuildDependenciesModifier:
-    def __init__(self, project_root, dependencies_json_path, build_tool='maven'):
+    def __init__(self, project_root, testFilePath, dependencies_json_path, build_tool='maven'):
         self.project_root = project_root
         self.dependencies_json_path = dependencies_json_path
         self.build_tool = build_tool.lower()
-
-        self.pom_path = os.path.join(self.project_root, 'pom.xml')
-        self.backup_pom_path = os.path.join(self.project_root, 'pom.xml.org')
+        self.testFilePath = testFilePath
+        self.pom_path = find_pom_in_hierarchy(testFilePath)
+        self.pom_path = self.pom_path if self.pom_path else os.path.join(self.project_root, 'pom.xml')
+        self.backup_pom_path = self.pom_path.replace('pom.xml', 'pom.xml.org')
 
         self.import_to_dependency = self.load_dependencies_mapping()
         self.dependency_versions = self.load_dependency_versions()
@@ -241,3 +242,39 @@ class BuildDependenciesModifier:
     def main(project_root, java_file_path, dependencies_json_path, build_tool='maven'):
         modifier = BuildDependenciesModifier(project_root, dependencies_json_path, build_tool)
         return modifier.process_java_file(java_file_path)
+
+
+
+
+
+################################
+# Helper functions
+# ##############################
+
+
+def find_pom_in_hierarchy(test_file_path):
+    """
+    Traverse up the directory structure to find the nearest pom.xml and determine its type.
+    """
+    current_dir = os.path.dirname(os.path.abspath(test_file_path))
+    while current_dir != os.path.dirname(current_dir):  # Stop at root
+        pom_path = os.path.join(current_dir, 'pom.xml')
+        if os.path.isfile(pom_path):
+            # if is_multimodule_pom(pom_path):
+            #     logger.debug(f"Multi-module pom.xml found at: {pom_path}")
+            # else:
+            #     logger.debug(f"Single-module pom.xml found at: {pom_path}")
+            return pom_path
+        current_dir = os.path.dirname(current_dir)
+    return None
+
+def is_multimodule_pom(pom_path):
+    try:
+        tree = ET.parse(pom_path)
+        root = tree.getroot()
+        for elem in root.iter():
+            if '}' in elem.tag:
+                elem.tag = elem.tag.split('}', 1)[1]
+        return root.find('modules') is not None
+    except ET.ParseError:
+        return False
