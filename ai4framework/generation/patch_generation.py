@@ -65,8 +65,33 @@ def parse_build_output(build_tool, result_output):
         if "BUILD SUCCESS" in result_output and "COMPILATION ERROR" not in result_output:
             details['build_success'] = True
 
+    elif build_tool == 'gradle':
+        # 1) Check for build success/failure
+        if "BUILD SUCCESSFUL" in result_output:
+            details['build_success'] = True
+        else:
+            logger.info("GRADLE TEST FAILED")
+
+        # 2) Detect Java compilation errors
+        compilation_errors = re.findall(r'(.+?\.java):(\d+):\s+error:\s+(.*)', result_output)
+        if compilation_errors:
+
+            details['compilation_error'] = True
+            # We'll collect just the file paths as a unique set, ignoring duplicates
+            error_files = {file_path for file_path, _, _ in compilation_errors}
+            details['compilation_error_files'] = sorted(error_files)
+
+        # 3) Detect test failures (if any)
+        test_failures = re.findall(r'(.*?) > (.*?) FAILED\s*(.*)', result_output)
+        # Store them in 'failure_details' as (className, testName, extraMessage)
+        for class_name, test_name, extra_msg in test_failures:
+            details['failure_details'].append((class_name.strip(), test_name.strip(), extra_msg.strip()))
+
+        # 4) Detect test errors (similar approach, if needed)
+        # error_details = re.findall(r'(.*?) > (.*?) ERROR\s*(.*)', result_output)
+        # details['error_details'] = [(c.strip(), t.strip(), m.strip()) for c, t, m in error_details]
+
     else:
-        # TODO: Add logic for gradle and javac maybe
         raise NotImplementedError(f"Build tool '{build_tool}' not supported yet.")
 
     return details
