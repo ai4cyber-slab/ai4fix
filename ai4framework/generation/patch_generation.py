@@ -385,17 +385,25 @@ def copy_original_project_to_temp_directory(base_project_path, temp_dir):
 
 
 def update_build_env_vars(temp_dir_for_build_tool, build_tool):
+    env = os.environ.copy()
+
     if build_tool == 'maven':
-        env = os.environ.copy()
         env["MAVEN_OPTS"] = "-Xms512m -Xmx2048m"
         env["MAVEN_OPTS"] += f" -Djava.io.tmpdir={temp_dir_for_build_tool}"
+
+        # Also update common system temp vars
         env["TMPDIR"] = temp_dir_for_build_tool
         env["TEMP"] = temp_dir_for_build_tool
         env["TMP"] = temp_dir_for_build_tool
+
     elif build_tool == 'gradle':
-        env = os.environ.copy()
-        pass
-        # TODO: I should Add Gradle specific env vars
+        env["GRADLE_OPTS"] = "-Xms512m -Xmx2048m"
+        env["GRADLE_OPTS"] += f" -Djava.io.tmpdir={temp_dir_for_build_tool}"
+
+        env["TMPDIR"] = temp_dir_for_build_tool
+        env["TEMP"] = temp_dir_for_build_tool
+        env["TMP"] = temp_dir_for_build_tool
+
     return env
 
 
@@ -857,7 +865,7 @@ def process_warning_worker(args):
                 revert_test_content({'test_file_path': test_file_path, 'original_test_content': original_test_content})
         shutil.rmtree(temp_dir, ignore_errors=True)
         logger.info(f"Removed temporary directory: {temp_dir}")
-        if temp_dir_for_build_tool and build_tool == 'maven':
+        if temp_dir_for_build_tool:
             shutil.rmtree(temp_dir_for_build_tool, ignore_errors=True)
             logger.info(f"Removed process project directory: {temp_dir_for_build_tool}")
 
