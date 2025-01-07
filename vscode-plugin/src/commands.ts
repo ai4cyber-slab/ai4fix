@@ -1,21 +1,28 @@
-import { showDiff, showNotSupported } from "./webview";
-import {
-  readFileSync,
-  writeFileSync,
-  existsSync,
-  fstat,
-  access,
-  watch,
-  constants,
-  appendFileSync,
-  readdirSync,
-} from "fs";
 import * as vscode from "vscode";
+import * as logging from "./services/logging";
+import * as readline from 'readline';
+import * as child_process from 'child_process';
+import * as fakeAiFixCode from "./services/fakeAiFixCode";
+import { spawn } from "child_process";
+import { showDiff } from "./webview";
+import { TestView } from "./providers/testView";
+import { GroupedTestView } from "./providers/testViewGrouped";
+import { ExtendedWebview } from "./webview/extendedWebview";
+import { applyPatchToFile } from "./patch";
+import { refreshDiagnostics } from "./language/diagnostics";
+import { initActionCommands } from "./language/codeActions";
+import { analysisDiagnostics } from "./extension";
 import {
   getActiveDiffPanelWebview,
   getActiveDiffPanelWebviews,
 } from "./webview/store";
 import {
+  readFileSync,
+  writeFileSync,
+  appendFileSync,
+} from "fs";
+import {
+  CONFIG,
   ISSUES_PATH,
   TEST_FOLDER,
   PATCH_FOLDER,
@@ -25,37 +32,13 @@ import {
   SCRIPT_PATH,
   utf8Stream,
 } from "./constants";
-import { IChange, IFix, Iissue, IProjectAnalysis } from "./interfaces";
-import {
-  ExtendedWebview,
-  ExtendedWebviewEnv,
-  IExtendedWebviewEnvDiff,
-} from "./webview/extendedWebview";
-import { refreshDiagnostics } from "./language/diagnostics";
-import { TestView } from "./providers/testView";
-import { GroupedTestView } from "./providers/testViewGrouped";
-import { analysisDiagnostics } from "./extension";
-import * as fakeAiFixCode from "./services/fakeAiFixCode";
-import * as logging from "./services/logging";
-import { SymbolDisplayPartKind, WatchDirectoryFlags } from "typescript";
-import { basename, dirname } from "path";
-import { applyPatchToFile } from "./patch";
-import { getSafeFsPath } from "./path";
-import { initActionCommands } from "./language/codeActions";
-import * as child_process from 'child_process';
-import * as readline from 'readline';
-
-import * as cp from "child_process";
-import { spawn } from "child_process";
 
 
-const parseJson = require("parse-json");
-const parseDiff = require("parse-diff");
 const { applyPatchWithWhitespaceIgnore } = require('../utils/applyPatchWrapper');
 const diff = require("diff");
-var path = require("path");
-var upath = require("upath");
-var stringify = require("json-stringify");
+let path = require("path");
+let upath = require("upath");
+let stringify = require("json-stringify");
 
 let activeDiffPanelWebviews = getActiveDiffPanelWebviews();
 
@@ -194,6 +177,14 @@ export function init(
   context.subscriptions.push(
     vscode.commands.registerCommand("aifix4seccode-vscode.blank", blank),
     vscode.commands.registerCommand(
+      'aifix4seccode-vscode.patchIssuesNow',
+      patchIssuesNow
+    ),
+    vscode.commands.registerCommand(
+      'aifix4seccode-vscode.alwaysPatchIssues',
+      alwaysPatchIssues
+    ),
+    vscode.commands.registerCommand(
       "aifix4seccode-vscode.loadPatchFile",
       loadPatch
     ),
@@ -257,6 +248,43 @@ export function init(
     vscode.commands.executeCommand("setContext", "patchApplyEnabled", true);
   }
 
+  async function patchIssuesNow(item: { key: string }) {  
+    vscode.window.showInformationMessage(`Patching issues for ${item.key}...`);
+    try {
+        const issues = await fakeAiFixCode.getIssues2();
+        const issueType = issues[item.key];
+        if (!issueType) {
+            vscode.window.showWarningMessage(`No issues found for ${item.key}.`);
+            return;
+        }
+
+        for (const issueIndex in issueType) {
+            const issue = issueType[issueIndex];
+            for (const patchIndex in issue.patches) {
+                const patch = issue.patches[patchIndex];
+                // Using method from manual patch application
+                viewPatchFilesMode(patch.path);
+                console.log(`Applied patch: ${patch.path}`);
+            }
+        }
+
+        vscode.window.showInformationMessage(`All patches applied for ${item.key}.`);
+    } catch (error) {
+        vscode.window.showErrorMessage(`Error patching issues for ${item.key}: ${error}`);
+    }
+  }
+
+  async function alwaysPatchIssues(item: { key: string }) {
+    vscode.window.showInformationMessage(`Setting always patching for ${item.key}...`);
+    try {
+        // TODO
+        console.log("ALWAYS PATCHING:", item, item.key);
+        vscode.window.showInformationMessage(`Issues patched for ${item.key}.`);
+    } catch (error) {
+        vscode.window.showErrorMessage(`Error patching issues for ${item.key}: ${error}`);
+    }
+  }
+
   async function refreshAnalysisDiagnostics() {
     logging.LogInfo(
       "===== Executing refreshAnalysisDiagnostics command. ====="
@@ -318,9 +346,6 @@ export function init(
     }
   }
 
-
-
-
   async function getDiagnosticsAfterPatch() {
     logging.LogInfo("===== Analysis started from command. =====");
 
@@ -338,8 +363,6 @@ export function init(
 
   async function refreshDiagnosticsWithoutAnalysis() {
     let issuesPath = ISSUES_PATH;
-    let generatedPatchesPath = PATCH_FOLDER;
-    let subjectProjectPath = PROJECT_FOLDER;
     let jsonFilePaths: string[] = [];
   
     try {
@@ -650,7 +673,7 @@ export function init(
     vscode.workspace.openTextDocument(lastFilePath).then((document) => {
       vscode.window.showTextDocument(document).then(() => {
         if (ANALYZER_USE_DIFF_MODE == "view Diffs") {
-          var webview = getActiveDiffPanelWebview();
+          let webview = getActiveDiffPanelWebview();
           if ("patchPath" in webview.params) {
             const appliedPatchFilePath = path.normalize(webview.params.patchPath!);
   
@@ -668,7 +691,7 @@ export function init(
             });
           }
         } else if (ANALYZER_USE_DIFF_MODE == "view Patch files") {
-          var patchFilepath = path.normalize(
+          let patchFilepath = path.normalize(
             JSON.parse(context.workspaceState.get<string>("openedPatchPath")!)
           );
           // Update user decisions of the revert fix:
@@ -927,13 +950,11 @@ export function init(
 
   function startAnalyzingFileSync() {
     return new Promise<void>((resolve) => {
-      var currentFilePath = upath.normalize(
+      let currentFilePath = upath.normalize(
         vscode.window.activeTextEditor!.document.uri.path
       );
 
       let issuesPath = ISSUES_PATH;
-      let generatedPatchesPath = PATCH_FOLDER;
-      let subjectProjectPath = PROJECT_FOLDER;
 
       if (process.platform === "win32" && currentFilePath.startsWith("/")) {
         currentFilePath = currentFilePath.substring(1);
@@ -1150,7 +1171,7 @@ export function init(
         SetProjectFolder(vscode.workspace.workspaceFolders![0].uri.path);
       }
 
-      var patch = "";
+      let patch = "";
       try {
         patch = readFileSync(path.join(PATCH_FOLDER, patchPath), "utf8");
       } catch (err) {
@@ -1160,8 +1181,8 @@ export function init(
         );
       }
 
-      var sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patch);
-      var sourceFile: string;
+      let sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patch);
+      let sourceFile: string;
       if (sourceFileMatch && sourceFileMatch[1]) {
         sourceFile = sourceFileMatch[1];
       } else {
@@ -1171,8 +1192,8 @@ export function init(
         );
         throw Error("Unable to find source file in '" + patchPath + "'");
       }
-      var destinationFileMatch = /\+\+\+ ([^ \n\r\t]+).*/.exec(patch);
-      var destinationFile;
+      let destinationFileMatch = /\+\+\+ ([^ \n\r\t]+).*/.exec(patch);
+      let destinationFile;
       if (destinationFileMatch && destinationFileMatch[1]) {
         destinationFile = destinationFileMatch[1];
       } else {
@@ -1191,8 +1212,8 @@ export function init(
         }
       }
 
-      var original = readFileSync(sourceFile, "utf8");
-      var patched = applyPatchWithWhitespaceIgnore(original, patch);
+      let original = readFileSync(sourceFile, "utf8");
+      let patched = applyPatchWithWhitespaceIgnore(original, patch);
 
       if (!patched) {
         vscode.window.showErrorMessage(
@@ -1271,22 +1292,22 @@ export function init(
       SetProjectFolder(vscode.workspace.workspaceFolders![0].uri.path);
     }
 
-    var patch = "";
+    let patch = "";
     try {
       patch = readFileSync(PATCH_FOLDER + "/" + params.patchPath, "utf8");
     } catch (err) {
       logging.LogError(err as any);
     }
 
-    var sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patch);
-    var sourceFile: string;
+    let sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patch);
+    let sourceFile: string;
     if (sourceFileMatch && sourceFileMatch[1]) {
       sourceFile = sourceFileMatch[1];
     } else {
       throw Error("Unable to find source file in '" + params.patchPath + "'");
     }
-    var destinationFileMatch = /\+\+\+ ([^ \n\r\t]+).*/.exec(patch);
-    var destinationFile;
+    let destinationFileMatch = /\+\+\+ ([^ \n\r\t]+).*/.exec(patch);
+    let destinationFile;
     if (destinationFileMatch && destinationFileMatch[1]) {
       destinationFile = destinationFileMatch[1];
     } else {
@@ -1294,26 +1315,23 @@ export function init(
         "Unable to find destination file in '" + params.patchPath + "'"
       );
     }
-    var patched = diff.applyPatch(original, patch);
+    let patched = diff.applyPatch(original, patch);
     return patched;
   }
 
   async function applyPatch() {
     logging.LogInfo("===== Executing applyPatch command. =====");
-    let openFilePath
 
     if (ANALYZER_USE_DIFF_MODE == "view Diffs") {
-      let patchPath = "";
       const webview = getActiveDiffPanelWebview();
     
       if ("leftPath" in webview.params && "patchPath" in webview.params) {
         // Saving issues.json and file contents in state,
         // so later the changes can be reverted if the user asks for it:
-        if ("leftPath" in webview.params) {
-          logging.LogInfo("saveFileAndFixesToState RUNNING")
-          await saveFileAndFixesToState(webview.params.leftPath!);
-          logging.LogInfo("saveFileAndFixesToState RAN")
-        }
+        logging.LogInfo("Saving files and fixes to state...");
+        console.log("webview left path:", webview.params.leftPath);
+        await saveFileAndFixesToState(webview.params.leftPath!);
+        logging.LogInfo("Saving files and fixes to state DONE");
     
         // Update user decisions
         try {
@@ -1322,20 +1340,13 @@ export function init(
             webview.params.patchPath!,
             webview.params.leftPath!
           );
-    
+
           // Apply the patch
           webview.api.applyPatch();
 
-          openFilePath = vscode.Uri.file(
+          let openFilePath = vscode.Uri.file(
             upath.normalize(String(webview.params.leftPath))
           );
-    
-          let leftPath = upath.normalize(webview.params.leftPath);
-          if (!leftPath.includes(upath.normalize(String(PROJECT_FOLDER)))) {
-            openFilePath = vscode.Uri.file(
-              upath.join(PROJECT_FOLDER, leftPath)
-            );
-          }
     
           // Open and show the document
           const document = await vscode.workspace.openTextDocument(openFilePath);
@@ -1343,7 +1354,7 @@ export function init(
     
           // Filter out issues and update patch headers
           await filterOutIssues(webview.params.patchPath!);
-          await updateIssuesAfterPatch(webview.params.leftPath!, webview.params.patchPath!);
+          await updateIssueLinesAfterPatch(webview.params.leftPath!, webview.params.patchPath!);
     
           // Refresh diagnostics
           
@@ -1360,89 +1371,79 @@ export function init(
               false
             );
           }
-    
-          if ("patchPath" in webview.params && webview.params.patchPath) {
-            patchPath = webview.params.patchPath;
-          }
           await getDiagnosticsAfterPatch();
         } catch (error) {
           logging.LogErrorAndShowErrorMessage("Error during patch application:", error as any);
         }
       }
-      
 
     } else if (ANALYZER_USE_DIFF_MODE == "view Patch files") {
-      // 1. Get the content of the original file
-      // 2. Apply the patch to it's content.
-      // 3. Overwrite at the original file path with the patched content.
-      // 4. Hide navbar buttons (applyPatch, declinePatch, nextDiff, prevDiff).
-
-      // 1.
-      var patchFilepath = JSON.parse(
-        context.workspaceState.get<string>("openedPatchPath")!
-      );
-      var patchFileContent = readFileSync(
-        path.normalize(patchFilepath),
-        "utf8"
-      );
-      var sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patchFileContent);
-      var sourceFile: string;
-      if (sourceFileMatch && sourceFileMatch[1]) {
-        sourceFile = sourceFileMatch[1];
-      } else {
-        throw Error("Unable to find source file in '" + patchFilepath + "'");
-      }
-
-      let projectFolder = PROJECT_FOLDER;
-      sourceFile = upath.normalize(upath.join(PROJECT_FOLDER, sourceFile));
-      if (process.platform === "linux" || process.platform === "darwin") {
-        if (sourceFile[0] !== "/") {
-          sourceFile = "/" + sourceFile;
-        }
-      }
-      // Saving issupath.join(projectFolder, sourceFile)es.json and file contents in state,
-      // so later the changes can be reverted if user asks for it:
-      saveFileAndFixesToState(path.normalize(sourceFile));
-
-      var sourceFileContent = readFileSync(path.normalize(sourceFile), "utf8");
-
-      // 2.
-      var destinationFileMatch = /\+\+\+ ([^ \n\r\t]+).*/.exec(
-        patchFileContent
-      );
-      var destinationFile;
-      if (destinationFileMatch && destinationFileMatch[1]) {
-        destinationFile = destinationFileMatch[1];
-      } else {
-        throw Error(
-          "Unable to find destination file in '" + patchFilepath + "'"
-        );
-      }
-      var patched = diff.applyPatch(sourceFileContent, patchFileContent);
-
-      logging.LogInfo(patched);
-
-      // 3.
-      applyPatchToFile(path.normalize(sourceFile), patched, patchFilepath);
-
-      filterOutIssues(patchFilepath);
-
-      updateIssuesAfterPatch(sourceFile, patchFilepath);
-
-      await getDiagnosticsAfterPatch();
-
-      // 4.
-      vscode.commands.executeCommand("setContext", "patchApplyEnabled", false);
-      getOutputFromAnalyzerOfAFile();
-
+      viewPatchFilesMode();
     }
     //await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 
     await refreshDiagnosticsWithoutAnalysis();
   }
 
+  async function viewPatchFilesMode(patchPath: string = "") {
+    // Get the content of the original file
+    let patchFilepath;
+    if (!patchPath) {
+      patchFilepath = JSON.parse(
+        context.workspaceState.get<string>("openedPatchPath")!
+      );
+    } else {
+      patchFilepath = patchPath;
+    }
+    // console.log("OPENED PATCH PATH:", patchFilepath);
 
-  async function updateIssuesAfterPatch(sourceFilePath: string, patchFilePath: string) {
+    let patchFileContent = readFileSync(
+      path.normalize(patchFilepath),
+      "utf8"
+    );
+
+    let sourceFilePathMatch = /--- ([^ \n\r\t]+).*/.exec(patchFileContent);
+    let sourceFilePath: string;
+    if (sourceFilePathMatch && sourceFilePathMatch[1]) {
+      sourceFilePath = sourceFilePathMatch[1];
+    } else {
+      throw Error("Unable to find source file in '" + patchFilepath + "'");
+    }
+
+    sourceFilePath = upath.normalize(upath.join(PROJECT_FOLDER, sourceFilePath));
+    if (process.platform === "linux" || process.platform === "darwin") {
+      if (sourceFilePath[0] !== "/") {
+        sourceFilePath = "/" + sourceFilePath;
+      }
+    }
+    // Saving issues.json and file contents in state,
+    // so later the changes can be reverted if the user asks for it:
+    saveFileAndFixesToState(path.normalize(sourceFilePath));
+
+    let sourceFileContent = readFileSync(path.normalize(sourceFilePath), "utf8");
+
+    // Apply the patch to the original file
+    let patched = diff.applyPatch(sourceFileContent, patchFileContent);
+    logging.LogInfo(patched);
+
+    // Overwrite the original file with the patched content
+    if (patchPath) {
+      applyPatchToFile(path.normalize(sourceFilePath), patched, patchFilepath, true);
+    } else {
+      applyPatchToFile(path.normalize(sourceFilePath), patched, patchFilepath, false);
+    }
+
+    filterOutIssues(patchFilepath);
+    updateIssueLinesAfterPatch(sourceFilePath, patchFilepath);
+
+    await getDiagnosticsAfterPatch();
+
+    // Hide navbar buttons (applyPatch, declinePatch, nextDiff, prevDiff)
+    vscode.commands.executeCommand("setContext", "patchApplyEnabled", false);
+    getOutputFromAnalyzerOfAFile();
+  }
+
+  async function updateIssueLinesAfterPatch(sourceFilePath: string, patchFilePath: string) {
     const patchContent = readFileSync(upath.join(PATCH_FOLDER, patchFilePath), "utf8");
     
     // Parse the applied patch and compute line shifts
@@ -1635,7 +1636,7 @@ export function init(
           webview.params.leftPath!
         ).then(() => {
           if ("leftPath" in webview.params && "patchPath" in webview.params) {
-            var openFilePath = vscode.Uri.file(
+            let openFilePath = vscode.Uri.file(
               upath.normalize(String(webview.params.leftPath))
             );
             let projectFolder = PROJECT_FOLDER;
@@ -1685,12 +1686,12 @@ export function init(
     } else if (ANALYZER_USE_DIFF_MODE == "view Patch files") {
       // TODO: DO it with patch file
       let activeEditor = vscode.window.activeTextEditor!.document.uri.fsPath;
-      var patchFilepath = JSON.parse(
+      let patchFilepath = JSON.parse(
         context.workspaceState.get<string>("openedPatchPath")!
       );
-      var patchFileContent = readFileSync(patchFilepath, "utf8");
-      var sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patchFileContent);
-      var sourceFile: string;
+      let patchFileContent = readFileSync(patchFilepath, "utf8");
+      let sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patchFileContent);
+      let sourceFile: string;
       if (sourceFileMatch && sourceFileMatch[1]) {
         sourceFile = sourceFileMatch[1];
       } else {
@@ -1732,7 +1733,6 @@ export function init(
   async function filterOutIssues(patchPath: String) {
     await initIssues();
     if (issues) {
-      const webview = getActiveDiffPanelWebview();
       const currentFilePath = upath.normalize(
         vscode.window.activeTextEditor!.document.uri.path
       );
@@ -1762,9 +1762,11 @@ export function init(
     try {
       // Create the JSON file path
       const jsonFilePath = createJsonFilePath(currentFilePath);
+      // console.log("json path:", jsonFilePath);
       
       // Read the content of the JSON file
       const fileContent = await fs.readFile(jsonFilePath, 'utf-8');
+      // console.log("json content:", fileContent);
       
       // Parse the JSON content
       let jsonArray;
@@ -1779,10 +1781,13 @@ export function init(
       if (!Array.isArray(jsonArray)) {
         throw new Error('Parsed JSON is not an array');
       }
+
+      // console.log("json array:", jsonArray);
   
       // Filter out the object with the matching ID
       const updatedJsonArray = jsonArray.filter((item: any) => {
         if (item && item.id) {
+          console.log("Removed item:", item);
           return item.id !== id;
         } else {
           logging.LogErrorAndShowErrorMessage('Item does not have an id or is undefined:', item);
@@ -1792,6 +1797,7 @@ export function init(
   
       // Stringify the updated array
       const updatedContent = JSON.stringify(updatedJsonArray, null, 2);
+      // console.log("updated array:", updatedContent);
   
       // Write the updated content back to the JSON file
       await fs.writeFile(jsonFilePath, updatedContent, 'utf-8');
@@ -1810,11 +1816,16 @@ export function init(
   
 
   function createJsonFilePath(currentFilePath: string): string {
-    const SRC_PATH_INDEX = currentFilePath.indexOf('src');
-    const PROJECT_RELATIVE_PATH = path.relative(
-      path.dirname(PATCH_FOLDER),
-      currentFilePath
-    );
+    let PROJECT_RELATIVE_PATH;
+    if (path.isAbsolute(currentFilePath)) {
+      PROJECT_RELATIVE_PATH = path.relative(
+        path.dirname(PATCH_FOLDER),
+        currentFilePath
+      );
+    } else {
+      PROJECT_RELATIVE_PATH = currentFilePath;
+    }
+    
     const jsonFilePath = path.join(
       path.dirname(PATCH_FOLDER),
       'validation',
@@ -1822,21 +1833,22 @@ export function init(
       'jsons', // for some reason some path should be here otherwise the 'jsons' won't be included in the final jsonFilePath
       PROJECT_RELATIVE_PATH
     ) + '.json';
+    // console.log("json file path:" , jsonFilePath);
     return jsonFilePath;
   }
 
 async function saveFileAndFixesToState(filePath: string) {
   // Normalize the path correctly
-  let normalizedFilePath = filePath;
+  let normalizedFilePath;
 
   if (process.platform === "win32") {
     const driveLetterRegex = /^\/([a-zA-Z]):\//;
-    if (driveLetterRegex.test(normalizedFilePath)) {
-      normalizedFilePath = normalizedFilePath.replace(driveLetterRegex, (match, driveLetter) => {
+    if (driveLetterRegex.test(filePath)) {
+      normalizedFilePath = filePath.replace(driveLetterRegex, (match, driveLetter) => {
         return `${driveLetter.toUpperCase()}:\\`;
       });
-    } else if (/^[a-zA-Z]:/.test(normalizedFilePath) && normalizedFilePath.includes('/')) {
-      normalizedFilePath = upath.toUnix(normalizedFilePath).replace(driveLetterRegex, (match: any, driveLetter: string) => {
+    } else if (/^[a-zA-Z]:/.test(filePath) && filePath.includes('/')) {
+      normalizedFilePath = upath.toUnix(filePath).replace(driveLetterRegex, (match: any, driveLetter: string) => {
         return `${driveLetter.toUpperCase()}:\\`;
       });
     }
@@ -1848,21 +1860,20 @@ async function saveFileAndFixesToState(filePath: string) {
 
   let jsonFilePath = createJsonFilePath(normalizedFilePath);
 
-  var originalFileContent = readFileSync(normalizedFilePath, "utf8");
-  var originalIssuesContent = readFileSync(jsonFilePath, "utf8");
-    context.workspaceState.update(
-      "lastFileContent",
-      originalFileContent
-    );
-    context.workspaceState.update("lastFilePath", filePath);
+  let originalFileContent = readFileSync(normalizedFilePath, "utf8");
+  let originalIssuesContent = readFileSync(jsonFilePath, "utf8");
+  context.workspaceState.update(
+    "lastFileContent",
+    originalFileContent
+  );
+  context.workspaceState.update("lastFilePath", filePath);
 
-    context.workspaceState.update(
-      "lastIssuesContent",
-      JSON.stringify(originalIssuesContent)
-    );
-    context.workspaceState.update("lastIssuesPath", jsonFilePath);
-    logging.LogInfo(filePath);
-  }
+  context.workspaceState.update(
+    "lastIssuesContent",
+    JSON.stringify(originalIssuesContent)
+  );
+  context.workspaceState.update("lastIssuesPath", jsonFilePath);
+}
 
   let currentFixId = 0;
 
@@ -1909,18 +1920,18 @@ async function saveFileAndFixesToState(filePath: string) {
       }
       currentFixId = nextFixId;
     } else if (ANALYZER_USE_DIFF_MODE == "view Patch files") {
-      var patchFilepath = JSON.parse(
+      let patchFilepath = JSON.parse(
         context.workspaceState.get<string>("openedPatchPath")!
       );
-      var patchFileContent = readFileSync(patchFilepath, "utf8");
-      var sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patchFileContent);
-      var sourceFile: string;
+      let patchFileContent = readFileSync(patchFilepath, "utf8");
+      let sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patchFileContent);
+      let sourceFile: string;
       if (sourceFileMatch && sourceFileMatch[1]) {
         sourceFile = sourceFileMatch[1];
       } else {
         throw Error("Unable to find source file in '" + patchFilepath + "'");
       }
-      var leftPath = upath.normalize(upath.join(PROJECT_FOLDER, sourceFile));
+      let leftPath = upath.normalize(upath.join(PROJECT_FOLDER, sourceFile));
       if (process.platform === "linux" || process.platform === "darwin") {
         if (leftPath[0] !== "/") leftPath = "/" + leftPath;
       }
@@ -1985,7 +1996,7 @@ async function saveFileAndFixesToState(filePath: string) {
       outputFolder = vscode.workspace.workspaceFolders![0].uri.path;
     }
 
-    var patch = "";
+    let patch = "";
     try {
       patch = readFileSync(
         upath.normalize(upath.join(outputFolder, patchPath)),
@@ -1994,8 +2005,8 @@ async function saveFileAndFixesToState(filePath: string) {
     } catch (err) {
       logging.LogError(err as any);
     }
-    var sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patch);
-    var sourceFile: string;
+    let sourceFileMatch = /--- ([^ \n\r\t]+).*/.exec(patch);
+    let sourceFile: string;
     if (sourceFileMatch && sourceFileMatch[1]) {
       sourceFile = sourceFileMatch[1];
     } else {
@@ -2009,7 +2020,7 @@ async function saveFileAndFixesToState(filePath: string) {
       }
     }
 
-    var original = readFileSync(sourceFile, "utf8");
+    let original = readFileSync(sourceFile, "utf8");
     return original;
   }
 
@@ -2019,20 +2030,20 @@ async function saveFileAndFixesToState(filePath: string) {
       outputFolder = vscode.workspace.workspaceFolders![0].uri.path;
     }
 
-    var patch = "";
+    let patch = "";
     try {
       patch = readFileSync(outputFolder + "/" + patchPath, "utf8");
     } catch (err) {
       logging.LogError(err as any);
     }
-    var destinationFileMatch = /\+\+\+ ([^ \n\r\t]+).*/.exec(patch);
-    var destinationFile;
+    let destinationFileMatch = /\+\+\+ ([^ \n\r\t]+).*/.exec(patch);
+    let destinationFile;
     if (destinationFileMatch && destinationFileMatch[1]) {
       destinationFile = destinationFileMatch[1];
     } else {
       throw Error("Unable to find destination file in '" + patchPath + "'");
     }
-    var patched = diff.applyPatch(original, patch);
+    let patched = diff.applyPatch(original, patch);
 
     return patched;
   }

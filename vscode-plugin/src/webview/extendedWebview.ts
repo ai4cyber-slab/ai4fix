@@ -1,18 +1,16 @@
-import { join } from 'path';
 import { API } from './api';
 import { log } from '../logger';
-import { appendFileSync, fstat, readFileSync, writeFileSync } from 'fs';
-import { utf8Stream, UNSAVED_SYMBOL } from '../constants';
-import { commands, ExtensionContext, Uri, WebviewPanel } from 'vscode';
-import { getTitle, ensureDirectoryExistence } from './utils';
-import { consoleTestResultHandler } from 'tslint/lib/test';
-import { updateUserDecisions } from '../commands';
-import { getSafeFsPath } from '../path';
-import { PATCH_FOLDER, PROJECT_FOLDER } from '../constants';
+import { join } from 'path';
 import { Guid } from './guid';
+import { PATCH_FOLDER } from '../constants';
+import { getSafeFsPath } from '../path';
+import { updateUserDecisions } from '../commands';
+import { utf8Stream, UNSAVED_SYMBOL } from '../constants';
+import { readFileSync, writeFileSync } from 'fs';
+import { getTitle, ensureDirectoryExistence } from './utils';
+import { ExtensionContext, Uri, WebviewPanel } from 'vscode';
 
 var path = require('path');
-var fs = require('fs');
 
 interface IExtendedWebviewEnvContentOnly {
   content: string;
@@ -143,28 +141,28 @@ export class ExtendedWebview {
           this.setPanelTitleDraft();
           break;
         case 'save':
-          let sevent = e as SaveEvent;
-          if('rightContent' in this.params && 'leftPath' in this.params && 'patchPath' in this.params){
-          if(sevent.contents.right.replace(/\r\n/g, "\n") === this.params.rightContent.replace(/\r\n/g, "\n"))
-          {
-            // //No manual change
-            // updateUserDecisions('applied', this.params.patchPath!, this.params.leftPath!);
-          } else {
-            //Manual change
-            let guid = Guid.newGuid();
-            let outpath = getSafeFsPath(path.join(PATCH_FOLDER, 'manualpatches', this.params.leftPath!.replace(/^.*[\\\/]/, '')));
-            let safeoutpath = outpath.split('.')[0] + "_" + guid + "." + outpath.split('.')[1];
-            ensureDirectoryExistence(safeoutpath);
-            updateUserDecisions('applied-with-manual-changes [' + safeoutpath + ']', this.params.patchPath!, this.params.leftPath!);
-            
-            writeFileSync(safeoutpath, this.params.rightContent, {
-              encoding: 'utf8',
-              flag: "w+"
-            });
-            console.log("Manual changes detected and the patch saved to: " + safeoutpath + "!");
+          let saveEvent = e as SaveEvent;
+          if('rightContent' in this.params && 'leftPath' in this.params && 'patchPath' in this.params) {
+            if(saveEvent.contents.right.replace(/\r\n/g, "\n") === this.params.rightContent.replace(/\r\n/g, "\n"))
+            {
+              // //No manual change
+              // updateUserDecisions('applied', this.params.patchPath!, this.params.leftPath!);
+            } else {
+              //Manual change
+              let guid = Guid.newGuid();
+              let outpath = getSafeFsPath(path.join(PATCH_FOLDER, 'manualpatches', this.params.leftPath!.replace(/^.*[\\\/]/, '')));
+              let safeoutpath = outpath.split('.')[0] + "_" + guid + "." + outpath.split('.')[1];
+              ensureDirectoryExistence(safeoutpath);
+              updateUserDecisions('applied-with-manual-changes [' + safeoutpath + ']', this.params.patchPath!, this.params.leftPath!);
+              
+              writeFileSync(safeoutpath, this.params.rightContent, {
+                encoding: 'utf8',
+                flag: "w+"
+              });
+              console.log("Manual changes detected and the patch saved to: " + safeoutpath + "!");
+            }
           }
-        }
-          this.onSave(sevent);
+          this.onSave(saveEvent);
           break;
         default:
           if (this._listener) {

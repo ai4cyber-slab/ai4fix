@@ -1,17 +1,16 @@
-import * as vscode from "vscode";
-import { IFix } from "../interfaces";
 import * as path from "path";
-import { getIssues,getIssues2 } from "../services/fakeAiFixCode";
-import { objectify } from "tslint/lib/utils";
-import { isObjectLiteralExpression } from "typescript";
-import { writeFileSync } from "fs";
-import { ISSUE, utf8Stream, ISSUES_PATH } from "../constants";
+import * as vscode from "vscode";
+import { getIssues2 } from "../services/fakeAiFixCode";
+
+
 var stringify = require("json-stringify");
 
 let tree: any;
 
 export class TestView {
+
   public treeDataProvider: NodeWithIdTreeDataProvider | undefined;
+
   constructor(context: vscode.ExtensionContext) {
     initTree().then(() => {
       this.treeDataProvider = new NodeWithIdTreeDataProvider();
@@ -19,8 +18,10 @@ export class TestView {
         treeDataProvider: this.treeDataProvider,
         showCollapseAll: true,
       });
+
       context.subscriptions.push(view);
-      try{
+
+      try {
         vscode.commands.registerCommand("testView.reveal", async () => {
           const key = await vscode.window.showInputBox({
             placeHolder: "Type the label of the item to reveal",
@@ -32,7 +33,8 @@ export class TestView {
             );
           }
         });
-      }catch{}
+      } catch {}
+
       try{
         vscode.commands.registerCommand("testView.changeTitle", async () => {
           const title = await vscode.window.showInputBox({
@@ -43,9 +45,10 @@ export class TestView {
             view.title = title;
           }
         });
-      }catch{}
+      } catch {}
     });
   }
+
 }
 
 async function initTree() {
@@ -99,7 +102,7 @@ function deleteDuplicateKeys(_key: any) {
 let nodes: string[] = [];
 let counter = 1;
 
-class NodeWithIdTreeDataProvider
+export class NodeWithIdTreeDataProvider
   implements vscode.TreeDataProvider<{ key: string }>
 {
   private _onDidChangeTreeData: vscode.EventEmitter<
@@ -119,6 +122,7 @@ class NodeWithIdTreeDataProvider
   getTreeItem(element: { key: string }): vscode.TreeItem {
     const treeItem = getTreeItem(element.key);
     treeItem.id = (++counter).toString();
+    treeItem.contextValue = 'testItem';
     return treeItem;
   }
 
