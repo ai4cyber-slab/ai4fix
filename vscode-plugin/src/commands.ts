@@ -716,15 +716,16 @@ export function init(
     issuesJsonPaths.forEach(jsonPath => {
       const jsonContent = readFileSync(jsonPath, 'utf8');
       const issues = JSON.parse(jsonContent);
-  
-      const appliedPatchContent = readFileSync(upath.join(PATCH_FOLDER, appliedPatchFilePath), 'utf8');
+      
+      const appliedPatchContent = readFileSync(appliedPatchFilePath, 'utf8');
+      
       const appliedParsedPatch = diff.parsePatch(appliedPatchContent);
       const appliedLineShifts = computeLineShifts(appliedParsedPatch);
   
       issues.forEach((issue: any) => {
         issue.items.forEach((item: any) => {
           item.patches.forEach((patch: any) => {
-            const patchFilePath = upath.join(PATCH_FOLDER, patch.path);
+            const patchFilePath =  patch.path;
   
             // Skip the patch that was just undone
             if (patch.path === appliedPatchFilePath) {
@@ -1028,8 +1029,7 @@ export function init(
         const patchPath = patchPathOrIssue;
         let patch = "";
         try {
-          logging.LogInfo("Reading patch from " + PATCH_FOLDER + "/" + patchPath);
-          patch = readFileSync(upath.join(PATCH_FOLDER, patchPath), "utf8");
+          patch = readFileSync(patchPath, "utf8");
         } catch (err) {
           logging.LogErrorAndShowErrorMessage(
             String(err),
@@ -1173,7 +1173,7 @@ export function init(
 
       let patch = "";
       try {
-        patch = readFileSync(path.join(PATCH_FOLDER, patchPath), "utf8");
+        patch = readFileSync(patchPath, "utf8");
       } catch (err) {
         logging.LogErrorAndShowErrorMessage(
           String(err),
@@ -1273,11 +1273,11 @@ export function init(
       // ==== LOAD PATCH IN "view Patch files" MODE: ====
     } else if (ANALYZER_USE_DIFF_MODE == "view Patch files") {
       vscode.workspace
-        .openTextDocument(path.join(PATCH_FOLDER, patchPath))
+        .openTextDocument(PATCH_FOLDER)
         .then((document) => {
           context.workspaceState.update(
             "openedPatchPath",
-            JSON.stringify(path.join(PATCH_FOLDER, patchPath))
+            JSON.stringify(patchPath)
           );
           vscode.window.showTextDocument(document);
         });
