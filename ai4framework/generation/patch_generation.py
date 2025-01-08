@@ -730,7 +730,7 @@ def process_warning_worker(args):
                 logger.error(f"Error reading file {full_file_path}: {e}")
                 continue
 
-            max_attempts = 3
+            max_attempts = 2
             attempt = 0
             previous_generated_patch = None
             test_file_path, status, original_test_content = None, False, None
@@ -777,7 +777,7 @@ def process_warning_worker(args):
                         logger.error(f"Error while restoring original content to {full_file_path}: {e}")
                     continue
                 else:
-                    local_stats['passed'] = True
+                    local_stats['applicable_patch'] = True
 
                 full_import = derive_full_import_from_path(file_path=full_file_path)
                 test_file_path, status, original_test_content = generate_test_file(
@@ -1028,7 +1028,7 @@ class PatchGenerator:
             self.warnings_dict[name] -= 1
 
         self.stats['total_attempts'] += res.get('total_attempts', 0)
-        if res.get('passed', False):
+        if res.get('validation_passed', False):
             self.successful_patches += 1
         if not res.get('validation_passed', True):
             self.validation_errors += 1
