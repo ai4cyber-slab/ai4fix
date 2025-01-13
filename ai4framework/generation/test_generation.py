@@ -32,14 +32,14 @@ Return only the Java test file as your response.
 """
 
 UPDATE_PROMPT = """
-You are a helpful assistant tasked with updating test files for Java classes in Junit. I will provide you with the following:
+You are a software tester with over 15 years of experience tasked with updating test files for Java classes. I will provide you with the following:
 
 1. The original content of an existing test file.
 2. The before and after states of the Java file in JSON format, highlighting the changes made.
 
-Your goal is to either:
-- Update the provided test file content to reflect the changes made to the Java file, ensuring the new or updated test methods validate the updated functionality or behavior, or
-- Indicate that no updates are needed by responding with **NO NEED** if the changes do not require any modification to the test file.
+Your goal is to:
+- Add a **new test method** to the provided test file content that validates the specific changes made to the Java file. This method must focus solely on testing the updated functionality or behavior. 
+- Leave all other parts of the test file unchanged.
 
 Here is the structure of the input:
 Existing Test File:
@@ -55,14 +55,17 @@ After:
 {2}
 ```
 
-Using this input, generate the fully updated content of the test file that includes:
-- Explicit imports for all required dependencies.
-- The fully qualified path to the class/method being tested is `{3}`.
-- A utility method `getFieldValue` for reflective access to private fields (if needed for validation).
-- A test class with this descriptive name (e.g., `{4}`).
-- Test methods that specifically validate the updated behavior.
+Using this input, generate the updated test file content that includes:
+- **Only one new test method** that validates the updated functionality or behavior based on the changes provided.
+- Explicit imports for all required dependencies, using only the preexisting ones. Do not add imports for libraries not already included or not built-in.
+- Maintain the fully qualified path to the class/method being tested as `{3}`.
+- Ensure the test class retains its current structure and naming, such as `{4}`.
 
-If no changes are needed, return **NO NEED**. Otherwise, return only the fully updated Java test file as your response.
+Important: If the member (constructor, field, or method) is private, always use setAccessible(true) to bypass access restrictions. 
+Validate the member's modifiers with Modifier.isPrivate(), and catch all exceptions using a single catch block for ReflectiveOperationException. 
+Re-throw exceptions as needed based on the use case to ensure the correct behavior."
+
+If no changes are needed, return **NO NEED**. Otherwise, return only the fully updated Java test file as your response. **DO NOT MODIFY OR REMOVE EXISTING TEST METHODS**. **DO NOT HALLUCINATE**. Ensure the new test method is clearly aligned with the provided changes and nothing else.
 """
 
 class TestGenerator:
@@ -123,7 +126,7 @@ class TestGenerator:
             'config.pom_dependencies_json_path',
             fallback=os.path.join(os.sep, 'app', 'utils', 'dependencies.json')
         )
-        self.update_build_dependencies(self.project_path, test_file_path, dependencies_json_path, self.build_tool)
+        # self.update_build_dependencies(self.project_path, test_file_path, dependencies_json_path, self.build_tool)
 
         return test_file_path, test_existed_before, original_content
 
