@@ -177,7 +177,7 @@ export class Analyzer implements vscode.CodeActionProvider {
                         }
 
                         try {
-                            patch = readFileSync(upath.join(patch_folder, patchPath), "utf8");
+                            patch = readFileSync(patchPath, "utf8");
                         } catch (err) {
                             console.log(err);
                         }
