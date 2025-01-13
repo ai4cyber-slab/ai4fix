@@ -373,13 +373,6 @@ def get_prompt(explanation, startLine, endLine, attempt, previous_generated_patc
     return prompt
 
 
-def create_unique_temp_directory(warning):
-    temp_dir = tempfile.mkdtemp(prefix=f"patch_{warning['id']}_")
-    process_project_directory_core = temp_dir
-    temp_dir_for_build_tool = tempfile.mkdtemp(prefix=f"patch_{warning['id']}")
-    return temp_dir, process_project_directory_core, temp_dir_for_build_tool
-
-
 def copy_original_project_to_temp_directory(base_project_path, temp_dir):
     shutil.copytree(base_project_path, temp_dir, dirs_exist_ok=True)
 
@@ -697,165 +690,167 @@ def process_warning_worker(args):
     }
 
     try:
-        temp_dir, process_project_directory_core, temp_dir_for_build_tool = create_unique_temp_directory(warning)
-        copy_original_project_to_temp_directory(base_project_path, temp_dir)
-        env = update_build_env_vars(temp_dir_for_build_tool, build_tool)
-        local_config = copy.deepcopy(config_data)
-        local_config.set('DEFAULT', 'config.project_root', temp_dir)
-        test_generator = TestGenerator(temp_dir, local_config)
-        sast = SASTOrchestrator(local_config)
-        symbolic = SymbolicExecution(local_config)
-        mutable_warnings = warning_dict.copy()
+        with tempfile.TemporaryDirectory(prefix=f"patch_{warning['id']}_") as temp_dir, tempfile.TemporaryDirectory(prefix=f"patch_{warning['id']}_build_") as temp_dir_for_build_tool:
+            process_project_directory_core = temp_dir
+            shutil.copytree(base_project_path, temp_dir, dirs_exist_ok=True)
+            
+            env = update_build_env_vars(temp_dir_for_build_tool, build_tool)
+            local_config = copy.deepcopy(config_data)
+            local_config.set('DEFAULT', 'config.project_root', temp_dir)
+            test_generator = TestGenerator(temp_dir, local_config)
+            sast = SASTOrchestrator(local_config)
+            symbolic = SymbolicExecution(local_config)
+            mutable_warnings = warning_dict.copy()
 
 
-        explanation = warning['explanation']
-        items = warning['items']
-        name = warning['name']
-        tag = warning['tags']
+            explanation = warning['explanation']
+            items = warning['items']
+            name = warning['name']
+            tag = warning['tags']
 
-        for item in items:
-            textrange = item['textrange']
-            file_path = textrange['file']
-            startLine = textrange['startLine']
-            endLine = textrange['endLine']
+            for item in items:
+                textrange = item['textrange']
+                file_path = textrange['file']
+                startLine = textrange['startLine']
+                endLine = textrange['endLine']
 
-            full_file_path = os.path.join(temp_dir, file_path)
-            code_in_json_format = code_file_to_json(full_file_path)
-            initial_content = ""
-            try:
-                with open(full_file_path, 'r') as f:
-                    file_content = f.readlines()
-                    initial_content = ''.join(file_content)
-            except Exception as e:
-                logger.error(f"Error reading file {full_file_path}: {e}")
-                continue
-
-            max_attempts = 2
-            attempt = 0
-            previous_generated_patch = None
-            test_file_path, status, original_test_content = None, False, None
-
-            SOLVE_COMMAND = ALL_WARNINGS.get(name, explanation)
-            METHOD_INFO, METHOD_START, METHOD_END = get_method_info_if_any(code_in_json_format, startLine, endLine)
-            adjusted_start_line = int(startLine) - 5
-            adjusted_end_line = int(endLine) + 5
-            if f"Line:{adjusted_start_line}" in code_in_json_format and f"Line:{adjusted_end_line}" in code_in_json_format:
-                extract_json_section = extracted_section(code_in_json_format, f"Line:{adjusted_start_line}", f"Line:{adjusted_end_line}")
-            else:
-                extract_json_section = extracted_section(code_in_json_format, f"Line:{startLine}", f"Line:{endLine}")
-
-            if METHOD_START and METHOD_END:
-                extract_json_section = extracted_section(code_in_json_format, f"Line:{METHOD_START}", f"Line:{METHOD_END}")
-
-            while attempt < max_attempts:
-                attempt += 1
-                local_stats['total_attempts'] += 1
-                logger.info(f"Process {os.getpid()} - Attempt {attempt} for warning ID {warning['id']}...")
-
-                prompt = get_prompt(explanation, startLine, endLine, attempt, previous_generated_patch, SOLVE_COMMAND, extract_json_section)
-
-                os.makedirs(diffs_output_dir, exist_ok=True)
-
-                response = call_ai_with_retries_worker(provider, model_name, api_key, prompt, config_data)
-                if response is None:
-                    logger.error(f"Failed to get AI response for warning ID {warning['id']} on attempt {attempt}.")
-                    continue
-
-                generated_patch = extract_patch_from_response_worker(response['message'])
-                previous_generated_patch = generated_patch
-                local_stats['input_tokens'].append(response.get('input_tokens', 0))
-                local_stats['response_tokens'].append(response.get('output_tokens', 0))
-
-                update_success = update_java_file_worker(full_file_path, extract_json_section, generated_patch)
-                if not update_success:
-                    local_stats['applicable_patch'] = False
-                    try:
-                        with open(full_file_path, 'w') as f:
-                            f.write(initial_content)
-                        logger.debug(f"Reverted patch in {full_file_path} due to unsuccessful patch application.")
-                    except Exception as e:
-                        logger.error(f"Error while restoring original content to {full_file_path}: {e}")
-                    continue
-                else:
-                    local_stats['applicable_patch'] = True
-
-                full_import = derive_full_import_from_path(file_path=full_file_path)
-                test_file_path, status, original_test_content = generate_test_file(
-                    java_file_path=full_file_path,
-                    updated_section=generated_patch,
-                    full_import=full_import,
-                    test_generator=test_generator,
-                    initial_section=extract_json_section
-                )
-
-                if test_file_path and os.path.exists(test_file_path):
-                    try:
-                        with open(test_file_path, 'r') as f:
-                            original_test_content = f.read()
-                            logger.debug(f"Saved original content for existing test file: {test_file_path}")
-                    except Exception as e:
-                        logger.error(f"Error reading original test file content: {e}")
-
-                logger.info(f"Process {os.getpid()} - Running '{build_tool} test' for warning ID {warning['id']}...")
-                output = run_tests_and_collect_output(build_tool, process_project_directory_core, env)
-                decisions = validate_test_and_patch(test_file_path, output, build_tool)
-                context = {
-                    'test_file_path': test_file_path,
-                    'original_test_content': original_test_content,
-                    'initial_content': initial_content,
-                    'full_file_path': full_file_path,
-                    'file_path': file_path,
-                    'build_tool': build_tool,
-                    'name': name,
-                    'tag': tag,
-                    'sast': sast,
-                    'symbolic': symbolic,
-                    'mutable_warnings': mutable_warnings,
-                    'local_stats': local_stats,
-                    'attempt': attempt,
-                    'max_attempts': max_attempts,
-                    'env': env,
-                    'process_project_directory_core': process_project_directory_core,
-                    'diffs_output_dir': diffs_output_dir,
-                    'warning_id': warning['id'],
-                    'decisions': decisions,
-                    'status': status
-                }
-
-                compilation_result = handle_compilation_error(context)
-
-                if compilation_result is True:
-                    break
-                elif compilation_result is False:
-                    continue
-
-                if decisions.get('build_success', False):
-                    validation_result = handle_build_success(context)
-                    if validation_result is True:
-                        break
-                    elif validation_result is False:
-                        continue
-                else:
-                    test_failure_result = handle_test_failures(context)
-                    if test_failure_result is True:
-                        break
-                    elif test_failure_result is False:
-                        continue
-
-            if test_file_path and os.path.exists(test_file_path):
+                full_file_path = os.path.join(temp_dir, file_path)
+                code_in_json_format = code_file_to_json(full_file_path)
+                initial_content = ""
                 try:
-                    project_path = os.environ.get('PROJECT_PATH')
-                    if project_path:
-                        relative_test_path = os.path.relpath(test_file_path, temp_dir)
-                        new_test_path = os.path.join(project_path, '.ai4framework', 'tests', warning['id'], relative_test_path)
-                        os.makedirs(os.path.dirname(new_test_path), exist_ok=True)
-                        shutil.move(test_file_path, new_test_path)
-                        local_stats['test_file_path'] = new_test_path
-                        logger.debug(f"Moved test file from {test_file_path} to {new_test_path}")
+                    with open(full_file_path, 'r') as f:
+                        file_content = f.readlines()
+                        initial_content = ''.join(file_content)
                 except Exception as e:
-                    logger.error(f"Error moving test file to project path: {e}")
-            else:
-                logger.debug("Test file not moved because it does not exist.")
+                    logger.error(f"Error reading file {full_file_path}: {e}")
+                    continue
+
+                max_attempts = 2
+                attempt = 0
+                previous_generated_patch = None
+                test_file_path, status, original_test_content = None, False, None
+
+                SOLVE_COMMAND = ALL_WARNINGS.get(name, explanation)
+                METHOD_INFO, METHOD_START, METHOD_END = get_method_info_if_any(code_in_json_format, startLine, endLine)
+                adjusted_start_line = int(startLine) - 5
+                adjusted_end_line = int(endLine) + 5
+                if f"Line:{adjusted_start_line}" in code_in_json_format and f"Line:{adjusted_end_line}" in code_in_json_format:
+                    extract_json_section = extracted_section(code_in_json_format, f"Line:{adjusted_start_line}", f"Line:{adjusted_end_line}")
+                else:
+                    extract_json_section = extracted_section(code_in_json_format, f"Line:{startLine}", f"Line:{endLine}")
+
+                if METHOD_START and METHOD_END:
+                    extract_json_section = extracted_section(code_in_json_format, f"Line:{METHOD_START}", f"Line:{METHOD_END}")
+
+                while attempt < max_attempts:
+                    attempt += 1
+                    local_stats['total_attempts'] += 1
+                    logger.info(f"Process {os.getpid()} - Attempt {attempt} for warning ID {warning['id']}...")
+
+                    prompt = get_prompt(explanation, startLine, endLine, attempt, previous_generated_patch, SOLVE_COMMAND, extract_json_section)
+
+                    os.makedirs(diffs_output_dir, exist_ok=True)
+
+                    response = call_ai_with_retries_worker(provider, model_name, api_key, prompt, config_data)
+                    if response is None:
+                        logger.error(f"Failed to get AI response for warning ID {warning['id']} on attempt {attempt}.")
+                        continue
+
+                    generated_patch = extract_patch_from_response_worker(response['message'])
+                    previous_generated_patch = generated_patch
+                    local_stats['input_tokens'].append(response.get('input_tokens', 0))
+                    local_stats['response_tokens'].append(response.get('output_tokens', 0))
+
+                    update_success = update_java_file_worker(full_file_path, extract_json_section, generated_patch)
+                    if not update_success:
+                        local_stats['applicable_patch'] = False
+                        try:
+                            with open(full_file_path, 'w') as f:
+                                f.write(initial_content)
+                            logger.debug(f"Reverted patch in {full_file_path} due to unsuccessful patch application.")
+                        except Exception as e:
+                            logger.error(f"Error while restoring original content to {full_file_path}: {e}")
+                        continue
+                    else:
+                        local_stats['applicable_patch'] = True
+
+                    full_import = derive_full_import_from_path(file_path=full_file_path)
+                    test_file_path, status, original_test_content = generate_test_file(
+                        java_file_path=full_file_path,
+                        updated_section=generated_patch,
+                        full_import=full_import,
+                        test_generator=test_generator,
+                        initial_section=extract_json_section
+                    )
+
+                    if test_file_path and os.path.exists(test_file_path):
+                        try:
+                            with open(test_file_path, 'r') as f:
+                                original_test_content = f.read()
+                                logger.debug(f"Saved original content for existing test file: {test_file_path}")
+                        except Exception as e:
+                            logger.error(f"Error reading original test file content: {e}")
+
+                    logger.info(f"Process {os.getpid()} - Running '{build_tool} test' for warning ID {warning['id']}...")
+                    output = run_tests_and_collect_output(build_tool, process_project_directory_core, env)
+                    decisions = validate_test_and_patch(test_file_path, output, build_tool)
+                    context = {
+                        'test_file_path': test_file_path,
+                        'original_test_content': original_test_content,
+                        'initial_content': initial_content,
+                        'full_file_path': full_file_path,
+                        'file_path': file_path,
+                        'build_tool': build_tool,
+                        'name': name,
+                        'tag': tag,
+                        'sast': sast,
+                        'symbolic': symbolic,
+                        'mutable_warnings': mutable_warnings,
+                        'local_stats': local_stats,
+                        'attempt': attempt,
+                        'max_attempts': max_attempts,
+                        'env': env,
+                        'process_project_directory_core': process_project_directory_core,
+                        'diffs_output_dir': diffs_output_dir,
+                        'warning_id': warning['id'],
+                        'decisions': decisions,
+                        'status': status
+                    }
+
+                    compilation_result = handle_compilation_error(context)
+
+                    if compilation_result is True:
+                        break
+                    elif compilation_result is False:
+                        continue
+
+                    if decisions.get('build_success', False):
+                        validation_result = handle_build_success(context)
+                        if validation_result is True:
+                            break
+                        elif validation_result is False:
+                            continue
+                    else:
+                        test_failure_result = handle_test_failures(context)
+                        if test_failure_result is True:
+                            break
+                        elif test_failure_result is False:
+                            continue
+
+                if test_file_path and os.path.exists(test_file_path): # TODO: Update to check validation later
+                    try:
+                        project_path = os.environ.get('PROJECT_PATH')
+                        if project_path:
+                            relative_test_path = os.path.relpath(test_file_path, temp_dir)
+                            new_test_path = os.path.join(project_path, '.ai4framework', 'tests', warning['id'], relative_test_path)
+                            os.makedirs(os.path.dirname(new_test_path), exist_ok=True)
+                            shutil.move(test_file_path, new_test_path)
+                            local_stats['test_file_path'] = new_test_path
+                            logger.debug(f"Moved test file from {test_file_path} to {new_test_path}")
+                    except Exception as e:
+                        logger.error(f"Error moving test file to project path: {e}")
+                else:
+                    logger.debug("Test file not moved because it does not exist.")
 
     except Exception as e:
         logger.error(f"Process {os.getpid()} - Unexpected error processing warning ID {warning['id']}: {e}")
