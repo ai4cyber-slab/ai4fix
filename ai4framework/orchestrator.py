@@ -24,22 +24,23 @@ class WorkflowFramework:
     of a software project.
     """
 
-    def __init__(self, commit_sha, skip_patches=False, sast_rerun=False, automatic_application=False):
+    def __init__(self, commit_sha, skip_patches=False, sast_rerun=False, automatic_application=False, single_file=None):
         try:
             self.config = ConfigManager.get_config(commit_sha)
         except Exception as e:
             logger.error(f"Please create and fill correctly your config.properties file and set it under the root of your project. To fix: {e}")
             sys.exit(1)
         try:
+            self.single_file = single_file
             self.sast_rerun = sast_rerun
             self.skip_patches = skip_patches
             self.automatic_application = automatic_application
 
-            self.sast = SASTOrchestrator(self.config)
+            self.sast = SASTOrchestrator(self.config, self.single_file)
             self.security_classifier = SecurityClassifier(self.config)
-            self.symbolic_execution = SymbolicExecution(self.config)
-            self.issues_merger = JSONCombiner(self.config)
-            self.json_converter = JsonPluginConverter(self.config)
+            self.symbolic_execution = SymbolicExecution(self.config, self.single_file)
+            self.issues_merger = JSONCombiner(self.config, single_file=self.single_file)
+            self.json_converter = JsonPluginConverter(self.config, single_file=self.single_file)
             signal.signal(signal.SIGINT, self.handle_signal)
             signal.signal(signal.SIGTERM, self.handle_signal)
             logger.info("Signal handlers for SIGINT and SIGTERM registered.")
@@ -53,6 +54,8 @@ class WorkflowFramework:
 
         try:
             rounds_count = int(self.config.get("DEFAULT", "config.rounds_count", fallback=1))
+            if self.single_file:
+                rounds_count = 1
             logger.info(f"Rounds count: {rounds_count}")
 
             for i in range(1, rounds_count + 1):
@@ -68,7 +71,7 @@ class WorkflowFramework:
                     logger.info("Issues merger run completed")
 
                     if not self.skip_patches and not self.sast_rerun:
-                        patch_generator = PatchGenerator(self.config, warnings_dict_original, i)
+                        patch_generator = PatchGenerator(self.config, warnings_dict_original, i, single_file=self.single_file)
                         patch_generator.main()
                         logger.info("Patch generation completed")
 
@@ -116,13 +119,15 @@ if __name__ == "__main__":
         parser.add_argument("--skip-patches", action="store_true", help="If provided, the patches part will be skipped.")
         parser.add_argument("--sast-rerun", action="store_true", help="If provided, issues will be generated for the new java files contents.")
         parser.add_argument("--auto", action="store_true", help="If provided, patches will be applied automatically after the analysis complete.")
+        parser.add_argument("--single-file", help="The path of the file to be analyzed.")
         args = parser.parse_args()
 
         framework = WorkflowFramework(
             commit_sha=args.commit_sha,
             skip_patches=args.skip_patches,
             sast_rerun=args.sast_rerun,
-            automatic_application=args.auto
+            automatic_application=args.auto,
+            single_file=args.single_file
         )
 
         framework.execute_workflow()

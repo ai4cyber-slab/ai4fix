@@ -459,7 +459,7 @@ def create_diff(context):
     )
     diff_text = ''.join(diff)
 
-    diff_file_name = f"{os.path.splitext(os.path.basename(full_file_path))[0]}_patch_{warning_id}_attempt_{attempt}.diff"
+    diff_file_name = f"{os.path.splitext(os.path.basename(full_file_path))[0]}_patch_{warning_id}_attempt_{attempt}_{str(int(time.time()))}.diff"
     diff_file_path = os.path.join(diffs_output_dir, diff_file_name)
 
     try:
@@ -665,7 +665,8 @@ def process_warning_worker(args):
         api_key,
         build_tool,
         base_project_path,
-        diffs_output_dir
+        diffs_output_dir,
+        single_file
     ) = args
 
     local_stats = {
@@ -698,8 +699,12 @@ def process_warning_worker(args):
             local_config = copy.deepcopy(config_data)
             local_config.set('DEFAULT', 'config.project_root', temp_dir)
             test_generator = TestGenerator(temp_dir, local_config)
-            sast = SASTOrchestrator(local_config)
-            symbolic = SymbolicExecution(local_config)
+            if single_file is not None:
+                sast = SASTOrchestrator(local_config, single_file=single_file.replace(os.environ.get('PROJECT_PATH'), temp_dir, 1))
+                symbolic = SymbolicExecution(local_config, single_file=single_file.replace(os.environ.get('PROJECT_PATH'), temp_dir, 1))
+            else:
+                sast = SASTOrchestrator(local_config)
+                symbolic = SymbolicExecution(local_config)
             mutable_warnings = warning_dict.copy()
 
 
@@ -774,14 +779,14 @@ def process_warning_worker(args):
                     else:
                         local_stats['applicable_patch'] = True
 
-                    full_import = derive_full_import_from_path(file_path=full_file_path)
-                    test_file_path, status, original_test_content = generate_test_file(
-                        java_file_path=full_file_path,
-                        updated_section=generated_patch,
-                        full_import=full_import,
-                        test_generator=test_generator,
-                        initial_section=extract_json_section
-                    )
+                    # full_import = derive_full_import_from_path(file_path=full_file_path)
+                    # test_file_path, status, original_test_content = generate_test_file(
+                    #     java_file_path=full_file_path,
+                    #     updated_section=generated_patch,
+                    #     full_import=full_import,
+                    #     test_generator=test_generator,
+                    #     initial_section=extract_json_section
+                    # )
 
                     if test_file_path and os.path.exists(test_file_path):
                         try:
@@ -868,7 +873,7 @@ def process_warning_worker(args):
 
 
 class PatchGenerator:
-    def __init__(self, config, warning_dict, num_of_rounds):
+    def __init__(self, config, warning_dict, num_of_rounds, single_file=None):
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
         self.config = config
@@ -876,14 +881,15 @@ class PatchGenerator:
         self.model_name = self.config.get('API', 'config.model')
         self.api_key = self.config.get('API', 'config.key', fallback='').strip()
         self.build_tool = self.config.get('DEFAULT', 'config.build_tool', fallback='maven').lower()
+        self.single_file = single_file
         if self.api_key == '':
             logger.warning("API key not found. Please set it in the configuration.")
             sys.exit(1)
 
         self.project_path = self.config.get('DEFAULT', 'config.project_root')
-        self.visualize_path = os.path.join(self.project_path, '.ai4framework', 'visualizations')
+        self.visualize_path = os.path.join(self.project_path, '.ai4framework', 'visualizations', str(int(time.time())))
         self.diffs_output_dir = self.config.get('DEFAULT', 'config.results_path')
-        self.json_file_path = self.config.get('DEFAULT', 'config.issues_path')
+        self.json_file_path = self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "single_rerun_issues.json") if self.single_file else self.config.get('DEFAULT', 'config.issues_path')
         self.cores_to_use = self.config.get('DEFAULT', 'config.parallel_workers', fallback='1')
         self.warnings = []
         self.compilation_or_test_errors = 0
@@ -973,7 +979,8 @@ class PatchGenerator:
                     self.api_key,
                     self.build_tool,
                     self.project_path,
-                    self.diffs_output_dir
+                    self.diffs_output_dir,
+                    self.single_file
                 )
                 args_list.append(args)
 

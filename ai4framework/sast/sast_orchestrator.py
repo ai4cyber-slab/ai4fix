@@ -16,7 +16,7 @@ class SASTOrchestrator:
     This class manages the overall process of running various SAST tools,
     including checking out specific commits, running the tools, and merging reports.
     """
-    def __init__(self, config):
+    def __init__(self, config, single_file=None):
         """
         Initialize the SASTOrchestrator with configuration settings.
 
@@ -27,7 +27,7 @@ class SASTOrchestrator:
             config.get('DEFAULT', 'config.project_root'),
             config.get('DEFAULT', 'config.commit_sha')
         )
-        self.tool_runner = ToolRunner(config, self.repo_manager)
+        self.tool_runner = ToolRunner(config, self.repo_manager, single_file=single_file)
         self.report_merger = ReportMerger(config)
         self.project_path = config.get('DEFAULT', 'config.project_root')
         self.build_tool = config.get('DEFAULT', 'config.build_tool').lower()

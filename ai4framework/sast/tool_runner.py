@@ -12,7 +12,7 @@ class ToolRunner:
     and handles the execution and logging of these tools.
     """
 
-    def __init__(self, config, repo_manager):
+    def __init__(self, config, repo_manager, single_file=None):
         """
         Initialize the ToolRunner with configuration and repository manager.
 
@@ -27,6 +27,7 @@ class ToolRunner:
         self.pmd_runner = PMDRunner(config)
         self.spotbugs_runner = SpotBugsRunner(config)
         self.build_tool = self.config.get('DEFAULT', 'config.build_tool', fallback='maven')
+        self.single_file = single_file
 
     def run_tool(self, tool_name, runner_method, files_to_analyze):
         """
@@ -61,7 +62,7 @@ class ToolRunner:
         if not files_to_analyze:
             logger.warning("PMD couldn't find any files to analyze.")
             return
-        self.run_tool("PMD", self.pmd_runner.run, files_to_analyze)
+        self.run_tool("PMD", self.pmd_runner.run, [self.single_file] if self.single_file else files_to_analyze)
 
     def run_spotbugs(self):
         """
@@ -69,13 +70,13 @@ class ToolRunner:
 
         Finds the corresponding class files for Java files and runs SpotBugs on them.
         """
-        files_to_analyze = self.find_class_changed_files()
+        files_to_analyze = self.find_class_changed_files(self.single_file)
         if not files_to_analyze:
             logger.warning("Spotbugs couldn't find any files to analyze.")
             return
         self.run_tool("SpotBugs", self.spotbugs_runner.run, files_to_analyze)
 
-    def find_class_changed_files(self):
+    def find_class_changed_files(self, single_file=None):
         """
         Find the corresponding .class files for the Java files.
 
@@ -83,8 +84,8 @@ class ToolRunner:
             list: A list of paths to .class files corresponding to the Java files.
         """
         class_files = []
-
-        for java_file in self.repo_manager.get_files_to_analyze(self.project_root, self.filter):
+        files_list = [single_file] if single_file else self.repo_manager.get_files_to_analyze(self.project_root, self.filter)
+        for java_file in files_list:
             class_file_path = find_class_file_from_java(java_file, self.build_tool)
             if class_file_path:
                 class_files.append(class_file_path)

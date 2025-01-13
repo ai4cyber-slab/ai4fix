@@ -13,7 +13,7 @@ class Analyzer:
     A class to run static analysis on a project using a specified analyzer tool.
     """
 
-    def __init__(self, analyzer_path, project_name, project_path, results_path, filter_list):
+    def __init__(self, analyzer_path, project_name, project_path, results_path, filter_list, single_file=None):
         """
         Initialize the Analyzer with project details and paths.
 
@@ -31,7 +31,7 @@ class Analyzer:
         self.results_path = results_path
         self.filter = os.path.join(os.path.dirname(self.results_path), 'filter.txt')
         self.repo_manager = RepoManager(project_path)
-        self.javaFilepaths = self.repo_manager.get_files_to_analyze(self.project_path, self.filter_list)
+        self.javaFilepaths = [single_file] if single_file else self.repo_manager.get_files_to_analyze(self.project_path, self.filter_list)
         
         try:
             if self.javaFilepaths:

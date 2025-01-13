@@ -15,7 +15,7 @@ class SymbolicExecution:
     on a project and processing the results.
     """
 
-    def __init__(self, config):
+    def __init__(self, config, single_file=None):
         """
         Initialize the SymbolicExecution instance.
 
@@ -28,6 +28,7 @@ class SymbolicExecution:
         self.results_path = self.config.get("DEFAULT", "config.analyzer_results_path")
         self.analyzer_path = os.environ.get('ANALYZER_BIN')
         self.filter_list = self.config.get('DEFAULT', 'config.filter')
+        self.single_file = single_file
     
     def analyze(self, validation=False):
         """
@@ -52,7 +53,7 @@ class SymbolicExecution:
                 if not "11." in version:
                     logger.warning("Java version over 11 detected. Skipping Symbolic execution analysis.")
                     return
-        analyzer = Analyzer(self.analyzer_path, self.project_name, self.project_path, self.results_path, self.filter_list)
+        analyzer = Analyzer(self.analyzer_path, self.project_name, self.project_path, self.results_path, self.filter_list, self.single_file)
         try:
             logger.info("Symbolic Execution Started ...")
             json_file = analyzer.run_analysis()

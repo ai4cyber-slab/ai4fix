@@ -6,7 +6,7 @@ from utils.logger import logger
 
 
 class JsonPluginConverter:
-    def __init__(self, config):
+    def __init__(self, config, single_file=None):
         """
         Initialize the JSONProcessor with configuration.
 
@@ -16,8 +16,10 @@ class JsonPluginConverter:
             json_txt_file (str): Path to the file where the list of output JSON paths will be written.
         """
         self.config = config
+        self.single_file = single_file
         self.project_path = self.config.get('DEFAULT', 'config.project_root')
-        self.input_file = self.config.get('DEFAULT', 'config.issues_path')
+        self.temp_file = self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "single_rerun_issues.json")
+        self.input_file = self.temp_file if self.single_file else self.config.get('DEFAULT', 'config.issues_path')
         self.output_directory = os.path.join(self.input_file.replace(os.path.basename(self.input_file), 'validation'), 'jsons')
         self.json_txt_file = self.config.get('DEFAULT', 'config.jsons_listfile')
 
@@ -119,6 +121,9 @@ class JsonPluginConverter:
         grouped_data = self.group_entries_by_file(input_data)
 
         json_paths = self.write_grouped_json(grouped_data)
-        self.write_json_paths(json_paths)
-        logger.info(f"Processed {len(json_paths)} JSON files.")
-        logger.info(f"Paths have been written to '{self.json_txt_file}'.")
+        if not self.single_file:
+            self.write_json_paths(json_paths)
+            logger.info(f"Processed {len(json_paths)} JSON files.")
+            logger.info(f"Paths have been written to '{self.json_txt_file}'.")
+        if os.path.exists(self.temp_file):
+            os.remove(self.temp_file)
