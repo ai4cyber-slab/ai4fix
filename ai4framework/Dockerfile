@@ -7,6 +7,7 @@ ARG MAVEN_VERSION=3.9.5
 ARG GRADLE_VERSION=7.6
 ENV PMD_VERSION=7.4.0
 ENV SPOTBUGS_VERSION=4.8.6
+ENV FINDSECBUGS_PLUGIN_VERSION=1.12.0
 ENV MAVEN_HOME=/opt/maven
 ENV GRADLE_HOME=/opt/gradle
 ENV PMD_BIN=/opt/pmd-bin-${PMD_VERSION}/bin/pmd
@@ -57,7 +58,7 @@ RUN wget https://github.com/pmd/pmd/releases/download/pmd_releases%2F${PMD_VERSI
 RUN wget https://github.com/spotbugs/spotbugs/releases/download/${SPOTBUGS_VERSION}/spotbugs-${SPOTBUGS_VERSION}.tgz -O /tmp/spotbugs.tgz && \
     tar -xzf /tmp/spotbugs.tgz -C /opt && rm /tmp/spotbugs.tgz && \
     chmod +x /opt/spotbugs-${SPOTBUGS_VERSION}/bin/spotbugs && \
-    wget https://repo1.maven.org/maven2/com/h3xstream/findsecbugs/findsecbugs-plugin/1.12.0/findsecbugs-plugin-1.12.0.jar -O /opt/spotbugs-${SPOTBUGS_VERSION}/plugin/findsecbugs-plugin.jar
+    wget https://repo1.maven.org/maven2/com/h3xstream/findsecbugs/findsecbugs-plugin/${FINDSECBUGS_PLUGIN_VERSION}/findsecbugs-plugin-${FINDSECBUGS_PLUGIN_VERSION}.jar -O /opt/spotbugs-${SPOTBUGS_VERSION}/plugin/findsecbugs-plugin.jar
 
 RUN curl -fsSL https://code-server.dev/install.sh | sh
 
