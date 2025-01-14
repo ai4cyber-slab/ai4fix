@@ -56,7 +56,8 @@ RUN wget https://github.com/pmd/pmd/releases/download/pmd_releases%2F${PMD_VERSI
 
 RUN wget https://github.com/spotbugs/spotbugs/releases/download/${SPOTBUGS_VERSION}/spotbugs-${SPOTBUGS_VERSION}.tgz -O /tmp/spotbugs.tgz && \
     tar -xzf /tmp/spotbugs.tgz -C /opt && rm /tmp/spotbugs.tgz && \
-    chmod +x /opt/spotbugs-${SPOTBUGS_VERSION}/bin/spotbugs
+    chmod +x /opt/spotbugs-${SPOTBUGS_VERSION}/bin/spotbugs && \
+    wget https://repo1.maven.org/maven2/com/h3xstream/findsecbugs/findsecbugs-plugin/1.12.0/findsecbugs-plugin-1.12.0.jar -O /opt/spotbugs-${SPOTBUGS_VERSION}/plugin/findsecbugs-plugin.jar
 
 RUN curl -fsSL https://code-server.dev/install.sh | sh
 
