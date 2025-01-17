@@ -140,13 +140,14 @@ def derive_full_import_from_path(file_path):
     return without_ext.replace('/', '.')
 
 
-def generate_test_file(java_file_path, updated_section, full_import, test_generator, initial_section):
+def generate_test_file(java_file_path, updated_section, full_import, test_generator, initial_section, diff_content):
     try:
         test_file_path, status, original_test_content = test_generator.generate_test(
             java_file_path=java_file_path,
             updated_section=updated_section,
             full_import=full_import,
-            initial_section=initial_section
+            initial_section=initial_section,
+            diff_content=diff_content
         )
         if status:
             logger.debug(f"Updated test file at path: {test_file_path}")
@@ -414,7 +415,7 @@ def revert_test_content(context):
     test_file_path = context['test_file_path']
     original_test_content = context['original_test_content']
 
-    if test_file_path and original_test_content is not None:
+    if os.path.exists(test_file_path) and original_test_content is not None:
         try:
             with open(test_file_path, 'w') as f:
                 f.write(original_test_content)
@@ -779,14 +780,32 @@ def process_warning_worker(args):
                     else:
                         local_stats['applicable_patch'] = True
 
-                    # full_import = derive_full_import_from_path(file_path=full_file_path)
-                    # test_file_path, status, original_test_content = generate_test_file(
-                    #     java_file_path=full_file_path,
-                    #     updated_section=generated_patch,
-                    #     full_import=full_import,
-                    #     test_generator=test_generator,
-                    #     initial_section=extract_json_section
-                    # )
+                    if single_file is not None:
+                        try:
+                            with open(full_file_path, 'r') as f:
+                                new_file_content = f.read()
+                        except Exception as e:
+                            logger.error(f"Error reading file {full_file_path}: {e}")
+                            return None
+
+                        diff = difflib.unified_diff(
+                            initial_content.splitlines(keepends=True),
+                            new_file_content.splitlines(keepends=True),
+                            fromfile=file_path,
+                            tofile=file_path,
+                            n=2
+                        )
+                        diff_text = ''.join(diff)
+
+                        full_import = derive_full_import_from_path(file_path=full_file_path)
+                        test_file_path, status, original_test_content = generate_test_file(
+                            java_file_path=full_file_path,
+                            updated_section=generated_patch,
+                            full_import=full_import,
+                            test_generator=test_generator,
+                            initial_section=extract_json_section,
+                            diff_content=diff_text
+                        )
 
                     if test_file_path and os.path.exists(test_file_path):
                         try:

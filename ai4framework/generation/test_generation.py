@@ -35,31 +35,27 @@ UPDATE_PROMPT = """
 You are a software tester with over 15 years of experience tasked with updating test files for Java classes. I will provide you with the following:
 
 1. The original content of an existing test file.
-2. The before and after states of the Java file in JSON format, highlighting the changes made.
+2. The diff content of the java file to highlight the changes made to it.
 
 Your goal is to:
 - Add a **new test method** to the provided test file content that validates the specific changes made to the Java file. This method must focus solely on testing the updated functionality or behavior. 
 - Leave all other parts of the test file unchanged.
 
 Here is the structure of the input:
-Existing Test File:
+Existing Original Test File:
 ```java
 {0}
 ```
-Before:
-```json
+Diff:
+```diff
 {1}
-```
-After:
-```json
-{2}
 ```
 
 Using this input, generate the updated test file content that includes:
 - **Only one new test method** that validates the updated functionality or behavior based on the changes provided.
 - Explicit imports for all required dependencies, using only the preexisting ones. Do not add imports for libraries not already included or not built-in.
-- Maintain the fully qualified path to the class/method being tested as `{3}`.
-- Ensure the test class retains its current structure and naming, such as `{4}`.
+- Maintain the fully qualified path to the class/method being tested as `{2}`.
+- Ensure the test class retains its current structure and naming, such as `{3}`.
 
 Important: If the member (constructor, field, or method) is private, always use setAccessible(true) to bypass access restrictions. 
 Validate the member's modifiers with Modifier.isPrivate(), and catch all exceptions using a single catch block for ReflectiveOperationException. 
@@ -81,7 +77,7 @@ class TestGenerator:
         test_file_path = test_file_relative_path.replace('/', os.sep)
         return test_file_path
 
-    def generate_test(self, java_file_path, full_import, initial_section, updated_section):
+    def generate_test(self, java_file_path, full_import, initial_section, updated_section, diff_content):
         """
         Generate or update a test file for the given Java file.
         """
@@ -95,8 +91,7 @@ class TestGenerator:
                 original_content = test_file.read()
             prompt = UPDATE_PROMPT.format(
                 original_content,
-                initial_section,
-                updated_section,
+                diff_content,
                 full_import,
                 java_file_path.split("/")[-1].replace(".java", "") + "Test"
             )

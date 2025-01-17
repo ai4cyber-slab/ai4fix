@@ -99,10 +99,17 @@ class JsonPluginConverter:
 
     def write_json_paths(self, json_paths):
         """
-        Write all JSON file paths to a single text file.
+        Write all JSON file paths to a single text file, ensuring uniqueness.
         """
+        existing_paths = set()
+        if os.path.exists(self.json_txt_file):
+            with open(self.json_txt_file, 'r') as f:
+                existing_paths = {line.strip() for line in f.readlines()}
+
+        unique_paths = existing_paths.union(json_paths)
+
         with open(self.json_txt_file, 'w') as f:
-            for path in json_paths:
+            for path in unique_paths:
                 f.write(f"{path}\n")
 
     def process(self):
@@ -121,9 +128,8 @@ class JsonPluginConverter:
         grouped_data = self.group_entries_by_file(input_data)
 
         json_paths = self.write_grouped_json(grouped_data)
-        if not self.single_file:
-            self.write_json_paths(json_paths)
-            logger.info(f"Processed {len(json_paths)} JSON files.")
-            logger.info(f"Paths have been written to '{self.json_txt_file}'.")
+        self.write_json_paths(json_paths)
+        logger.info(f"Processed {len(json_paths)} JSON files.")
+        logger.info(f"Paths have been written to '{self.json_txt_file}'.")
         if os.path.exists(self.temp_file):
             os.remove(self.temp_file)
