@@ -3,7 +3,7 @@ import * as logging from "./services/logging";
 import * as readline from 'readline';
 import * as child_process from 'child_process';
 import * as fakeAiFixCode from "./services/fakeAiFixCode";
-import { spawn } from "child_process";
+import { execSync, spawn } from "child_process";
 import { showDiff } from "./webview";
 import { TestView } from "./providers/testView";
 import { GroupedTestView } from "./providers/testViewGrouped";
@@ -12,12 +12,14 @@ import { applyPatchToFile } from "./patch";
 import { refreshDiagnostics } from "./language/diagnostics";
 import { initActionCommands } from "./language/codeActions";
 import { analysisDiagnostics } from "./extension";
+import { parsePatch } from 'diff';
 import {
   getActiveDiffPanelWebview,
   getActiveDiffPanelWebviews,
 } from "./webview/store";
 import {
   readFileSync,
+  existsSync,
   writeFileSync,
   appendFileSync,
 } from "fs";
@@ -110,7 +112,7 @@ export async function refreshDiagnosticsWithoutAnalysis(context: vscode.Extensio
       return;
     }
   } catch (err) {
-    logging.LogError("Error reading the issuesPath file: " + err);
+    //logging.LogError("Error reading the issuesPath file: " + err);
     return;
   }
 
@@ -248,40 +250,40 @@ export function init(
     vscode.commands.executeCommand("setContext", "patchApplyEnabled", true);
   }
 
-  async function patchIssuesNow(item: { key: string }) {  
+  async function patchIssuesNow(item: { key: string }) {
     vscode.window.showInformationMessage(`Patching issues for ${item.key}...`);
     try {
-        const issues = await fakeAiFixCode.getIssues2();
-        const issueType = issues[item.key];
-        if (!issueType) {
-            vscode.window.showWarningMessage(`No issues found for ${item.key}.`);
-            return;
-        }
+      const issues = await fakeAiFixCode.getIssues2();
+      const issueType = issues[item.key];
+      if (!issueType) {
+        vscode.window.showWarningMessage(`No issues found for ${item.key}.`);
+        return;
+      }
 
-        for (const issueIndex in issueType) {
-            const issue = issueType[issueIndex];
-            for (const patchIndex in issue.patches) {
-                const patch = issue.patches[patchIndex];
-                // Using method from manual patch application
-                viewPatchFilesMode(patch.path);
-                console.log(`Applied patch: ${patch.path}`);
-            }
+      for (const issueIndex in issueType) {
+        const issue = issueType[issueIndex];
+        for (const patchIndex in issue.patches) {
+          const patch = issue.patches[patchIndex];
+          // Using method from manual patch application
+          viewPatchFilesMode(patch.path);
+          console.log(`Applied patch: ${patch.path}`);
         }
+      }
 
-        vscode.window.showInformationMessage(`All patches applied for ${item.key}.`);
+      vscode.window.showInformationMessage(`All patches applied for ${item.key}.`);
     } catch (error) {
-        vscode.window.showErrorMessage(`Error patching issues for ${item.key}: ${error}`);
+      vscode.window.showErrorMessage(`Error patching issues for ${item.key}: ${error}`);
     }
   }
 
   async function alwaysPatchIssues(item: { key: string }) {
     vscode.window.showInformationMessage(`Setting always patching for ${item.key}...`);
     try {
-        // TODO
-        console.log("ALWAYS PATCHING:", item, item.key);
-        vscode.window.showInformationMessage(`Issues patched for ${item.key}.`);
+      // TODO
+      console.log("ALWAYS PATCHING:", item, item.key);
+      vscode.window.showInformationMessage(`Issues patched for ${item.key}.`);
     } catch (error) {
-        vscode.window.showErrorMessage(`Error patching issues for ${item.key}: ${error}`);
+      vscode.window.showErrorMessage(`Error patching issues for ${item.key}: ${error}`);
     }
   }
 
@@ -308,15 +310,15 @@ export function init(
       vscode.window.showWarningMessage('Analysis is already running.');
       return;
     }
-  
+
     isAnalyzing = true;
     analysisCancellationTokenSource = new vscode.CancellationTokenSource();
-  
+
     analysisStatusBarItem.text = '$(sync~spin) Analyzing...';
     analysisStatusBarItem.command = undefined; // Remove the cancel command
-  
+
     logging.LogInfo('===== Analysis started from command. =====');
-  
+
     try {
       await vscode.window.withProgress(
         {
@@ -364,29 +366,29 @@ export function init(
   async function refreshDiagnosticsWithoutAnalysis() {
     let issuesPath = ISSUES_PATH;
     let jsonFilePaths: string[] = [];
-  
+
     try {
       const data = readFileSync(issuesPath, "utf8");
       let lines = data.split("\n");
-  
+
       jsonFilePaths = lines.filter((line: string) => line.trim().endsWith(".json"));
-  
+
       if (jsonFilePaths.length === 0) {
         logging.LogError("No JSON file paths found in the issuesPath file.");
         return;
       }
     } catch (err) {
-      logging.LogError("Error reading the issuesPath file: " + err);
+      //logging.LogError("Error reading the issuesPath file: " + err);
       return;
     }
-  
+
     // Show issues treeView:
     testView = new TestView(context);
     groupedTestView = new GroupedTestView(context);
-  
+
     // Initialize action commands of diagnostics made after analysis:
     initActionCommands(context);
-  
+
     // Await the withProgress function
     await vscode.window.withProgress(
       {
@@ -397,10 +399,10 @@ export function init(
         await refreshDiagnostics(vscode.window.activeTextEditor!.document, analysisDiagnostics);
       }
     );
-  
+
     let output = fakeAiFixCode.getIssuesSync();
     //logging.LogInfo("issues got from analyzer output: " + JSON.stringify(output));
-  
+
     logging.LogInfoAndShowInformationMessage(
       "===== Finished analysis. =====",
       "Finished analysis of project!"
@@ -429,7 +431,7 @@ export function init(
     cancellationToken: vscode.CancellationToken
   ) {
     const issuesPath = ISSUES_PATH;
-  
+
     // Step 1: Clear the issuesPath file
     // Step 2: Define the path to orchestrator.py
     // Step 3: Spawn the orchestrator.py process
@@ -449,14 +451,14 @@ export function init(
         error as any
       );
     }
-  
+
     // 2.
     const scriptPath = upath.normalize(upath.join(SCRIPT_PATH, 'orchestrator.py'));
-  
+
     const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
-  
+
     const args = [scriptPath];
-  
+
     const options: child_process.SpawnOptions = {
       cwd: PROJECT_FOLDER,
       shell: false,
@@ -465,12 +467,12 @@ export function init(
         PYTHONUNBUFFERED: '1',
       },
     };
-  
+
     logging.LogInfo(`Running orchestrator in: ${PROJECT_FOLDER}`);
-  
+
     // 3.
     const childProc = spawn(pythonCommand, args, options);
-  
+
     // Handle cancellation
     cancellationToken.onCancellationRequested(() => {
       logging.LogInfo('Cancellation requested. Terminating orchestrator.py...');
@@ -488,23 +490,23 @@ export function init(
         childProc.kill('SIGINT');
       }
     });
-  
+
     // Listen for lines from stdout
     const rl = readline.createInterface({
       input: childProc.stdout,
       crlfDelay: Infinity,
     });
-  
+
     let totalTasks = 0;
     let completedTasks = 0;
     let workflowCompleted = false; // Flag to track if workflow is completed
     rl.on('line', (line: string) => {
       logging.LogInfo(`orchestrator.py: ${line}`);
-    
+
       if (workflowCompleted) {
         return; // Stop processing further lines after workflow completion
       }
-    
+
       // Remove ANSI escape sequences
       const strippedLine = line.replace(
         /\u001b\[[0-9;]*m/g,
@@ -514,7 +516,7 @@ export function init(
       if (progressMatch) {
         completedTasks = parseInt(progressMatch[1], 10);
         totalTasks = parseInt(progressMatch[2], 10);
-    
+
         if (totalTasks > 0) {
           const increment = (1 / totalTasks) * 100;
           progress.report({
@@ -523,30 +525,30 @@ export function init(
           });
         }
       }
-    
+
       if (strippedLine.toLowerCase().includes('workflow execution completed')) {
         logging.LogInfo('Workflow execution completed detected.');
         workflowCompleted = true;
         progress.report({ increment: 100 });
       }
     });
-    
-  
+
+
     childProc.stderr.on('data', (data: Buffer) => {
       const message = data.toString();
-      logging.LogInfo(`orchestrator.py (stderr): ${message}`);
-  
+      logging.LogInfo(`orchestrator.py : ${message}`);
+
       if (workflowCompleted) {
         return; // Stop processing further lines after workflow completion
       }
-  
+
       if (message.toLowerCase().includes('workflow execution completed')) {
         logging.LogInfo('Workflow execution completed detected in stderr.');
         workflowCompleted = true;
         progress.report({ increment: 100 });
       }
     });
-  
+
     // Handle process exit
     const processExitPromise = new Promise<void>((resolve, reject) => {
       childProc.on('close', (code, signal) => {
@@ -564,7 +566,7 @@ export function init(
           reject(error);
         }
       });
-  
+
       childProc.on('error', (error) => {
         logging.LogError(`Failed to start orchestrator.py: ${error.message}`);
         vscode.window.showErrorMessage(`Failed to start analysis: ${error.message}`);
@@ -572,11 +574,11 @@ export function init(
         reject(error);
       });
     });
-  
+
     try {
       // Await the process to complete or be cancelled
       await processExitPromise;
-  
+
       if (cancellationToken.isCancellationRequested) {
         logging.LogInfo('Analysis was cancelled by the user.');
         getDiagnosticsAfterPatch();
@@ -629,26 +631,62 @@ export function init(
   }
 
 
-  async function getOutputFromAnalyzerOfAFile() {
+  async function getOutputFromAnalyzerOfAFile(JavaFilePath: any) {
     logging.LogInfo("===== Analysis of a file started from command. =====");
-    vscode.window.withProgress(
-      {
-        location: vscode.ProgressLocation.Notification,
-        title: "Analyzing file!",
-        cancellable: false,
-      },
-      async () => {
-        return await startAnalyzingFileSync();
+    if (isAnalyzing) {
+      vscode.window.showWarningMessage('Analysis is already running.');
+      return;
+    }
+
+    if (!JavaFilePath) {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        logging.LogError(
+          'No Java file path provided, and no active text editor found. Cannot analyze.'
+        );
+        return;
       }
-    );
+      // Use the path of the active document
+      JavaFilePath = editor.document.uri.fsPath;
+      logging.LogInfo(`Analyzing currently opened file: ${JavaFilePath}`);
+    }
+  
+
+    isAnalyzing = true;
+    analysisCancellationTokenSource = new vscode.CancellationTokenSource();
+
+    analysisStatusBarItem.text = '$(sync~spin) Analyzing file...';
+    analysisStatusBarItem.command = undefined; // Remove the cancel command
+
+    logging.LogInfo('===== Analysis started from command. =====');
+
+    try {
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'Analyzing file...',
+          cancellable: true,
+        },
+        async (progress, cancellationToken) => {
+          await runOrchestratorOnAFile(JavaFilePath, progress, cancellationToken);
+        }
+      );
+    } catch (error) {
+      logging.LogError(`Error during analysis: ${error}`);
+    } finally {
+      isAnalyzing = false;
+      analysisCancellationTokenSource = null;
+      analysisStatusBarItem.text = '$(symbol-misc) Start Analysis';
+      analysisStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzer';
+    }
   }
 
   async function undoLastFix() {
     logging.LogInfo("===== Undo Last Fix started from command. =====");
-  
+
     // Retrieve the last file path
     let lastFilePath = context.workspaceState.get<string>("lastFilePath")!;
-  
+
     // Correct the file path for Windows systems
     if (process.platform === "win32") {
       const driveLetterMatch = lastFilePath.match(/^([/\\])?([a-zA-Z]):[/\\]/);
@@ -657,29 +695,29 @@ export function init(
         lastFilePath = lastFilePath.replace(/^([/\\])?[a-zA-Z]:[/\\]/, `${driveLetter}:\\`);
       }
     }
-  
+
     // Normalize the path after the correction
     lastFilePath = path.normalize(lastFilePath);
-  
+
     // Get the file content to revert
     const lastFileContent = context.workspaceState.get<string>("lastFileContent")!;
     const lastIssuesPath = path.normalize(context.workspaceState.get<string>("lastIssuesPath")!);
     const lastIssuesContent = JSON.parse(context.workspaceState.get<string>("lastIssuesContent")!);
-  
+
     writeFileSync(lastIssuesPath, lastIssuesContent);
-  
+
     writeFileSync(lastFilePath, lastFileContent);
-  
+
     vscode.workspace.openTextDocument(lastFilePath).then((document) => {
       vscode.window.showTextDocument(document).then(() => {
         if (ANALYZER_USE_DIFF_MODE == "view Diffs") {
           let webview = getActiveDiffPanelWebview();
           if ("patchPath" in webview.params) {
             const appliedPatchFilePath = path.normalize(webview.params.patchPath!);
-  
+
             // Reverse the header updates for all other diffs in the JSON
             revertDiffHeaders(lastFilePath, appliedPatchFilePath);
-  
+
             // Update user decisions of the revert fix:
             updateUserDecisions(
               "Undo was requested by user.",
@@ -706,63 +744,63 @@ export function init(
         }
       });
     });
-    
+
     logging.LogInfo("===== Undo Last Fix command finished executing. =====");
   }
 
   function revertDiffHeaders(sourceFilePath: string, appliedPatchFilePath: string) {
     const issuesJsonPaths = getIssuesJsonPathsForSourceFile(sourceFilePath);
-  
+
     issuesJsonPaths.forEach(jsonPath => {
       const jsonContent = readFileSync(jsonPath, 'utf8');
       const issues = JSON.parse(jsonContent);
-      
+
       const appliedPatchContent = readFileSync(appliedPatchFilePath, 'utf8');
-      
+
       const appliedParsedPatch = diff.parsePatch(appliedPatchContent);
       const appliedLineShifts = computeLineShifts(appliedParsedPatch);
-  
+
       issues.forEach((issue: any) => {
         issue.items.forEach((item: any) => {
           item.patches.forEach((patch: any) => {
-            const patchFilePath =  patch.path;
-  
+            const patchFilePath = patch.path;
+
             // Skip the patch that was just undone
             if (patch.path === appliedPatchFilePath) {
               return;
             }
-  
+
             // For all other patches, apply the line shifts from the applied patch
             const patchContent = readFileSync(patchFilePath, 'utf8');
             const parsedPatch = diff.parsePatch(patchContent);
-            
-            revertDiffHeader(patchFilePath, appliedLineShifts); 
+
+            revertDiffHeader(patchFilePath, appliedLineShifts);
           });
         });
       });
-  
+
       writeFileSync(jsonPath, JSON.stringify(issues, null, 2), 'utf8');
     });
   }
-  
+
   function revertDiffHeader(patchFilePath: string, lineShifts: { [lineNumber: number]: number }) {
     let patchContent = readFileSync(patchFilePath, 'utf8');
     const parsedPatch = diff.parsePatch(patchContent);
-  
+
     let revertedPatch = "";
-  
+
     parsedPatch.forEach((hunk: { hunks: { oldStart: any; newStart: any; oldLines: any; newLines: any; lines: string[]; }[]; }) => {
       const sourceLines = patchContent.split('\n').slice(0, 2);
       revertedPatch += sourceLines.join('\n') + "\n";
-  
+
       // Iterate through each hunk and revert its header
       hunk.hunks.forEach((chunk: { oldStart: any; newStart: any; oldLines: any; newLines: any; lines: string[]; }) => {
         const oldStartLine = chunk.oldStart;
         const newStartLine = chunk.newStart;
-  
+
         let adjustedOldStart = oldStartLine;
         let adjustedNewStart = newStartLine;
-  
+
         // Apply reverse shifts (based on the applied patch)
         for (const line in lineShifts) {
           const lineNumber = parseInt(line, 10);
@@ -773,17 +811,17 @@ export function init(
             adjustedNewStart -= lineShifts[lineNumber];
           }
         }
-  
+
         // Replace the header in the patch content with reverted line numbers
         const header = `@@ -${adjustedOldStart},${chunk.oldLines} +${adjustedNewStart},${chunk.newLines} @@`;
-  
+
         revertedPatch += header + "\n";
         chunk.lines.forEach((line: string) => {
           revertedPatch += line + "\n";
         });
       });
     });
-  
+
     writeFileSync(patchFilePath, revertedPatch, 'utf8');
   }
 
@@ -985,7 +1023,7 @@ export function init(
       // Show issues treeView:
       // tslint:disable-next-line: no-unused-expression
       testView = new TestView(context);
-      groupedTestView= new GroupedTestView(context);
+      groupedTestView = new GroupedTestView(context);
 
       // Initialize action commands of diagnostics made after analysis:
       initActionCommands(context);
@@ -1319,71 +1357,433 @@ export function init(
     return patched;
   }
 
-  async function applyPatch() {
-    logging.LogInfo("===== Executing applyPatch command. =====");
 
-    if (ANALYZER_USE_DIFF_MODE == "view Diffs") {
-      const webview = getActiveDiffPanelWebview();
-    
-      if ("leftPath" in webview.params && "patchPath" in webview.params) {
-        // Saving issues.json and file contents in state,
-        // so later the changes can be reverted if the user asks for it:
-        logging.LogInfo("Saving files and fixes to state...");
-        console.log("webview left path:", webview.params.leftPath);
-        await saveFileAndFixesToState(webview.params.leftPath!);
-        logging.LogInfo("Saving files and fixes to state DONE");
-    
-        // Update user decisions
-        try {
-          await updateUserDecisions(
-            "applied",
-            webview.params.patchPath!,
-            webview.params.leftPath!
-          );
+  async function runOrchestratorOnAFile(javaFilePath: string, progress: any, cancellationToken: any) {
+    const pythonExecutable = process.platform === 'win32' ? 'python' : 'python3';
+    const args = [
+      '/app/orchestrator.py',
+      '--single-file',
+      javaFilePath
+    ];
 
-          // Apply the patch
-          webview.api.applyPatch();
+    // 1) Spawn the process
+    const childProc = spawn(pythonExecutable, args, {
+    });
 
-          let openFilePath = vscode.Uri.file(
-            upath.normalize(String(webview.params.leftPath))
-          );
-    
-          // Open and show the document
-          const document = await vscode.workspace.openTextDocument(openFilePath);
-          await vscode.window.showTextDocument(document);
-    
-          // Filter out issues and update patch headers
-          await filterOutIssues(webview.params.patchPath!);
-          await updateIssueLinesAfterPatch(webview.params.leftPath!, webview.params.patchPath!);
-    
-          // Refresh diagnostics
-          
-    
-          // Close the webview and update context
-          activeDiffPanelWebviews.splice(
-            activeDiffPanelWebviews.indexOf(webview),
-            1
-          );
-          if (activeDiffPanelWebviews.length < 1) {
-            vscode.commands.executeCommand(
-              "setContext",
-              "patchApplyEnabled",
-              false
-            );
+    // Handle cancellation
+    cancellationToken.onCancellationRequested(() => {
+      logging.LogInfo('Cancellation requested. Terminating orchestrator.py...');
+      if (process.platform === 'win32') {
+        const pid = childProc.pid;
+        const exec = require('child_process').exec;
+        exec(`taskkill /PID ${pid} /T /F`, (error: any, stdout: any, stderr: any) => {
+          if (error) {
+            logging.LogError(`Error killing process: ${error.message}`);
+          } else {
+            logging.LogInfo('Process terminated successfully.');
           }
-          await getDiagnosticsAfterPatch();
-        } catch (error) {
-          logging.LogErrorAndShowErrorMessage("Error during patch application:", error as any);
+        });
+      } else {
+        childProc.kill('SIGINT');
+      }
+    });
+
+    // Listen for lines from stdout
+    const rl = readline.createInterface({
+      input: childProc.stdout,
+      crlfDelay: Infinity,
+    });
+
+    let totalTasks = 0;
+    let completedTasks = 0;
+    let workflowCompleted = false;
+    rl.on('line', (line: string) => {
+      logging.LogInfo(`orchestrator.py: ${line}`);
+
+      if (workflowCompleted) {
+        return;
+      }
+
+      // Remove ANSI escape sequences
+      const strippedLine = line.replace(
+        /\u001b\[[0-9;]*m/g,
+        ''
+      );
+      const progressMatch = strippedLine.match(/^PROGRESS UPDATE:\s*(\d+)\/(\d+)/);
+      if (progressMatch) {
+        completedTasks = parseInt(progressMatch[1], 10);
+        totalTasks = parseInt(progressMatch[2], 10);
+
+        if (totalTasks > 0) {
+          const increment = (1 / totalTasks) * 100;
+          progress.report({
+            message: `Processing issue ${completedTasks}/${totalTasks}`,
+            increment: increment,
+          });
         }
       }
 
-    } else if (ANALYZER_USE_DIFF_MODE == "view Patch files") {
-      viewPatchFilesMode();
-    }
-    //await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+      if (strippedLine.toLowerCase().includes('workflow execution completed')) {
+        logging.LogInfo('Workflow execution completed detected.');
+        workflowCompleted = true;
+        progress.report({ increment: 100 });
+      }
+    });
 
-    await refreshDiagnosticsWithoutAnalysis();
+
+    childProc.stderr.on('data', (data: Buffer) => {
+      const message = data.toString();
+      logging.LogInfo(`orchestrator.py: ${message}`);
+
+      if (workflowCompleted) {
+        return;
+      }
+
+      if (message.toLowerCase().includes('workflow execution completed')) {
+        logging.LogInfo('Workflow execution completed detected in stderr.');
+        workflowCompleted = true;
+        progress.report({ increment: 100 });
+      }
+    });
+
+    // Handle process exit
+    const processExitPromise = new Promise<void>((resolve, reject) => {
+      childProc.on('close', (code, signal) => {
+        if (cancellationToken.isCancellationRequested) {
+          logging.LogInfo('Process was cancelled by the user.');
+          resolve();
+        } else if (code === 0) {
+          logging.LogInfo(`orchestrator.py completed successfully with exit code ${code}`);
+          resolve();
+        } else {
+          const error = new Error(`orchestrator.py exited with code ${code}`);
+          logging.LogError(error.message);
+          vscode.window.showErrorMessage(`Analysis failed: ${error.message}`);
+          progress.report({ increment: 100 });
+          reject(error);
+        }
+      });
+
+      childProc.on('error', (error) => {
+        logging.LogError(`Failed to start orchestrator.py: ${error.message}`);
+        vscode.window.showErrorMessage(`Failed to start analysis: ${error.message}`);
+        progress.report({ increment: 100 });
+        reject(error);
+      });
+    });
+
+    try {
+      // Await the process to complete or be cancelled
+      await processExitPromise;
+
+      if (cancellationToken.isCancellationRequested) {
+        logging.LogInfo('Analysis was cancelled by the user.');
+        getDiagnosticsAfterPatch();
+        return;
+      }
+
+      // 2) Listen for stdout data
+      childProc.stdout.on('data', (data) => {
+        // data is a Buffer, so convert to string
+        const output = data.toString();
+        logging.LogInfo(`Orchestrator STDOUT: ${output}`);
+      });
+
+      // 3) Listen for stderr data
+      childProc.stderr.on('data', (data) => {
+        const errorOutput = data.toString();
+        logging.LogError(`Orchestrator STDERR: ${errorOutput}`);
+      });
+
+      // 4) Listen for the process to exit
+      childProc.on('close', (code) => {
+        if (code === 0) {
+          logging.LogInfo('Orchestrator completed successfully.');
+        } else {
+          logging.LogError(`Orchestrator exited with code ${code}`);
+        }
+      });
+
+      // 5) listen for 'error' if spawning fails at the OS level
+      childProc.on('error', (err) => {
+        logging.LogErrorAndShowErrorMessage('Failed to start orchestrator process', err as any);
+      });
+    } catch (error) {
+      logging.LogError(`Error during analysis: ${error}`);
+      progress.report({ increment: 100 }); // Complete the progress bar
+      throw error;
+    }
+
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: 'Loading Diagnostics...',
+      },
+      async () => {
+        await refreshDiagnosticsWithoutAnalysis();
+      }
+    );
+
   }
+
+
+  async function handleOverlappingIssues(
+    jsonFilePath: string,
+    patchFilePath: string,
+    javaFilePath: string
+  ) {
+    // 1) Load patch content
+    const patchContent = readFileSync(patchFilePath, 'utf8');
+
+    // 2) Parse the patch to get all changed lines
+    const parsedDiffs = parsePatch(patchContent);
+    const changedLines = new Set<number>();
+
+    for (const singleDiff of parsedDiffs) {
+      logging.LogInfo(`Patch modifies file: ${singleDiff.newFileName}`);
+
+      for (const hunk of singleDiff.hunks) {
+        let currentNewLine = hunk.newStart;
+        for (const line of hunk.lines) {
+          if (line.startsWith('-') || line.startsWith('+')) {
+            changedLines.add(currentNewLine);
+          }
+          // Increment new-file line only if it’s not a removal line
+          if (!line.startsWith('-')) {
+            currentNewLine++;
+          }
+        }
+      }
+    }
+
+    logging.LogInfo(`Changed lines from patch: ${[...changedLines].join(', ')}`);
+
+    // 3) Load the JSON issues
+    if (!existsSync(jsonFilePath)) {
+      logging.LogInfo(`JSON file not found at: ${jsonFilePath}. Skipping overlap handling.`);
+      return;
+    }
+
+    let allIssues;
+    try {
+      const jsonRawContent = readFileSync(jsonFilePath, 'utf8');
+      allIssues = JSON.parse(jsonRawContent);
+    } catch (e) {
+      logging.LogErrorAndShowErrorMessage(`Failed to parse JSON from ${jsonFilePath}`, e as any);
+      return;
+    }
+
+    // 4) For each issue -> item, see if its textRange overlaps any changed line.
+    //    We call the orchestrator script only if the item is NOT the same patch
+    //    we are currently applying, AND it overlaps the changed lines.
+
+    for (let i = 0; i < allIssues.length; i++) {
+      const issue = allIssues[i];
+      if (!issue.items) continue;
+
+      for (const item of issue.items) {
+        if (!item.textRange) continue;
+
+        // skip calling the orchestrator because it's the patch we just applied.
+        let isSamePatch = false;
+        if (item.patches && Array.isArray(item.patches)) {
+          isSamePatch = item.patches.some(
+            (p: any) => p.path === patchFilePath
+          );
+        }
+
+        // Now check overlap
+        const { startLine, endLine } = item.textRange;
+        let overlaps = false;
+        for (let line = startLine; line <= endLine; line++) {
+          if (changedLines.has(line)) {
+            overlaps = true;
+            break;
+          }
+        }
+
+        if (overlaps && !isSamePatch) {
+          logging.LogInfo(
+            `Overlap found for issue ${issue.id} on lines [${startLine}, ${endLine}] -> calling orchestrator.`
+          );
+          getOutputFromAnalyzerOfAFile(javaFilePath);
+        } else if (overlaps && isSamePatch) {
+          logging.LogInfo(
+            `Overlap found for issue ${issue.id} on lines [${startLine}, ${endLine}] but it's the same patch, skipping orchestrator.`
+          );
+        }
+      }
+    }
+
+    return changedLines;
+
+  }
+
+  function getAllPatchPathsFromJson(jsonFilePath: string): string[] {
+    const patchPaths: string[] = [];
+  
+    if (!existsSync(jsonFilePath)) {
+      logging.LogInfo(`Cannot find JSON at ${jsonFilePath}, returning empty patch list.`);
+      return patchPaths;
+    }
+  
+    const rawContent = readFileSync(jsonFilePath, 'utf8');
+    let issues;
+    try {
+      issues = JSON.parse(rawContent);
+    } catch (e) {
+      logging.LogInfo(`Could not parse JSON at ${jsonFilePath}, returning empty patch list.`);
+      return patchPaths;
+    }
+  
+    // The JSON structure is an array of issues -> each has items[] -> each has patches[]
+    for (const issue of issues) {
+      if (!issue.items) continue;
+      for (const item of issue.items) {
+        if (!item.patches || !Array.isArray(item.patches)) continue;
+  
+        // for each patch in patches
+        for (const patchObj of item.patches) {
+          if (patchObj.path) {
+            patchPaths.push(patchObj.path);
+          }
+        }
+      }
+    }
+  
+    return patchPaths;
+  }
+
+  async function handleFuturePatchConflicts(
+    newlyAppliedPatchPath: string, 
+    changedLines: Set<number>, 
+    allDiffPaths: string[],
+    javaFilePath: string
+  ) {
+    logging.LogInfo(`Checking future patch conflicts with: ${newlyAppliedPatchPath}`);
+  
+    for (const diffPath of allDiffPaths) {
+      // Skip the patch we just applied
+      if (diffPath === newlyAppliedPatchPath) continue;
+  
+      if (!existsSync(diffPath)) {
+        logging.LogInfo(`Patch file ${diffPath} does not exist, skipping.`);
+        continue;
+      }
+  
+      const patchContent = readFileSync(diffPath, 'utf-8');
+      const parsedDiffs = parsePatch(patchContent);
+  
+      let conflictFound = false;
+  
+      for (const singleDiff of parsedDiffs) {
+        // Check if it modifies the same file as javaFilePath
+  
+        for (const hunk of singleDiff.hunks) {
+          let oldLine = hunk.oldStart;
+          for (const line of hunk.lines) {
+            // `-` or ' ' lines reference the old code that must still be present
+            if (line.startsWith('-') || line.startsWith(' ')) {
+              if (changedLines.has(oldLine)) {
+                conflictFound = true;
+                break;
+              }
+              oldLine++;
+            } else if (line.startsWith('+')) {
+              // plus-lines are new lines for that patch, skip
+            }
+          }
+          if (conflictFound) break;
+        }
+        if (conflictFound) break;
+      }
+  
+      if (conflictFound) {
+        logging.LogInfo(
+          `Patch ${diffPath} may be invalidated by changes in ${newlyAppliedPatchPath}, re-running analyzer.`
+        );
+        await getOutputFromAnalyzerOfAFile(javaFilePath);
+        return;
+        
+      }
+    }
+  }
+
+async function applyPatch() {
+  logging.LogInfo("===== Executing applyPatch command. =====");
+
+  if (ANALYZER_USE_DIFF_MODE == "view Diffs") {
+    const webview = getActiveDiffPanelWebview();
+
+    if ("leftPath" in webview.params && "patchPath" in webview.params) {
+      logging.LogInfo("Saving files and fixes to state...");
+      await saveFileAndFixesToState(webview.params.leftPath!);
+
+      try {
+        await updateUserDecisions("applied", webview.params.patchPath!, webview.params.leftPath!);
+
+        // 1) Apply the patch to the code
+        webview.api.applyPatch();
+
+        let openFilePath = vscode.Uri.file(upath.normalize(String(webview.params.leftPath)));
+        const document = await vscode.workspace.openTextDocument(openFilePath);
+        await vscode.window.showTextDocument(document);
+
+        // 2) Construct the jsonFilePath
+        let PROJECT_RELATIVE_PATH;
+        if (path.isAbsolute(webview.params.leftPath)) {
+          PROJECT_RELATIVE_PATH = path.relative(path.dirname(PATCH_FOLDER), webview.params.leftPath);
+        } else {
+          PROJECT_RELATIVE_PATH = webview.params.leftPath;
+        }
+        const jsonFilePath = path.join(
+          path.dirname(PATCH_FOLDER),
+          'validation',
+          'jsons',
+          'jsons',
+          PROJECT_RELATIVE_PATH
+        ) + '.json';
+
+        // 3) Overlapping issues
+        logging.LogInfo("1. handleOverlappingIssues");
+        const changedLines = await handleOverlappingIssues(
+          jsonFilePath, 
+          webview.params.patchPath!, 
+          webview.params.leftPath!
+        );
+
+        // 4) Filter out issues directly connected to the patch we just applied
+        await filterOutIssues(webview.params.patchPath!);
+
+        // 5) Update line references for remaining issues
+        await updateIssueLinesAfterPatch(webview.params.leftPath!, webview.params.patchPath!);
+
+        // 6) Now check for "future patch conflicts"
+        const allDiffPaths = getAllPatchPathsFromJson(jsonFilePath);
+        
+        await handleFuturePatchConflicts(
+          webview.params.patchPath!,
+          changedLines as any,
+          allDiffPaths,
+          webview.params.leftPath!
+        );
+
+        // Close the webview, refresh diagnostics, etc.
+        activeDiffPanelWebviews.splice(activeDiffPanelWebviews.indexOf(webview), 1);
+        if (activeDiffPanelWebviews.length < 1) {
+          vscode.commands.executeCommand("setContext", "patchApplyEnabled", false);
+        }
+        await getDiagnosticsAfterPatch();
+      } catch (error) {
+        logging.LogErrorAndShowErrorMessage("Error during patch application:", error as any);
+      }
+    }
+  } else if (ANALYZER_USE_DIFF_MODE == "view Patch files") {
+    viewPatchFilesMode();
+  }
+
+  await refreshDiagnosticsWithoutAnalysis();
+}
 
   async function viewPatchFilesMode(patchPath: string = "") {
     // Get the content of the original file
@@ -1433,37 +1833,36 @@ export function init(
       applyPatchToFile(path.normalize(sourceFilePath), patched, patchFilepath, false);
     }
 
-    filterOutIssues(patchFilepath);
     updateIssueLinesAfterPatch(sourceFilePath, patchFilepath);
 
     await getDiagnosticsAfterPatch();
 
     // Hide navbar buttons (applyPatch, declinePatch, nextDiff, prevDiff)
     vscode.commands.executeCommand("setContext", "patchApplyEnabled", false);
-    getOutputFromAnalyzerOfAFile();
+    //getOutputFromAnalyzerOfAFile();
   }
 
   async function updateIssueLinesAfterPatch(sourceFilePath: string, patchFilePath: string) {
-    const patchContent = readFileSync(upath.join(PATCH_FOLDER, patchFilePath), "utf8");
-    
+    const patchContent = readFileSync(patchFilePath, "utf8");
+
     // Parse the applied patch and compute line shifts
     const parsedPatch = diff.parsePatch(patchContent);
     const lineShifts = computeLineShifts(parsedPatch);
-    
+
     // Update the issues' text ranges in the related JSON file
     updateIssuesTextRanges(sourceFilePath, lineShifts);
-    
+
     // Find and update all diffs in the corresponding JSON, except the one applied
     updateDiffHeadersInJson(sourceFilePath, patchFilePath, lineShifts);
   }
-  
+
   function updateDiffHeadersInJson(sourceFilePath: string, appliedPatchFilePath: string, lineShifts: { [lineNumber: number]: number }) {
     // Find the matching JSON file in ISSUES_PATH
     const issuesJsonPaths = getIssuesJsonPathsForSourceFile(sourceFilePath);
-    
+
     // Get the Java filename from the sourceFilePath
     const sourceFileBaseName = path.basename(sourceFilePath, '.java');
-    
+
     // Go through each JSON file related to this source file
     issuesJsonPaths.forEach(jsonPath => {
       const jsonContent = readFileSync(jsonPath, 'utf8');
@@ -1481,7 +1880,7 @@ export function init(
             }
 
             // Apply header updates for other patches
-            const patchFilePath = upath.join(PATCH_FOLDER, patch.path);
+            const patchFilePath = patch.path;
             updateDiffHeaders(patchFilePath, lineShifts);  // Update the diff headers
             updated = true;
           });
@@ -1544,40 +1943,40 @@ export function init(
   function computeLineShifts(parsedPatch: any): { [lineNumber: number]: number } {
     const lineShifts: { [lineNumber: number]: number } = {};
     let cumulativeShift = 0;
-  
+
     parsedPatch.forEach((hunk: { hunks: any[]; }) => {
       hunk.hunks.forEach(chunk => {
         const startLine = chunk.oldStart;
         const oldLines = chunk.oldLines || 0;
         const newLines = chunk.newLines || 0;
         const lineDiff = newLines - oldLines;
-  
+
         cumulativeShift += lineDiff;
-  
+
         lineShifts[startLine] = cumulativeShift;
       });
     });
-  
+
     return lineShifts;
   }
 
   function updateIssuesTextRanges(sourceFilePath: string, lineShifts: { [lineNumber: number]: number }) {
     // Load the issues for the source file
     const issuesJsonPaths = getIssuesJsonPathsForSourceFile(sourceFilePath);
-  
+
     issuesJsonPaths.forEach(jsonPath => {
       const issuesContent = readFileSync(jsonPath, 'utf8');
       const issues = JSON.parse(issuesContent);
-  
+
       let updated = false;
-  
+
       issues.forEach((issue: any) => {
         issue.items.forEach((item: any) => {
           const startLine = item.textRange.startLine;
           const endLine = item.textRange.endLine;
-  
+
           let shift = 0;
-  
+
           // Determine the shift for the current issue based on the line shifts
           for (const line in lineShifts) {
             const lineNumber = parseInt(line, 10);
@@ -1585,7 +1984,7 @@ export function init(
               shift = lineShifts[line];
             }
           }
-  
+
           if (shift !== 0) {
             // Update the text ranges
             item.textRange.startLine += shift;
@@ -1594,7 +1993,7 @@ export function init(
           }
         });
       });
-  
+
       if (updated) {
         // Write back the updated issues
         writeFileSync(jsonPath, JSON.stringify(issues, null, 2), 'utf8');
@@ -1609,14 +2008,14 @@ export function init(
       .map(line => line.trim())
       .filter(line => line.length > 0)
       .map(jsonPath => path.resolve(jsonPath));
-  
+
     const sourceFileBaseName = path.basename(sourceFilePath, '.java');
-  
+
     const matchingJsonPaths = jsonFilePaths.filter(jsonPath => {
       const jsonBaseName = path.basename(jsonPath, '.json');
       return jsonBaseName.includes(sourceFileBaseName);
     });
-  
+
     return matchingJsonPaths;
   }
 
@@ -1736,8 +2135,8 @@ export function init(
       const currentFilePath = upath.normalize(
         vscode.window.activeTextEditor!.document.uri.path
       );
-      saveFileAndFixesToState(currentFilePath);
-  
+      //saveFileAndFixesToState(currentFilePath);
+
       for (const key of Object.keys(issues)) {
         for (const issue of issues[key]) {
           for (const patch of issue.patches) {
@@ -1753,21 +2152,21 @@ export function init(
         }
       }
     }
-  
+
     const issuesStr = stringify(issues);
     logging.LogInfo("from filter out cm.ts " + issuesStr);
   }
-  
+
   async function removeObjectById(id: string, currentFilePath: string): Promise<[string, string]> {
     try {
       // Create the JSON file path
       const jsonFilePath = createJsonFilePath(currentFilePath);
       // console.log("json path:", jsonFilePath);
-      
+
       // Read the content of the JSON file
       const fileContent = await fs.readFile(jsonFilePath, 'utf-8');
       // console.log("json content:", fileContent);
-      
+
       // Parse the JSON content
       let jsonArray;
       try {
@@ -1776,14 +2175,14 @@ export function init(
         logging.LogErrorAndShowErrorMessage('Error parsing JSON:', parseError as any);
         throw parseError;
       }
-  
+
       // Ensure jsonArray is actually an array
       if (!Array.isArray(jsonArray)) {
         throw new Error('Parsed JSON is not an array');
       }
 
       // console.log("json array:", jsonArray);
-  
+
       // Filter out the object with the matching ID
       const updatedJsonArray = jsonArray.filter((item: any) => {
         if (item && item.id) {
@@ -1794,18 +2193,18 @@ export function init(
           return true;
         }
       });
-  
+
       // Stringify the updated array
       const updatedContent = JSON.stringify(updatedJsonArray, null, 2);
       // console.log("updated array:", updatedContent);
-  
+
       // Write the updated content back to the JSON file
       await fs.writeFile(jsonFilePath, updatedContent, 'utf-8');
-  
+
       logging.LogInfo(`Successfully removed the object with id: ${id}`);
 
       getDiagnosticsAfterPatch();
-  
+
       // Return the original file content and JSON file path
       return [fileContent, jsonFilePath];
     } catch (error) {
@@ -1813,7 +2212,7 @@ export function init(
       throw error; // Re-throw the error if needed
     }
   }
-  
+
 
   function createJsonFilePath(currentFilePath: string): string {
     let PROJECT_RELATIVE_PATH;
@@ -1825,7 +2224,7 @@ export function init(
     } else {
       PROJECT_RELATIVE_PATH = currentFilePath;
     }
-    
+
     const jsonFilePath = path.join(
       path.dirname(PATCH_FOLDER),
       'validation',
@@ -1833,47 +2232,46 @@ export function init(
       'jsons', // for some reason some path should be here otherwise the 'jsons' won't be included in the final jsonFilePath
       PROJECT_RELATIVE_PATH
     ) + '.json';
-    // console.log("json file path:" , jsonFilePath);
     return jsonFilePath;
   }
 
-async function saveFileAndFixesToState(filePath: string) {
-  // Normalize the path correctly
-  let normalizedFilePath;
+  async function saveFileAndFixesToState(filePath: string) {
+    // Normalize the path correctly
+    let normalizedFilePath;
 
-  if (process.platform === "win32") {
-    const driveLetterRegex = /^\/([a-zA-Z]):\//;
-    if (driveLetterRegex.test(filePath)) {
-      normalizedFilePath = filePath.replace(driveLetterRegex, (match, driveLetter) => {
-        return `${driveLetter.toUpperCase()}:\\`;
-      });
-    } else if (/^[a-zA-Z]:/.test(filePath) && filePath.includes('/')) {
-      normalizedFilePath = upath.toUnix(filePath).replace(driveLetterRegex, (match: any, driveLetter: string) => {
-        return `${driveLetter.toUpperCase()}:\\`;
-      });
+    if (process.platform === "win32") {
+      const driveLetterRegex = /^\/([a-zA-Z]):\//;
+      if (driveLetterRegex.test(filePath)) {
+        normalizedFilePath = filePath.replace(driveLetterRegex, (match, driveLetter) => {
+          return `${driveLetter.toUpperCase()}:\\`;
+        });
+      } else if (/^[a-zA-Z]:/.test(filePath) && filePath.includes('/')) {
+        normalizedFilePath = upath.toUnix(filePath).replace(driveLetterRegex, (match: any, driveLetter: string) => {
+          return `${driveLetter.toUpperCase()}:\\`;
+        });
+      }
+    } else {
+      normalizedFilePath = upath.normalize(filePath);
     }
-  } else {
-    normalizedFilePath = upath.normalize(filePath);
+
+    logging.LogInfo("Final normalized file path: " + normalizedFilePath);
+
+    let jsonFilePath = createJsonFilePath(normalizedFilePath);
+
+    let originalFileContent = readFileSync(normalizedFilePath, "utf8");
+    let originalIssuesContent = readFileSync(jsonFilePath, "utf8");
+    context.workspaceState.update(
+      "lastFileContent",
+      originalFileContent
+    );
+    context.workspaceState.update("lastFilePath", filePath);
+
+    context.workspaceState.update(
+      "lastIssuesContent",
+      JSON.stringify(originalIssuesContent)
+    );
+    context.workspaceState.update("lastIssuesPath", jsonFilePath);
   }
-
-  logging.LogInfo("Final normalized file path: " + normalizedFilePath);
-
-  let jsonFilePath = createJsonFilePath(normalizedFilePath);
-
-  let originalFileContent = readFileSync(normalizedFilePath, "utf8");
-  let originalIssuesContent = readFileSync(jsonFilePath, "utf8");
-  context.workspaceState.update(
-    "lastFileContent",
-    originalFileContent
-  );
-  context.workspaceState.update("lastFilePath", filePath);
-
-  context.workspaceState.update(
-    "lastIssuesContent",
-    JSON.stringify(originalIssuesContent)
-  );
-  context.workspaceState.update("lastIssuesPath", jsonFilePath);
-}
 
   let currentFixId = 0;
 
