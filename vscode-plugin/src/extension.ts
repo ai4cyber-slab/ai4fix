@@ -29,20 +29,20 @@ export async function activate(context: vscode.ExtensionContext) {
   // Initialize the analysis status bar item
   analysisStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
   analysisStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzer';
-  analysisStatusBarItem.text = "$(symbol-misc) Start Analysis";
+  analysisStatusBarItem.text = "$(play-circle) Start Analysis";
   analysisStatusBarItem.show();
   context.subscriptions.push(analysisStatusBarItem);
 
   // Initialize other status bar items similarly
   analyzeCurrentFileStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
   analyzeCurrentFileStatusBarItem.command = "aifix4seccode-vscode.getOutputFromAnalyzerPerFile";
-  analyzeCurrentFileStatusBarItem.text = "$(symbol-keyword) Analyse Current File";
+  analyzeCurrentFileStatusBarItem.text = "$(file-code) Analyse Current File"
   analyzeCurrentFileStatusBarItem.show();
   context.subscriptions.push(analyzeCurrentFileStatusBarItem);
 
   undoFixStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
   undoFixStatusBarItem.command = 'aifix4seccode-vscode.undoLastFix';
-  undoFixStatusBarItem.text = "$(undo) Undo Last Fix (for manual apply only)";
+  undoFixStatusBarItem.text = "$(discard) Undo Last Fix (for manual apply only)";
   undoFixStatusBarItem.show();
   context.subscriptions.push(undoFixStatusBarItem);
 
@@ -76,7 +76,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // Start up log:
   logging.LogInfo("Extension started!");
   vscode.window.showInformationMessage(
-    'This extension is used for analyzing your project for issues. If you have no project folder opened please open it, or include it in the \'AIFix4SecCode\' Extension settings.',
+    'This extension is used for analysing your project for issues. If you have no project folder opened please open it, or include it in the \'AIFix4SecCode\' Extension settings.',
     'Open Settings'
   ).then(selected => {
     if (selected === 'Open Settings') {
@@ -88,16 +88,26 @@ export async function activate(context: vscode.ExtensionContext) {
   await refreshDiagnosticsWithoutAnalysis(context);
 
   // Handle file save with running a file analysis:
-  vscode.workspace.onDidSaveTextDocument((document: vscode.TextDocument) => {
+  const lastSavedVersionMap = new Map<string, number>();
+
+  vscode.workspace.onDidSaveTextDocument(async (document: vscode.TextDocument) => {
     if (document.languageId === "java" && document.uri.scheme === "file") {
-      vscode.commands.executeCommand("aifix4seccode-vscode.getOutputFromAnalyzerPerFile");
-      // Optional: Refresh diagnostics after analysis
-      (async () => {
-        await refreshDiagnostics(
-          vscode.window.activeTextEditor!.document,
-          analysisDiagnostics
-        );
-      })();
+      
+      const docUriStr = document.uri.toString();
+      
+      const currentVersion = document.version;
+      const previousVersion = lastSavedVersionMap.get(docUriStr) || 1;
+      
+      // Only run the analysis on the file if it has been changed
+      if (currentVersion > previousVersion) {
+        
+        lastSavedVersionMap.set(docUriStr, currentVersion);
+        await vscode.commands.executeCommand("aifix4seccode-vscode.getOutputFromAnalyzerPerFile");
+        await refreshDiagnosticsWithoutAnalysis(context);
+      } else {
+        // Either no changes were made or we’ve already recorded this version
+        console.log('File saved but content did not change. Skipping analysis.');
+      }
     }
   });
 

@@ -655,17 +655,17 @@ export function init(
       }
       // Use the path of the active document
       JavaFilePath = editor.document.uri.fsPath;
-      logging.LogInfo(`Analyzing currently opened file: ${JavaFilePath}`);
+      logging.LogInfo(`Analysing currently opened file: ${JavaFilePath}`);
     }
   
 
     isAnalyzing = true;
     analysisCancellationTokenSource = new vscode.CancellationTokenSource();
 
-    analysisStatusBarItem.text = '$(sync~spin) Analyzing file...';
+    analysisStatusBarItem.text = '$(sync~spin) Analysing file...';
     analysisStatusBarItem.command = undefined; // Remove the cancel command
 
-    analyzeCurrentFileStatusBarItem.text = '$(sync~spin) Analyzing file...';
+    analyzeCurrentFileStatusBarItem.text = '$(sync~spin) Analysing file...';
     analyzeCurrentFileStatusBarItem.command = undefined; // Remove the cancel command
 
     logging.LogInfo('===== Analysis started from command. =====');
@@ -674,7 +674,7 @@ export function init(
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: 'Analyzing file...',
+          title: 'Analysing file...',
           cancellable: true,
         },
         async (progress, cancellationToken) => {
