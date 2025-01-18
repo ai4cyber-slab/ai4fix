@@ -36,7 +36,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // Initialize other status bar items similarly
   analyzeCurrentFileStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
   analyzeCurrentFileStatusBarItem.command = "aifix4seccode-vscode.getOutputFromAnalyzerPerFile";
-  analyzeCurrentFileStatusBarItem.text = "$(symbol-keyword) Scan Current File";
+  analyzeCurrentFileStatusBarItem.text = "$(symbol-keyword) Analyse Current File";
   analyzeCurrentFileStatusBarItem.show();
   context.subscriptions.push(analyzeCurrentFileStatusBarItem);
 
@@ -53,7 +53,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(generateTestForCurrentFileStatusBarItem); */
 
   // Initialize commands with the analysisStatusBarItem
-  init(context, jsonOutlineProvider, analysisStatusBarItem);
+  init(context, jsonOutlineProvider, analysisStatusBarItem, analyzeCurrentFileStatusBarItem);
 
   log(process.env);
 

@@ -146,7 +146,8 @@ export async function refreshDiagnosticsWithoutAnalysis(context: vscode.Extensio
 export function init(
   context: vscode.ExtensionContext,
   jsonOutlineProvider: any,
-  analysisStatusBarItem: vscode.StatusBarItem
+  analysisStatusBarItem: vscode.StatusBarItem,
+  analyzeCurrentFileStatusBarItem: vscode.StatusBarItem
 ) {
   let isAnalyzing = false;
   let analysisCancellationTokenSource: vscode.CancellationTokenSource | null = null;
@@ -294,7 +295,7 @@ export function init(
     vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: "Analyzing Project...",
+        title: "Analysing Project...",
       },
       async () => {
         await refreshDiagnostics(
@@ -314,8 +315,11 @@ export function init(
     isAnalyzing = true;
     analysisCancellationTokenSource = new vscode.CancellationTokenSource();
 
-    analysisStatusBarItem.text = '$(sync~spin) Analyzing...';
+    analysisStatusBarItem.text = '$(sync~spin) Analysing...';
     analysisStatusBarItem.command = undefined; // Remove the cancel command
+
+    analyzeCurrentFileStatusBarItem.text = '$(sync~spin) Analysing...';
+    analyzeCurrentFileStatusBarItem.command = undefined; // Remove the cancel command
 
     logging.LogInfo('===== Analysis started from command. =====');
 
@@ -323,7 +327,7 @@ export function init(
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: 'Analyzing project...',
+          title: 'Analysing project...',
           cancellable: true,
         },
         async (progress, cancellationToken) => {
@@ -337,6 +341,9 @@ export function init(
       analysisCancellationTokenSource = null;
       analysisStatusBarItem.text = '$(symbol-misc) Start Analysis';
       analysisStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzer';
+
+      analyzeCurrentFileStatusBarItem.text = '$(symbol-keyword) Analyse Current File';
+      analyzeCurrentFileStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzerPerFile';
     }
   }
 
@@ -354,7 +361,7 @@ export function init(
     vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: "Analyzing project!",
+        title: "Analysing project!",
         cancellable: false,
       },
       async () => {
@@ -658,6 +665,9 @@ export function init(
     analysisStatusBarItem.text = '$(sync~spin) Analyzing file...';
     analysisStatusBarItem.command = undefined; // Remove the cancel command
 
+    analyzeCurrentFileStatusBarItem.text = '$(sync~spin) Analyzing file...';
+    analyzeCurrentFileStatusBarItem.command = undefined; // Remove the cancel command
+
     logging.LogInfo('===== Analysis started from command. =====');
 
     try {
@@ -678,6 +688,9 @@ export function init(
       analysisCancellationTokenSource = null;
       analysisStatusBarItem.text = '$(symbol-misc) Start Analysis';
       analysisStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzer';
+
+      analyzeCurrentFileStatusBarItem.text = '$(symbol-keyword) Analyse Current File';
+      analyzeCurrentFileStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzerPerFile';
     }
   }
 
@@ -1114,7 +1127,6 @@ export function init(
           }
 
           const openFilePath = vscode.Uri.file(sourceFilePath);
-          logging.LogInfo(`Matched source file path: ${openFilePath.fsPath}`);
 
           const document = await vscode.workspace.openTextDocument(openFilePath);
           await vscode.window.showTextDocument(document);
