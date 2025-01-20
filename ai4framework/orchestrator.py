@@ -24,7 +24,7 @@ class WorkflowFramework:
     of a software project.
     """
 
-    def __init__(self, commit_sha, skip_patches=False, sast_rerun=False, automatic_application=False, single_file=None):
+    def __init__(self, commit_sha, skip_patches=False, sast_rerun=False, automatic_application=False, single_file=None, count_issues=False):
         try:
             self.config = ConfigManager.get_config(commit_sha)
         except Exception as e:
@@ -35,6 +35,7 @@ class WorkflowFramework:
             self.sast_rerun = sast_rerun
             self.skip_patches = skip_patches
             self.automatic_application = automatic_application
+            self.count_issues = count_issues
 
             self.sast = SASTOrchestrator(self.config, self.single_file)
             self.security_classifier = SecurityClassifier(self.config)
@@ -67,16 +68,17 @@ class WorkflowFramework:
                     self.symbolic_execution.analyze()
                     logger.info("Analysis completed")
 
-                    warnings_dict_original = self.issues_merger.run()
+                    warnings_dict_original = self.issues_merger.run(self.count_issues)
+                    total_issue_count = sum(warnings_dict_original.values())
                     logger.info("Issues merger run completed")
 
-                    if not self.skip_patches and not self.sast_rerun:
+                    if not self.skip_patches and not self.sast_rerun and not self.count_issues:
                         patch_generator = PatchGenerator(self.config, warnings_dict_original, i, single_file=self.single_file)
                         patch_generator.main()
                         logger.info("Patch generation completed")
-
-                    self.json_converter.process()
-                    logger.info("JSON conversion completed")
+                    if not self.count_issues:
+                        self.json_converter.process()
+                        logger.info("JSON conversion completed")
 
                     if self.automatic_application:
                         PatchApplier(self.config).apply_patches()
@@ -92,6 +94,8 @@ class WorkflowFramework:
         finally:
             elapsed_time = time.time() - start_time
             logger.info(f"Workflow execution completed in {elapsed_time:.2f} seconds")
+            if self.count_issues:
+                print(f"Total issue count: {total_issue_count}")
 
             RESET_COLOR = "\033[0m"
             BOLD_BLUE = "\033[1;34m"
@@ -120,6 +124,7 @@ if __name__ == "__main__":
         parser.add_argument("--sast-rerun", action="store_true", help="If provided, issues will be generated for the new java files contents.")
         parser.add_argument("--auto", action="store_true", help="If provided, patches will be applied automatically after the analysis complete.")
         parser.add_argument("--single-file", help="The path of the file to be analyzed.")
+        parser.add_argument("--count-issues", action="store_true", help="If provided, only the count of the issues found will be returned.")
         args = parser.parse_args()
 
         framework = WorkflowFramework(
@@ -127,7 +132,8 @@ if __name__ == "__main__":
             skip_patches=args.skip_patches,
             sast_rerun=args.sast_rerun,
             automatic_application=args.auto,
-            single_file=args.single_file
+            single_file=args.single_file,
+            count_issues=args.count_issues
         )
 
         framework.execute_workflow()

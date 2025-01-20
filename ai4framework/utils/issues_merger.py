@@ -38,10 +38,13 @@ class JSONCombiner:
             json.dump(combined_data, file, indent=4)
         logger.info(f"Issues added to path: '{self.combined_output_path}'.")
 
-    def run(self):
-        """Executes the process of loading, combining, and saving JSON files."""
+    def run(self, count_issues=False):
+        """
+        Executes the process of loading, combining, and saving JSON files. If count_issues is True, it returns the count of issues without saving the combined data.
+        """
         combined_data = self.combine_json_files()
-        self.save_combined_json(combined_data)
+        if not count_issues:
+            self.save_combined_json(combined_data)
         return self.extract_issue_counts(combined_data)
     
 
