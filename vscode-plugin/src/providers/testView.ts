@@ -160,8 +160,6 @@ function getTreeItem(key: string): vscode.TreeItem {
     if (treeElement) {
       itemLabel = <any>{
         label: labelText,
-        highlights:
-          key.length > 1 ? [[key.length - 2, key.length - 1]] : void 0,
       };
     }
     return {
@@ -201,8 +199,6 @@ function getTreeItem(key: string): vscode.TreeItem {
     if (treeElement) {
       itemLabel = <any>{
         label: key,
-        highlights:
-          key.length > 1 ? [[key.length - 2, key.length - 1]] : void 0,
       };
     }
 

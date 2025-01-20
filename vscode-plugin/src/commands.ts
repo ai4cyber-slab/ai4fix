@@ -30,6 +30,7 @@ import {
   PATCH_FOLDER,
   PROJECT_FOLDER,
   ANALYZER_USE_DIFF_MODE,
+  RERUN_ANALYSIS_AFTER_PATCH,
   SetProjectFolder,
   SCRIPT_PATH,
   utf8Stream,
@@ -146,7 +147,8 @@ export async function refreshDiagnosticsWithoutAnalysis(context: vscode.Extensio
 export function init(
   context: vscode.ExtensionContext,
   jsonOutlineProvider: any,
-  analysisStatusBarItem: vscode.StatusBarItem
+  analysisStatusBarItem: vscode.StatusBarItem,
+  analyzeCurrentFileStatusBarItem: vscode.StatusBarItem
 ) {
   let isAnalyzing = false;
   let analysisCancellationTokenSource: vscode.CancellationTokenSource | null = null;
@@ -294,7 +296,7 @@ export function init(
     vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: "Analyzing Project...",
+        title: "Analysing Project...",
       },
       async () => {
         await refreshDiagnostics(
@@ -314,8 +316,11 @@ export function init(
     isAnalyzing = true;
     analysisCancellationTokenSource = new vscode.CancellationTokenSource();
 
-    analysisStatusBarItem.text = '$(sync~spin) Analyzing...';
+    analysisStatusBarItem.text = '$(sync~spin) Analysing...';
     analysisStatusBarItem.command = undefined; // Remove the cancel command
+
+    analyzeCurrentFileStatusBarItem.text = '$(sync~spin) Analysing...';
+    analyzeCurrentFileStatusBarItem.command = undefined; // Remove the cancel command
 
     logging.LogInfo('===== Analysis started from command. =====');
 
@@ -323,7 +328,7 @@ export function init(
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: 'Analyzing project...',
+          title: 'Analysing project...',
           cancellable: true,
         },
         async (progress, cancellationToken) => {
@@ -337,6 +342,9 @@ export function init(
       analysisCancellationTokenSource = null;
       analysisStatusBarItem.text = '$(symbol-misc) Start Analysis';
       analysisStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzer';
+
+      analyzeCurrentFileStatusBarItem.text = '$(symbol-keyword) Analyse Current File';
+      analyzeCurrentFileStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzerPerFile';
     }
   }
 
@@ -354,7 +362,7 @@ export function init(
     vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: "Analyzing project!",
+        title: "Analysing project!",
         cancellable: false,
       },
       async () => {
@@ -648,15 +656,18 @@ export function init(
       }
       // Use the path of the active document
       JavaFilePath = editor.document.uri.fsPath;
-      logging.LogInfo(`Analyzing currently opened file: ${JavaFilePath}`);
+      logging.LogInfo(`Analysing currently opened file: ${JavaFilePath}`);
     }
   
 
     isAnalyzing = true;
     analysisCancellationTokenSource = new vscode.CancellationTokenSource();
 
-    analysisStatusBarItem.text = '$(sync~spin) Analyzing file...';
+    analysisStatusBarItem.text = '$(sync~spin) Analysing file...';
     analysisStatusBarItem.command = undefined; // Remove the cancel command
+
+    analyzeCurrentFileStatusBarItem.text = '$(sync~spin) Analysing file...';
+    analyzeCurrentFileStatusBarItem.command = undefined; // Remove the cancel command
 
     logging.LogInfo('===== Analysis started from command. =====');
 
@@ -664,7 +675,7 @@ export function init(
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: 'Analyzing file...',
+          title: 'Analysing file...',
           cancellable: true,
         },
         async (progress, cancellationToken) => {
@@ -678,6 +689,9 @@ export function init(
       analysisCancellationTokenSource = null;
       analysisStatusBarItem.text = '$(symbol-misc) Start Analysis';
       analysisStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzer';
+
+      analyzeCurrentFileStatusBarItem.text = '$(symbol-keyword) Analyse Current File';
+      analyzeCurrentFileStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzerPerFile';
     }
   }
 
@@ -1114,7 +1128,6 @@ export function init(
           }
 
           const openFilePath = vscode.Uri.file(sourceFilePath);
-          logging.LogInfo(`Matched source file path: ${openFilePath.fsPath}`);
 
           const document = await vscode.workspace.openTextDocument(openFilePath);
           await vscode.window.showTextDocument(document);
@@ -1745,28 +1758,32 @@ async function applyPatch() {
         ) + '.json';
 
         // 3) Overlapping issues
-        logging.LogInfo("1. handleOverlappingIssues");
-        const changedLines = await handleOverlappingIssues(
-          jsonFilePath, 
-          webview.params.patchPath!, 
-          webview.params.leftPath!
-        );
+        if (RERUN_ANALYSIS_AFTER_PATCH == "onOverlap"){
+          const changedLines = await handleOverlappingIssues(
+            jsonFilePath, 
+            webview.params.patchPath!, 
+            webview.params.leftPath!
+          );
 
-        // 4) Filter out issues directly connected to the patch we just applied
-        await filterOutIssues(webview.params.patchPath!);
+          // 4) Filter out issues directly connected to the patch we just applied
+          await filterOutIssues(webview.params.patchPath!);
 
-        // 5) Update line references for remaining issues
-        await updateIssueLinesAfterPatch(webview.params.leftPath!, webview.params.patchPath!);
+          // 5) Update line references for remaining issues
+          await updateIssueLinesAfterPatch(webview.params.leftPath!, webview.params.patchPath!);
 
-        // 6) Now check for "future patch conflicts"
-        const allDiffPaths = getAllPatchPathsFromJson(jsonFilePath);
-        
-        await handleFuturePatchConflicts(
-          webview.params.patchPath!,
-          changedLines as any,
-          allDiffPaths,
-          webview.params.leftPath!
-        );
+          // 6) Now check for "future patch conflicts"
+          const allDiffPaths = getAllPatchPathsFromJson(jsonFilePath);
+          
+          await handleFuturePatchConflicts(
+            webview.params.patchPath!,
+            changedLines as any,
+            allDiffPaths,
+            webview.params.leftPath!
+          );
+        }else{
+          getOutputFromAnalyzerOfAFile(webview.params.leftPath);
+        }
+
 
         // Close the webview, refresh diagnostics, etc.
         activeDiffPanelWebviews.splice(activeDiffPanelWebviews.indexOf(webview), 1);

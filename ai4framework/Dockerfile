@@ -67,6 +67,11 @@ RUN tar -xvzf /opt/slab-9.19-d45fdf7b5.tgz -C /opt/ && \
     rm /opt/slab-9.19-d45fdf7b5.tgz && \
     mv /opt/slab-9.19-d45fdf7b5 /opt/AI4VULN
 
+RUN mkdir -p /root/.local/share/code-server/User
+
+RUN echo '{ "files.autoSave": "off" }' \
+    > /root/.local/share/code-server/User/settings.json
+
 COPY . ${WORKDIR_PATH}
 
 COPY aifix4seccode-vscode-1.0.39.vsix /opt/
