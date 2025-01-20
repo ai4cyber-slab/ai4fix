@@ -30,6 +30,7 @@ import {
   PATCH_FOLDER,
   PROJECT_FOLDER,
   ANALYZER_USE_DIFF_MODE,
+  RERUN_ANALYSIS_AFTER_PATCH,
   SetProjectFolder,
   SCRIPT_PATH,
   utf8Stream,
@@ -1757,28 +1758,32 @@ async function applyPatch() {
         ) + '.json';
 
         // 3) Overlapping issues
-        logging.LogInfo("1. handleOverlappingIssues");
-        const changedLines = await handleOverlappingIssues(
-          jsonFilePath, 
-          webview.params.patchPath!, 
-          webview.params.leftPath!
-        );
+        if (RERUN_ANALYSIS_AFTER_PATCH == "onOverlap"){
+          const changedLines = await handleOverlappingIssues(
+            jsonFilePath, 
+            webview.params.patchPath!, 
+            webview.params.leftPath!
+          );
 
-        // 4) Filter out issues directly connected to the patch we just applied
-        await filterOutIssues(webview.params.patchPath!);
+          // 4) Filter out issues directly connected to the patch we just applied
+          await filterOutIssues(webview.params.patchPath!);
 
-        // 5) Update line references for remaining issues
-        await updateIssueLinesAfterPatch(webview.params.leftPath!, webview.params.patchPath!);
+          // 5) Update line references for remaining issues
+          await updateIssueLinesAfterPatch(webview.params.leftPath!, webview.params.patchPath!);
 
-        // 6) Now check for "future patch conflicts"
-        const allDiffPaths = getAllPatchPathsFromJson(jsonFilePath);
-        
-        await handleFuturePatchConflicts(
-          webview.params.patchPath!,
-          changedLines as any,
-          allDiffPaths,
-          webview.params.leftPath!
-        );
+          // 6) Now check for "future patch conflicts"
+          const allDiffPaths = getAllPatchPathsFromJson(jsonFilePath);
+          
+          await handleFuturePatchConflicts(
+            webview.params.patchPath!,
+            changedLines as any,
+            allDiffPaths,
+            webview.params.leftPath!
+          );
+        }else{
+          getOutputFromAnalyzerOfAFile(webview.params.leftPath);
+        }
+
 
         // Close the webview, refresh diagnostics, etc.
         activeDiffPanelWebviews.splice(activeDiffPanelWebviews.indexOf(webview), 1);
