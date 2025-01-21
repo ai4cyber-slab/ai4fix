@@ -55,23 +55,8 @@ export async function activate(context: vscode.ExtensionContext) {
   // Initialize commands with the analysisStatusBarItem
   init(context, jsonOutlineProvider, analysisStatusBarItem, analyzeCurrentFileStatusBarItem);
 
-  log(process.env);
+  //log(process.env);
 
-  // On settings change restart prompt:
-  vscode.workspace.onDidChangeConfiguration(event => {
-    const action = 'Reload';
-
-    vscode.window
-      .showInformationMessage(
-        `Reload window in order for change in extension AIFix4SecCode configuration to take effect.`,
-        action
-      )
-      .then(selectedAction => {
-        if (selectedAction === action) {
-          vscode.commands.executeCommand('workbench.action.reloadWindow');
-        }
-      });
-  });
 
   // Start up log:
   logging.LogInfo("Extension started!");

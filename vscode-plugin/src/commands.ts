@@ -340,10 +340,10 @@ export function init(
     } finally {
       isAnalyzing = false;
       analysisCancellationTokenSource = null;
-      analysisStatusBarItem.text = '$(symbol-misc) Start Analysis';
+      analysisStatusBarItem.text = '$(play-circle) Start Analysis';
       analysisStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzer';
 
-      analyzeCurrentFileStatusBarItem.text = '$(symbol-keyword) Analyse Current File';
+      analyzeCurrentFileStatusBarItem.text = '$(file-code) Analyse Current File';
       analyzeCurrentFileStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzerPerFile';
     }
   }
@@ -658,7 +658,7 @@ export function init(
       JavaFilePath = editor.document.uri.fsPath;
       logging.LogInfo(`Analysing currently opened file: ${JavaFilePath}`);
     }
-  
+
 
     isAnalyzing = true;
     analysisCancellationTokenSource = new vscode.CancellationTokenSource();
@@ -687,12 +687,73 @@ export function init(
     } finally {
       isAnalyzing = false;
       analysisCancellationTokenSource = null;
-      analysisStatusBarItem.text = '$(symbol-misc) Start Analysis';
+      analysisStatusBarItem.text = '$(play-circle) Start Analysis';
       analysisStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzer';
 
-      analyzeCurrentFileStatusBarItem.text = '$(symbol-keyword) Analyse Current File';
+      analyzeCurrentFileStatusBarItem.text = '$(file-code) Analyse Current File';
       analyzeCurrentFileStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzerPerFile';
     }
+  }
+
+  async function getOutputFromAnalyzerWithoutPatchingOfAFile(javaFilePath: string): Promise<number> {
+    logging.LogInfo("===== Analysis of a file started from command. =====");
+    if (isAnalyzing) {
+      vscode.window.showWarningMessage('Analysis is already running.');
+      return 0;
+    }
+
+    // If no path given, default to active editor
+    if (!javaFilePath) {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        logging.LogError('No Java file path provided, and no active text editor found.');
+        return 0;
+      }
+      javaFilePath = editor.document.uri.fsPath;
+      logging.LogInfo(`Analysing currently opened file: ${javaFilePath}`);
+    }
+
+    isAnalyzing = true;
+    analysisCancellationTokenSource = new vscode.CancellationTokenSource();
+
+    analysisStatusBarItem.text = '$(sync~spin) Analysing file...';
+    analysisStatusBarItem.command = undefined;
+
+    analyzeCurrentFileStatusBarItem.text = '$(sync~spin) Analysing file...';
+    analyzeCurrentFileStatusBarItem.command = undefined;
+
+    logging.LogInfo('===== Analysis started from command. =====');
+
+    let newIssueCount = 0;
+
+    try {
+      // Using the return value from withProgress as well
+      newIssueCount = await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'Analysing file...',
+          cancellable: true,
+        },
+        async () => {
+          // Return the result from runAnalysisOnAFile
+          return await runAnalysisOnAFile(javaFilePath);
+        }
+      );
+    } catch (error) {
+      logging.LogError(`Error during analysis: ${error}`);
+    } finally {
+      isAnalyzing = false;
+      analysisCancellationTokenSource = null;
+
+      analysisStatusBarItem.text = '$(play-circle) Start Analysis';
+      analysisStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzer';
+
+      analyzeCurrentFileStatusBarItem.text = '$(file-code) Analyse Current File';
+      analyzeCurrentFileStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzerPerFile';
+    }
+
+    // Return the captured newIssueCount
+    return newIssueCount;
   }
 
   async function undoLastFix() {
@@ -739,7 +800,7 @@ export function init(
               lastFilePath
             ).then(async () => {
               // Refresh diagnostics after undo
-              getDiagnosticsAfterPatch();
+              await getDiagnosticsAfterPatch();
             });
           }
         } else if (ANALYZER_USE_DIFF_MODE == "view Patch files") {
@@ -1067,6 +1128,9 @@ export function init(
   async function openUpFile(patchPathOrIssue: string | any) {
     logging.LogInfo("===== Executing openUpFile command. =====");
 
+    logging.LogInfo(`openUpFile called with argument: ${JSON.stringify(patchPathOrIssue, null, 2)}`);
+
+
     let project_folder = PROJECT_FOLDER;
     let patch_folder = PATCH_FOLDER;
     if (!PROJECT_FOLDER) {
@@ -1108,33 +1172,21 @@ export function init(
         sourceFile = issueData.sourceFile;
         textRange = issueData.textRange;
       }
+      // Find the full path to the source file
+      const sourceFilePath = await findFileInProject(sourceFile);
 
-      await vscode.window.withProgress(
-        {
-          location: vscode.ProgressLocation.Notification,
-          title: "Loading and opening file...",
-          cancellable: false,
-        },
-        async (progress) => {
+      if (!sourceFilePath) {
+        const errorMessage = `Source file '${sourceFile}' not found in project.`;
+        logging.LogErrorAndShowErrorMessage(errorMessage, errorMessage);
+        throw new Error(errorMessage);
+      }
 
-          // Find the full path to the source file
-          const sourceFilePath = await findFileInProject(sourceFile);
-          progress.report({ message: `path: '${sourceFilePath}'.` });
+      const openFilePath = vscode.Uri.file(sourceFilePath);
 
-          if (!sourceFilePath) {
-            const errorMessage = `Source file '${sourceFile}' not found in project.`;
-            logging.LogErrorAndShowErrorMessage(errorMessage, errorMessage);
-            throw new Error(errorMessage);
-          }
-
-          const openFilePath = vscode.Uri.file(sourceFilePath);
-
-          const document = await vscode.workspace.openTextDocument(openFilePath);
-          await vscode.window.showTextDocument(document);
-          await setIssueSelectionInEditor(patchPathOrIssue);
-          await getDiagnosticsAfterPatch();
-        }
-      );
+      const document = await vscode.workspace.openTextDocument(openFilePath);
+      await vscode.window.showTextDocument(document);
+      await setIssueSelectionInEditor(patchPathOrIssue);
+      await getDiagnosticsAfterPatch();
     } catch (error) {
       // Display the error using a progress notification as well.
       await vscode.window.withProgress(
@@ -1370,6 +1422,61 @@ export function init(
     return patched;
   }
 
+  async function runAnalysisOnAFile(javaFilePath: string): Promise<number> {
+    // Decide the Python executable:
+    const pythonExecutable = process.platform === 'win32' ? 'python' : 'python3';
+
+    // Prepare command arguments
+    const args = [
+      '/app/orchestrator.py',
+      '--single-file',
+      javaFilePath,
+      '--count-issues'
+    ];
+
+    // 1) Spawn the process
+    const childProc = spawn(pythonExecutable, args);
+
+    // 2) line-by-line reader
+    const rl = readline.createInterface({
+      input: childProc.stdout,
+      crlfDelay: Infinity
+    });
+
+    let totalIssueCount = 0;
+
+    // 3) Read each line as it’s emitted
+    rl.on('line', (line) => {
+      // Look for "Total issue count: N"
+      if (line.startsWith('Total issue count: ')) {
+        const parts = line.split(':');
+        if (parts.length === 2) {
+          const parsed = parseInt(parts[1].trim(), 10);
+          if (!isNaN(parsed)) {
+            totalIssueCount = parsed;
+          }
+        }
+      }
+    });
+
+    // 4) Wait for the process to exit, then return totalIssueCount
+    return new Promise<number>((resolve, reject) => {
+      childProc.on('error', (error) => {
+        reject(error);
+      });
+
+      // When the process closes
+      childProc.on('close', (code) => {
+        if (code === 0) {
+          // Successfully exited => resolve with the totalIssueCount we parsed
+          resolve(totalIssueCount);
+        } else {
+          reject(new Error(`Process exited with code ${code}. No issues count returned.`));
+        }
+      });
+    });
+  }
+
 
   async function runOrchestratorOnAFile(javaFilePath: string, progress: any, cancellationToken: any) {
     const pythonExecutable = process.platform === 'win32' ? 'python' : 'python3';
@@ -1544,37 +1651,32 @@ export function init(
     jsonFilePath: string,
     patchFilePath: string,
     javaFilePath: string
-  ) {
-    // 1) Load patch content
-    const patchContent = readFileSync(patchFilePath, 'utf8');
+  ): Promise<{ changedLines: Set<number>; ranOrchestrator: boolean }> {
 
-    // 2) Parse the patch to get all changed lines
+    const patchContent = readFileSync(patchFilePath, 'utf8');
     const parsedDiffs = parsePatch(patchContent);
     const changedLines = new Set<number>();
 
+    // 1) Identify changed lines
     for (const singleDiff of parsedDiffs) {
-      logging.LogInfo(`Patch modifies file: ${singleDiff.newFileName}`);
-
       for (const hunk of singleDiff.hunks) {
         let currentNewLine = hunk.newStart;
         for (const line of hunk.lines) {
           if (line.startsWith('-') || line.startsWith('+')) {
             changedLines.add(currentNewLine);
           }
-          // Increment new-file line only if it’s not a removal line
           if (!line.startsWith('-')) {
             currentNewLine++;
           }
         }
       }
     }
-
     logging.LogInfo(`Changed lines from patch: ${[...changedLines].join(', ')}`);
 
-    // 3) Load the JSON issues
+    // 2) Load JSON issues
     if (!existsSync(jsonFilePath)) {
       logging.LogInfo(`JSON file not found at: ${jsonFilePath}. Skipping overlap handling.`);
-      return;
+      return { changedLines, ranOrchestrator: false };
     }
 
     let allIssues;
@@ -1583,13 +1685,14 @@ export function init(
       allIssues = JSON.parse(jsonRawContent);
     } catch (e) {
       logging.LogErrorAndShowErrorMessage(`Failed to parse JSON from ${jsonFilePath}`, e as any);
-      return;
+      return { changedLines, ranOrchestrator: false };
     }
 
-    // 4) For each issue -> item, see if its textRange overlaps any changed line.
-    //    We call the orchestrator script only if the item is NOT the same patch
-    //    we are currently applying, AND it overlaps the changed lines.
+    // We'll track if we ever call getOutputFromAnalyzerOfAFile
+    let ranOrchestrator = false;
 
+    // 3) Check for overlaps
+    outerLoop:
     for (let i = 0; i < allIssues.length; i++) {
       const issue = allIssues[i];
       if (!issue.items) continue;
@@ -1597,15 +1700,12 @@ export function init(
       for (const item of issue.items) {
         if (!item.textRange) continue;
 
-        // skip calling the orchestrator because it's the patch we just applied.
+        // If this item is from the same patch, skip
         let isSamePatch = false;
         if (item.patches && Array.isArray(item.patches)) {
-          isSamePatch = item.patches.some(
-            (p: any) => p.path === patchFilePath
-          );
+          isSamePatch = item.patches.some((p: any) => p.path === patchFilePath);
         }
 
-        // Now check overlap
         const { startLine, endLine } = item.textRange;
         let overlaps = false;
         for (let line = startLine; line <= endLine; line++) {
@@ -1619,27 +1719,25 @@ export function init(
           logging.LogInfo(
             `Overlap found for issue ${issue.id} on lines [${startLine}, ${endLine}] -> calling orchestrator.`
           );
-          getOutputFromAnalyzerOfAFile(javaFilePath);
-        } else if (overlaps && isSamePatch) {
-          logging.LogInfo(
-            `Overlap found for issue ${issue.id} on lines [${startLine}, ${endLine}] but it's the same patch, skipping orchestrator.`
-          );
+          await getOutputFromAnalyzerOfAFile(javaFilePath);
+          ranOrchestrator = true;
+          break outerLoop;
         }
       }
     }
 
-    return changedLines;
-
+    return { changedLines, ranOrchestrator };
   }
+
 
   function getAllPatchPathsFromJson(jsonFilePath: string): string[] {
     const patchPaths: string[] = [];
-  
+
     if (!existsSync(jsonFilePath)) {
       logging.LogInfo(`Cannot find JSON at ${jsonFilePath}, returning empty patch list.`);
       return patchPaths;
     }
-  
+
     const rawContent = readFileSync(jsonFilePath, 'utf8');
     let issues;
     try {
@@ -1648,13 +1746,13 @@ export function init(
       logging.LogInfo(`Could not parse JSON at ${jsonFilePath}, returning empty patch list.`);
       return patchPaths;
     }
-  
+
     // The JSON structure is an array of issues -> each has items[] -> each has patches[]
     for (const issue of issues) {
       if (!issue.items) continue;
       for (const item of issue.items) {
         if (!item.patches || !Array.isArray(item.patches)) continue;
-  
+
         // for each patch in patches
         for (const patchObj of item.patches) {
           if (patchObj.path) {
@@ -1663,35 +1761,35 @@ export function init(
         }
       }
     }
-  
+
     return patchPaths;
   }
 
   async function handleFuturePatchConflicts(
-    newlyAppliedPatchPath: string, 
-    changedLines: Set<number>, 
+    newlyAppliedPatchPath: string,
+    changedLines: Set<number>,
     allDiffPaths: string[],
     javaFilePath: string
   ) {
     logging.LogInfo(`Checking future patch conflicts with: ${newlyAppliedPatchPath}`);
-  
+
     for (const diffPath of allDiffPaths) {
       // Skip the patch we just applied
       if (diffPath === newlyAppliedPatchPath) continue;
-  
+
       if (!existsSync(diffPath)) {
         logging.LogInfo(`Patch file ${diffPath} does not exist, skipping.`);
         continue;
       }
-  
+
       const patchContent = readFileSync(diffPath, 'utf-8');
       const parsedDiffs = parsePatch(patchContent);
-  
+
       let conflictFound = false;
-  
+
       for (const singleDiff of parsedDiffs) {
         // Check if it modifies the same file as javaFilePath
-  
+
         for (const hunk of singleDiff.hunks) {
           let oldLine = hunk.oldStart;
           for (const line of hunk.lines) {
@@ -1710,97 +1808,135 @@ export function init(
         }
         if (conflictFound) break;
       }
-  
+
       if (conflictFound) {
         logging.LogInfo(
           `Patch ${diffPath} may be invalidated by changes in ${newlyAppliedPatchPath}, re-running analyzer.`
         );
         await getOutputFromAnalyzerOfAFile(javaFilePath);
         return;
-        
+
       }
     }
   }
 
-async function applyPatch() {
-  logging.LogInfo("===== Executing applyPatch command. =====");
 
-  if (ANALYZER_USE_DIFF_MODE == "view Diffs") {
-    const webview = getActiveDiffPanelWebview();
+  function getJsonIssueCount(jsonFilePath: string): number {
+    if (!existsSync(jsonFilePath)) {
+      logging.LogInfo(`No JSON file at ${jsonFilePath}, returning 0 issues.`);
+      return 0;
+    }
+    const raw = readFileSync(jsonFilePath, "utf-8");
+    let allIssues: any[];
+    try {
+      allIssues = JSON.parse(raw);
+    } catch (e) {
+      logging.LogError(`Could not parse JSON at ${jsonFilePath}, defaulting to 0 issues.`);
+      return 0;
+    }
 
-    if ("leftPath" in webview.params && "patchPath" in webview.params) {
-      logging.LogInfo("Saving files and fixes to state...");
-      await saveFileAndFixesToState(webview.params.leftPath!);
-
-      try {
-        await updateUserDecisions("applied", webview.params.patchPath!, webview.params.leftPath!);
-
-        // 1) Apply the patch to the code
-        webview.api.applyPatch();
-
-        let openFilePath = vscode.Uri.file(upath.normalize(String(webview.params.leftPath)));
-        const document = await vscode.workspace.openTextDocument(openFilePath);
-        await vscode.window.showTextDocument(document);
-
-        // 2) Construct the jsonFilePath
-        let PROJECT_RELATIVE_PATH;
-        if (path.isAbsolute(webview.params.leftPath)) {
-          PROJECT_RELATIVE_PATH = path.relative(path.dirname(PATCH_FOLDER), webview.params.leftPath);
-        } else {
-          PROJECT_RELATIVE_PATH = webview.params.leftPath;
-        }
-        const jsonFilePath = path.join(
-          path.dirname(PATCH_FOLDER),
-          'validation',
-          'jsons',
-          'jsons',
-          PROJECT_RELATIVE_PATH
-        ) + '.json';
-
-        // 3) Overlapping issues
-        if (RERUN_ANALYSIS_AFTER_PATCH == "onOverlap"){
-          const changedLines = await handleOverlappingIssues(
-            jsonFilePath, 
-            webview.params.patchPath!, 
-            webview.params.leftPath!
-          );
-
-          // 4) Filter out issues directly connected to the patch we just applied
-          await filterOutIssues(webview.params.patchPath!);
-
-          // 5) Update line references for remaining issues
-          await updateIssueLinesAfterPatch(webview.params.leftPath!, webview.params.patchPath!);
-
-          // 6) Now check for "future patch conflicts"
-          const allDiffPaths = getAllPatchPathsFromJson(jsonFilePath);
-          
-          await handleFuturePatchConflicts(
-            webview.params.patchPath!,
-            changedLines as any,
-            allDiffPaths,
-            webview.params.leftPath!
-          );
-        }else{
-          getOutputFromAnalyzerOfAFile(webview.params.leftPath);
-        }
-
-
-        // Close the webview, refresh diagnostics, etc.
-        activeDiffPanelWebviews.splice(activeDiffPanelWebviews.indexOf(webview), 1);
-        if (activeDiffPanelWebviews.length < 1) {
-          vscode.commands.executeCommand("setContext", "patchApplyEnabled", false);
-        }
-        await getDiagnosticsAfterPatch();
-      } catch (error) {
-        logging.LogErrorAndShowErrorMessage("Error during patch application:", error as any);
+    let totalIssueCount = 0;
+    for (const issue of allIssues) {
+      if (issue.items) {
+        totalIssueCount += issue.items.length;
       }
     }
-  } else if (ANALYZER_USE_DIFF_MODE == "view Patch files") {
-    viewPatchFilesMode();
+    return totalIssueCount;
   }
 
-  await refreshDiagnosticsWithoutAnalysis();
-}
+  async function applyPatch() {
+    logging.LogInfo("===== Executing applyPatch command. =====");
+
+    if (ANALYZER_USE_DIFF_MODE === "view Diffs") {
+      const webview = getActiveDiffPanelWebview();
+
+      if ("leftPath" in webview.params && "patchPath" in webview.params) {
+        logging.LogInfo("Saving files and fixes to state...");
+        await saveFileAndFixesToState(webview.params.leftPath!);
+
+        try {
+          await updateUserDecisions("applied", webview.params.patchPath!, webview.params.leftPath!);
+
+          // 2) Actually apply the patch to code
+          webview.api.applyPatch();
+
+          const openFilePath = vscode.Uri.file(upath.normalize(String(webview.params.leftPath)));
+          const document = await vscode.workspace.openTextDocument(openFilePath);
+          await vscode.window.showTextDocument(document);
+
+          // 3) Construct jsonFilePath
+          let PROJECT_RELATIVE_PATH: string;
+          if (path.isAbsolute(webview.params.leftPath)) {
+            PROJECT_RELATIVE_PATH = path.relative(path.dirname(PATCH_FOLDER), webview.params.leftPath);
+          } else {
+            PROJECT_RELATIVE_PATH = webview.params.leftPath as any;
+          }
+          const jsonFilePath = path.join(
+            path.dirname(PATCH_FOLDER),
+            "validation",
+            "jsons",
+            "jsons",
+            PROJECT_RELATIVE_PATH
+          ) + ".json";
+
+          // 4) Count "old" issues from the JSON
+          const oldIssueCount = getJsonIssueCount(jsonFilePath);
+
+          // 5) Run a quick analysis *without* applying new patches, to get newIssueCount
+          const newIssueCount = await getOutputFromAnalyzerWithoutPatchingOfAFile(webview.params.leftPath!);
+
+          //logging.LogInfo(`Old issues: ${oldIssueCount}, New issues: ${newIssueCount}`);
+
+          // 6) Decide if we need the full "onOverlap" style approach or not
+          if (newIssueCount as any >= oldIssueCount) {
+            // If new issues are same or more => go for full analysis again
+            logging.LogInfo("New issues were introduced by the patch, rerunning analysis...");
+            await getOutputFromAnalyzerOfAFile(webview.params.leftPath!);
+          } else {
+            // 7) If new is less => we do the typical "handleOverlappingIssues"
+            logging.LogInfo("Checking overlaps caused by the applied patch...");
+            const { changedLines, ranOrchestrator } = await handleOverlappingIssues(
+              jsonFilePath,
+              webview.params.patchPath!,
+              webview.params.leftPath!
+            );
+
+            if (ranOrchestrator) {
+              logging.LogInfo("Already ran the analyzer from overlapping issues -> skipping filterOut & future conflict checks");
+            } else {
+              // Then filter out issues directly connected to the patch
+              await filterOutIssues(webview.params.patchPath!);
+
+              // And update line references
+              await updateIssueLinesAfterPatch(webview.params.leftPath!, webview.params.patchPath!);
+
+              // And check future patches
+              const allDiffPaths = getAllPatchPathsFromJson(jsonFilePath);
+              await handleFuturePatchConflicts(
+                webview.params.patchPath!,
+                changedLines,
+                allDiffPaths,
+                webview.params.leftPath!
+              );
+            }
+          }
+
+          // Finish up
+          activeDiffPanelWebviews.splice(activeDiffPanelWebviews.indexOf(webview), 1);
+          if (activeDiffPanelWebviews.length < 1) {
+            vscode.commands.executeCommand("setContext", "patchApplyEnabled", false);
+          }
+          await getDiagnosticsAfterPatch();
+        } catch (error) {
+          logging.LogErrorAndShowErrorMessage("Error during patch application:", error as any);
+        }
+      }
+    } else if (ANALYZER_USE_DIFF_MODE === "view Patch files") {
+      viewPatchFilesMode();
+    }
+
+    await refreshDiagnosticsWithoutAnalysis();
+  }
 
   async function viewPatchFilesMode(patchPath: string = "") {
     // Get the content of the original file
@@ -2171,7 +2307,7 @@ async function applyPatch() {
     }
 
     const issuesStr = stringify(issues);
-    logging.LogInfo("from filter out cm.ts " + issuesStr);
+    //logging.LogInfo("from filter out cm.ts " + issuesStr);
   }
 
   async function removeObjectById(id: string, currentFilePath: string): Promise<[string, string]> {
@@ -2203,7 +2339,7 @@ async function applyPatch() {
       // Filter out the object with the matching ID
       const updatedJsonArray = jsonArray.filter((item: any) => {
         if (item && item.id) {
-          console.log("Removed item:", item);
+          //console.log("Removed item:", item);
           return item.id !== id;
         } else {
           logging.LogErrorAndShowErrorMessage('Item does not have an id or is undefined:', item);
@@ -2270,8 +2406,6 @@ async function applyPatch() {
     } else {
       normalizedFilePath = upath.normalize(filePath);
     }
-
-    logging.LogInfo("Final normalized file path: " + normalizedFilePath);
 
     let jsonFilePath = createJsonFilePath(normalizedFilePath);
 

@@ -112,7 +112,7 @@ export function applyPatchToFile(leftPath: string, rightContent: string, patchPa
 
     });
 
-    window.showInformationMessage('Content saved to path: ' + leftPath);
+    //window.showInformationMessage('Content saved to path: ' + leftPath);
     return leftPath;
   }
   return '';

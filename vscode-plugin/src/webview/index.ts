@@ -82,7 +82,7 @@ export async function showDiff({ patchPath, leftContent, rightContent, leftPath,
     extendsWebView.render();
     panel.onDidChangeViewState(e => {
       setPanelFocused(e.webviewPanel.active);
-      log(`panel visibility changed to: ${e.webviewPanel.active}`);
+      //log(`panel visibility changed to: ${e.webviewPanel.active}`);
       if (e.webviewPanel.active) {
         setActiveDiffPanelWebview(extendsWebView);
       }
