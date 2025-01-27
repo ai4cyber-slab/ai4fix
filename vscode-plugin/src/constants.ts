@@ -89,7 +89,6 @@ export function SetProjectFolder(path: string) {
 export const PATCH_FOLDER = insertHiddenFile(PROJECT_FOLDER, upath.normalize(CONFIG['DEFAULT']?.['config.results_path'] || 'patches'));
 export const ISSUES_PATH = insertHiddenFile(PROJECT_FOLDER, upath.normalize(CONFIG['DEFAULT']?.['config.jsons_listfile'] || 'jsons.lists'))
 export const ANALYZER_USE_DIFF_MODE = CONFIG['PLUGIN']?.['plugin.use_diff_mode'] || 'view Diffs';
-export const RERUN_ANALYSIS_AFTER_PATCH = CONFIG['PLUGIN']?.['plugin.rerun_analysis_after_patch'] || 'onOverlap';
 
 let test_folder_path = CONFIG['PLUGIN']?.['plugin.test_folder_log'] || '';
 if(!upath.isAbsolute(test_folder_path)) {
@@ -108,7 +107,6 @@ export const PATCH_FOLDER_LOG = 'plugin.generated_patches_path' + '=' + PATCH_FO
 export const ISSUES_PATH_LOG = 'plugin.jsons_listfile' + '=' + ISSUES_PATH + os.EOL;
 export var PROJECT_FOLDER_LOG = 'plugin.subject_project_path' + '=' + PROJECT_FOLDER + os.EOL;
 export const ANALYZER_USE_DIFF_MODE_LOG = 'plugin.use_diff_mode' + '=' + ANALYZER_USE_DIFF_MODE + os.EOL;
-export const RERUN_ANALYSIS_AFTER_PATCH_LOG = 'plugin.rerun_analysis_after_patch' + '=' + RERUN_ANALYSIS_AFTER_PATCH + os.EOL;
 
 
 export const UNSAVED_SYMBOL = ' •';

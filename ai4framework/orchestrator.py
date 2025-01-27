@@ -96,6 +96,7 @@ class WorkflowFramework:
             logger.info(f"Workflow execution completed in {elapsed_time:.2f} seconds")
             if self.count_issues:
                 print(f"Total issue count: {total_issue_count}")
+                print(f"warnings_dict_original: {warnings_dict_original}")
 
             RESET_COLOR = "\033[0m"
             BOLD_BLUE = "\033[1;34m"

@@ -10,3 +10,4 @@ groq
 matplotlib
 anthropic
 commentjson
+tabulate

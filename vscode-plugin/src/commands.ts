@@ -30,7 +30,6 @@ import {
   PATCH_FOLDER,
   PROJECT_FOLDER,
   ANALYZER_USE_DIFF_MODE,
-  RERUN_ANALYSIS_AFTER_PATCH,
   SetProjectFolder,
   SCRIPT_PATH,
   utf8Stream,
@@ -693,67 +692,6 @@ export function init(
       analyzeCurrentFileStatusBarItem.text = '$(file-code) Analyse Current File';
       analyzeCurrentFileStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzerPerFile';
     }
-  }
-
-  async function getOutputFromAnalyzerWithoutPatchingOfAFile(javaFilePath: string): Promise<number> {
-    logging.LogInfo("===== Analysis of a file started from command. =====");
-    if (isAnalyzing) {
-      vscode.window.showWarningMessage('Analysis is already running.');
-      return 0;
-    }
-
-    // If no path given, default to active editor
-    if (!javaFilePath) {
-      const editor = vscode.window.activeTextEditor;
-      if (!editor) {
-        logging.LogError('No Java file path provided, and no active text editor found.');
-        return 0;
-      }
-      javaFilePath = editor.document.uri.fsPath;
-      logging.LogInfo(`Analysing currently opened file: ${javaFilePath}`);
-    }
-
-    isAnalyzing = true;
-    analysisCancellationTokenSource = new vscode.CancellationTokenSource();
-
-    analysisStatusBarItem.text = '$(sync~spin) Analysing file...';
-    analysisStatusBarItem.command = undefined;
-
-    analyzeCurrentFileStatusBarItem.text = '$(sync~spin) Analysing file...';
-    analyzeCurrentFileStatusBarItem.command = undefined;
-
-    logging.LogInfo('===== Analysis started from command. =====');
-
-    let newIssueCount = 0;
-
-    try {
-      // Using the return value from withProgress as well
-      newIssueCount = await vscode.window.withProgress(
-        {
-          location: vscode.ProgressLocation.Notification,
-          title: 'Analysing file...',
-          cancellable: true,
-        },
-        async () => {
-          // Return the result from runAnalysisOnAFile
-          return await runAnalysisOnAFile(javaFilePath);
-        }
-      );
-    } catch (error) {
-      logging.LogError(`Error during analysis: ${error}`);
-    } finally {
-      isAnalyzing = false;
-      analysisCancellationTokenSource = null;
-
-      analysisStatusBarItem.text = '$(play-circle) Start Analysis';
-      analysisStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzer';
-
-      analyzeCurrentFileStatusBarItem.text = '$(file-code) Analyse Current File';
-      analyzeCurrentFileStatusBarItem.command = 'aifix4seccode-vscode.getOutputFromAnalyzerPerFile';
-    }
-
-    // Return the captured newIssueCount
-    return newIssueCount;
   }
 
   async function undoLastFix() {
@@ -1422,61 +1360,6 @@ export function init(
     return patched;
   }
 
-  async function runAnalysisOnAFile(javaFilePath: string): Promise<number> {
-    // Decide the Python executable:
-    const pythonExecutable = process.platform === 'win32' ? 'python' : 'python3';
-
-    // Prepare command arguments
-    const args = [
-      '/app/orchestrator.py',
-      '--single-file',
-      javaFilePath,
-      '--count-issues'
-    ];
-
-    // 1) Spawn the process
-    const childProc = spawn(pythonExecutable, args);
-
-    // 2) line-by-line reader
-    const rl = readline.createInterface({
-      input: childProc.stdout,
-      crlfDelay: Infinity
-    });
-
-    let totalIssueCount = 0;
-
-    // 3) Read each line as it’s emitted
-    rl.on('line', (line) => {
-      // Look for "Total issue count: N"
-      if (line.startsWith('Total issue count: ')) {
-        const parts = line.split(':');
-        if (parts.length === 2) {
-          const parsed = parseInt(parts[1].trim(), 10);
-          if (!isNaN(parsed)) {
-            totalIssueCount = parsed;
-          }
-        }
-      }
-    });
-
-    // 4) Wait for the process to exit, then return totalIssueCount
-    return new Promise<number>((resolve, reject) => {
-      childProc.on('error', (error) => {
-        reject(error);
-      });
-
-      // When the process closes
-      childProc.on('close', (code) => {
-        if (code === 0) {
-          // Successfully exited => resolve with the totalIssueCount we parsed
-          resolve(totalIssueCount);
-        } else {
-          reject(new Error(`Process exited with code ${code}. No issues count returned.`));
-        }
-      });
-    });
-  }
-
 
   async function runOrchestratorOnAFile(javaFilePath: string, progress: any, cancellationToken: any) {
     const pythonExecutable = process.platform === 'win32' ? 'python' : 'python3';
@@ -1820,30 +1703,6 @@ export function init(
     }
   }
 
-
-  function getJsonIssueCount(jsonFilePath: string): number {
-    if (!existsSync(jsonFilePath)) {
-      logging.LogInfo(`No JSON file at ${jsonFilePath}, returning 0 issues.`);
-      return 0;
-    }
-    const raw = readFileSync(jsonFilePath, "utf-8");
-    let allIssues: any[];
-    try {
-      allIssues = JSON.parse(raw);
-    } catch (e) {
-      logging.LogError(`Could not parse JSON at ${jsonFilePath}, defaulting to 0 issues.`);
-      return 0;
-    }
-
-    let totalIssueCount = 0;
-    for (const issue of allIssues) {
-      if (issue.items) {
-        totalIssueCount += issue.items.length;
-      }
-    }
-    return totalIssueCount;
-  }
-
   async function applyPatch() {
     logging.LogInfo("===== Executing applyPatch command. =====");
 
@@ -1879,46 +1738,31 @@ export function init(
             PROJECT_RELATIVE_PATH
           ) + ".json";
 
-          // 4) Count "old" issues from the JSON
-          const oldIssueCount = getJsonIssueCount(jsonFilePath);
+          // 4) handling overlapping issues
+          logging.LogInfo("Checking overlaps caused by the applied patch...");
+          const { changedLines, ranOrchestrator } = await handleOverlappingIssues(
+            jsonFilePath,
+            webview.params.patchPath!,
+            webview.params.leftPath!
+          );
 
-          // 5) Run a quick analysis *without* applying new patches, to get newIssueCount
-          const newIssueCount = await getOutputFromAnalyzerWithoutPatchingOfAFile(webview.params.leftPath!);
-
-          //logging.LogInfo(`Old issues: ${oldIssueCount}, New issues: ${newIssueCount}`);
-
-          // 6) Decide if we need the full "onOverlap" style approach or not
-          if (newIssueCount as any >= oldIssueCount) {
-            // If new issues are same or more => go for full analysis again
-            logging.LogInfo("New issues were introduced by the patch, rerunning analysis...");
-            await getOutputFromAnalyzerOfAFile(webview.params.leftPath!);
+          if (ranOrchestrator) {
+            logging.LogInfo("Already ran the analyzer from overlapping issues -> skipping filterOut & future conflict checks");
           } else {
-            // 7) If new is less => we do the typical "handleOverlappingIssues"
-            logging.LogInfo("Checking overlaps caused by the applied patch...");
-            const { changedLines, ranOrchestrator } = await handleOverlappingIssues(
-              jsonFilePath,
+            // filter out issues directly connected to the patch
+            await filterOutIssues(webview.params.patchPath!);
+
+            // And update line references
+            await updateIssueLinesAfterPatch(webview.params.leftPath!, webview.params.patchPath!);
+
+            // And check future patches
+            const allDiffPaths = getAllPatchPathsFromJson(jsonFilePath);
+            await handleFuturePatchConflicts(
               webview.params.patchPath!,
+              changedLines,
+              allDiffPaths,
               webview.params.leftPath!
             );
-
-            if (ranOrchestrator) {
-              logging.LogInfo("Already ran the analyzer from overlapping issues -> skipping filterOut & future conflict checks");
-            } else {
-              // Then filter out issues directly connected to the patch
-              await filterOutIssues(webview.params.patchPath!);
-
-              // And update line references
-              await updateIssueLinesAfterPatch(webview.params.leftPath!, webview.params.patchPath!);
-
-              // And check future patches
-              const allDiffPaths = getAllPatchPathsFromJson(jsonFilePath);
-              await handleFuturePatchConflicts(
-                webview.params.patchPath!,
-                changedLines,
-                allDiffPaths,
-                webview.params.leftPath!
-              );
-            }
           }
 
           // Finish up

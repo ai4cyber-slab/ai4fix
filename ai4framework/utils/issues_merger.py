@@ -1,6 +1,5 @@
 import os
 import json
-
 from utils.logger import logger
 
 
@@ -13,6 +12,7 @@ class JSONCombiner:
         self.results_path = self.config.get("DEFAULT", "config.analyzer_results_path")
         self.combined_output_path = self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "single_rerun_issues.json") if single_file else self.config.get('DEFAULT', 'config.issues_path')
         self.ai4vuln_issues_path = os.path.join(self.results_path, self.project_name, 'java', 'now', 'ai4vuln_issues.json')
+        self.issue_type_exclusion = self.config.get("DEFAULT", "config.issue_type_exclusion", fallback="").split(",")
 
     def load_json(self, file_path):
         """Loads a JSON file and returns its data."""
@@ -25,12 +25,20 @@ class JSONCombiner:
             data1 = self.load_json(self.sast_issues_path)
         else:
             data1 = []
+
         if os.path.exists(self.ai4vuln_issues_path):
             data2 = self.load_json(self.ai4vuln_issues_path)
         else:
             data2 = []
+
         combined_data = data1 + data2
-        return combined_data
+        return self.filter_excluded_issues(combined_data)
+
+    def filter_excluded_issues(self, data):
+        """Filters out issues based on the issue_type_exclusion list."""
+        if self.issue_type_exclusion:
+            return [issue for issue in data if issue.get("name") not in self.issue_type_exclusion]
+        return data
 
     def save_combined_json(self, combined_data):
         """Saves the combined data to a JSON file."""
@@ -40,17 +48,16 @@ class JSONCombiner:
 
     def run(self, count_issues=False):
         """
-        Executes the process of loading, combining, and saving JSON files. If count_issues is True, it returns the count of issues without saving the combined data.
+        Executes the process of loading, combining, and saving JSON files.
+        If count_issues is True, it returns the count of issues without saving the combined data.
         """
         combined_data = self.combine_json_files()
         if not count_issues:
             self.save_combined_json(combined_data)
         return self.extract_issue_counts(combined_data)
-    
 
     def extract_issue_counts(self, data):
         issue_counts = {}
-        
         for issue in data:
             name = issue.get("name")
             if name:
@@ -58,5 +65,4 @@ class JSONCombiner:
                     issue_counts[name] += 1
                 else:
                     issue_counts[name] = 1
-        
         return issue_counts

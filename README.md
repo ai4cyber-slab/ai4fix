@@ -88,6 +88,7 @@ For reference, the content of the `config.properties` template is as follows:
 config.filter=test # packages/folders to filter files (if present in file paths, those files will be ignored). Leave empty to analyze all files.
 config.rounds_count=1 # Number of times to run the process. Useful for auto patching with '--auto' option.
 config.build_tool=maven # (maven, gradle, or javac)
+config.issue_type_exclusion = AtLeastOneConstructor # Issue types that should be excluded from the analysis process
 
 [API]
 config.provider=azureopenai # Service to use ('groq', 'openai', 'claude', 'azureopenai')
@@ -103,7 +104,6 @@ config.pmd_ruleset=/app/utils/PMD-config.xml # Leave as default or change if nee
 [PLUGIN]
 plugin.use_diff_mode=view Diffs # Do not change
 plugin.script_path=/app # Do not change
-plugin.rerun_analysis_after_patch=onOverlap # Values: 'always' = re-run analysis after every patch 'onOverlap' = only re-run analysis if the patch had overlapping issues
 ```
 
 ---

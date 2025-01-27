@@ -1,3 +1,5 @@
+import ast
+from collections import defaultdict
 import os
 import re
 import sys
@@ -11,6 +13,7 @@ import difflib
 import shutil
 import tempfile
 import multiprocessing
+from tabulate import tabulate
 from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
 import copy
@@ -86,10 +89,6 @@ def parse_build_output(build_tool, result_output):
         # Store them in 'failure_details' as (className, testName, extraMessage)
         for class_name, test_name, extra_msg in test_failures:
             details['failure_details'].append((class_name.strip(), test_name.strip(), extra_msg.strip()))
-
-        # 4) Detect test errors (similar approach, if needed)
-        # error_details = re.findall(r'(.*?) > (.*?) ERROR\s*(.*)', result_output)
-        # details['error_details'] = [(c.strip(), t.strip(), m.strip()) for c, t, m in error_details]
 
     else:
         raise NotImplementedError(f"Build tool '{build_tool}' not supported yet.")
@@ -436,7 +435,7 @@ def revert_patch(context):
         logger.error(f"Error restoring original content to {full_file_path}: {e}")
 
 
-def create_diff(context):
+def create_diff(context, extra=""):
     full_file_path = context['full_file_path']
     initial_content = context['initial_content']
     file_path = context['file_path']
@@ -459,8 +458,11 @@ def create_diff(context):
         n=2
     )
     diff_text = ''.join(diff)
-
-    diff_file_name = f"{os.path.splitext(os.path.basename(full_file_path))[0]}_patch_{warning_id}_attempt_{attempt}_{str(int(time.time()))}.diff"
+    if extra=="":
+        diff_file_name = f"{os.path.splitext(os.path.basename(full_file_path))[0]}_patch_{warning_id}_attempt_{attempt}_{str(int(time.time()))}.diff"
+    else:
+        diff_file_name = f"{os.path.splitext(os.path.basename(full_file_path))[0]}_patch_{warning_id}_attempt_{attempt}_{extra.replace(':','-')}.diff"
+    os.makedirs(diffs_output_dir, exist_ok=True)
     diff_file_path = os.path.join(diffs_output_dir, diff_file_name)
 
     try:
@@ -523,12 +525,20 @@ def handle_test_error(context):
             return True
         else:
             revert_patch(context)
-            revert_test_content(context)
+            try:
+                revert_test_content(context)
+            except TypeError as e:
+                if "NoneType" in str(e):
+                    logger.info("Test was not reverted.")
+                else:
+                    raise
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}")
             log_retry("Retrying", context)
             return False
     else:
         revert_patch(context)
-        log_retry("Retrying with a new patch", context)
+        log_retry("Build failed. Retrying with a new patch", context)
         return False
 
 
@@ -564,7 +574,15 @@ def handle_build_success(context):
         return True
     else:
         revert_patch(context)
-        revert_test_content(context)
+        try:
+            revert_test_content(context)
+        except TypeError as e:
+            if "NoneType" in str(e):
+                logger.info("Test was not reverted.")
+            else:
+                raise
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
         log_retry("Retrying with a new patch", context)
         return False
 
@@ -649,7 +667,68 @@ def handle_compilation_error(context):
             return handle_source_error(context)
     return None
 
+def check_new_issues(file_path, original_file_issue_count):
+    introduced_new_issue = "False"
+    new_warnings_dict = {}
 
+    try:
+        cmd = [
+            "python",
+            "/app/orchestrator.py",
+            "--single-file", file_path,
+            "--count-issues"
+        ]
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, check=False
+        )
+
+        if result.returncode != 0:
+            logger.warning(f"Orchestrator returned non-zero exit code: {result.returncode}")
+            # We can treat a non-zero exit as a possible build failure or skip.
+
+        match_count = re.search(r"Total issue count:\s*(\d+)", result.stdout)
+        if match_count:
+            new_count = int(match_count.group(1))
+            logger.info(
+                f"Orchestrator found {new_count} issues in {file_path}; originally had {original_file_issue_count}"
+            )
+            # If new_count >= original_file_issue_count => we introduced new or same # issues
+            if new_count >= original_file_issue_count:
+                introduced_new_issue = "True"
+        else:
+            introduced_new_issue = "build failed"
+
+        # Grab the dictionary after "warnings_dict_original:"
+        match_dict = re.search(r"warnings_dict_original:\s*(\{.*\})", result.stdout, re.DOTALL)
+        if match_dict:
+            dict_str = match_dict.group(1).strip()
+            try:
+                new_warnings_dict = ast.literal_eval(dict_str)
+            except Exception as parse_err:
+                logger.error(f"Failed to parse warnings_dict_original as Python dict: {parse_err}")
+        else:
+            logger.warning("build failed.")
+
+    except Exception as e:
+        logger.error(f"Error checking new issues in {file_path}: {e}")
+
+    return {
+        "introduced_new_issue": introduced_new_issue,
+        "new_warnings_dict": new_warnings_dict
+    }
+
+def get_newly_introduced_issues(original_issue_dict, new_issue_dict):
+    """
+    Return a dictionary of only the issue types that have
+    a higher count now than before, or did not exist originally.
+    """
+    newly_introduced = {}
+    for issue_type, new_count in new_issue_dict.items():
+        old_count = original_issue_dict.get(issue_type, 0)
+        diff = new_count - old_count
+        if diff > 0:
+            newly_introduced[issue_type] = diff
+    return newly_introduced
 
 ####################################
 # Main Logic
@@ -667,7 +746,9 @@ def process_warning_worker(args):
         build_tool,
         base_project_path,
         diffs_output_dir,
-        single_file
+        single_file,
+        total_warnings,
+        file_issue_types
     ) = args
 
     local_stats = {
@@ -679,6 +760,8 @@ def process_warning_worker(args):
         'non_applicabale_diffs': 0,
         'validation_errors': 0,
         'compilation_or_test_errors': 0,
+        'introduced_new_issue': False,
+        'issue_name': "",
         'successful_patches': 0,
         'total_attempts': 0,
         'diff_file_name': None,
@@ -688,7 +771,8 @@ def process_warning_worker(args):
         'keep_test': True,
         'explanation': warning['explanation'],
         'input_tokens': [],
-        'response_tokens': []
+        'response_tokens': [],
+        'new_warnings_distribution': {}
     }
 
     try:
@@ -778,7 +862,61 @@ def process_warning_worker(args):
                             logger.error(f"Error while restoring original content to {full_file_path}: {e}")
                         continue
                     else:
-                        local_stats['applicable_patch'] = True
+                        original_issue_dict_for_file = file_issue_types.get(file_path, {})
+                        original_count_for_this_file = sum(original_issue_dict_for_file.values())
+                        check_result = check_new_issues(full_file_path, original_count_for_this_file)
+                        introduced_new_issue = check_result["introduced_new_issue"]
+                        new_warnings_dict = check_result["new_warnings_dict"]
+                        newly_introduced_issues = get_newly_introduced_issues(
+                            original_issue_dict_for_file,
+                            new_warnings_dict
+                        )
+                    if introduced_new_issue == "True":
+                        logger.warning("New or equal number of issues introduced by patch. Reverting patch and retrying if attempts remain.")
+                        context = {
+                            'initial_content': initial_content,
+                            'full_file_path': full_file_path,
+                            'file_path': file_path,
+                            'attempt': attempt,
+                            'diffs_output_dir': diffs_output_dir.replace("patches","patches_with_validation_errors"),
+                            'warning_id': warning['id'],
+                        }
+                        if len(newly_introduced_issues) > 0:
+                            create_diff(context, f"introduced issue: {newly_introduced_issues}")
+                        else:
+                            create_diff(context, f"did not solve the issue")
+                        try:
+                            with open(full_file_path, 'w') as f:
+                                f.write(initial_content)
+                            logger.debug(f"Reverted patch in {full_file_path} due to newly introduced issues.")
+                        except Exception as e:
+                            logger.error(f"Error while restoring original content to {full_file_path}: {e}")
+
+                        # 1) Mark stats
+                        local_stats['introduced_new_issue'] = True
+                        local_stats['validation_passed'] = True
+                        local_stats['issue_name'] = name
+                        local_stats['new_warnings_distribution'] = newly_introduced_issues
+
+                        # 2) Incorporate the newly introduced issues into the next attempt's "previous_generated_patch"
+                        if len(newly_introduced_issues) > 0:
+                            introduced_issues_text = "\n\nThe previous patch introduced these new issues:\n"
+                        else:
+                            introduced_issues_text = "\n\nThe previous patch didn't solve the issue.\n"
+                        for introduced_type, introduced_count in newly_introduced_issues.items():
+                            introduced_issues_text += f"  - {introduced_type} (count: {introduced_count})\n"
+                            new_issue_solve_command = ALL_WARNINGS.get(introduced_type, "")
+                            if new_issue_solve_command:
+                                introduced_issues_text += f"    Possible fix command: {new_issue_solve_command}\n"
+                            
+                        if previous_generated_patch is None:
+                            previous_generated_patch = ""
+                        previous_generated_patch += introduced_issues_text
+                        continue
+                    elif introduced_new_issue=="build failed":
+                        local_stats['validation_passed'] = True
+                        local_stats['mvn_test_passed'] = False
+                        pass
 
                     if single_file is not None:
                         try:
@@ -853,12 +991,17 @@ def process_warning_worker(args):
                         if validation_result is True:
                             break
                         elif validation_result is False:
+                            local_stats['validation_passed'] = True
                             continue
                     else:
                         test_failure_result = handle_test_failures(context)
+                        logger.warning("Build failed")
+                        local_stats['mvn_test_passed'] = False
+                        local_stats['validation_passed'] = True
                         if test_failure_result is True:
                             break
                         elif test_failure_result is False:
+
                             continue
 
                 if test_file_path and os.path.exists(test_file_path): # TODO: Update to check validation later
@@ -891,6 +1034,10 @@ def process_warning_worker(args):
     return local_stats
 
 
+def nested_defaultdict_int():
+    return defaultdict(int)
+
+
 class PatchGenerator:
     def __init__(self, config, warning_dict, num_of_rounds, single_file=None):
         dotenv_path = find_dotenv()
@@ -912,6 +1059,7 @@ class PatchGenerator:
         self.cores_to_use = self.config.get('DEFAULT', 'config.parallel_workers', fallback='1')
         self.warnings = []
         self.compilation_or_test_errors = 0
+        self.introduced_new_issue = 0
         self.validation_errors = 0
         self.successful_patches = 0
         self.non_applicabale_diffs = 0
@@ -950,6 +1098,7 @@ class PatchGenerator:
             self.visualizer.update_metrics(self.model_name, {
                 'total_issues': self.stats['total_issues'],
                 'build_failures': self.compilation_or_test_errors,
+                'introduced_new_issue': self.introduced_new_issue,
                 'validation_failures': self.validation_errors,
                 'successful_patches': self.successful_patches,
                 'non_applicabale_diffs': self.non_applicabale_diffs,
@@ -965,7 +1114,7 @@ class PatchGenerator:
             self.visualizer.save_metrics(os.path.join(self.visualize_path, f'benchmark_metrics_round_{self.num_of_rounds}.json'))
             logger.info(f"Benchmarking results saved to {self.visualize_path}")
         except Exception as e:
-            logger.warning("Interruption during visualization and metrics generation.")
+            logger.warning("Interruption during visualization and metrics generation. "+e)
             logger.info("Saving the visualization and metrics ...")
 
     def main(self):
@@ -986,6 +1135,16 @@ class PatchGenerator:
             logger.info("Patch Generation Started...")
             total_warnings = len(self.warnings)
             logger.info(f"Total warnings to process: {total_warnings}")
+            
+            file_issue_types = defaultdict(nested_defaultdict_int)
+
+            for warning in self.warnings:
+                issue_type_name = warning["name"]
+                for item in warning["items"]:
+                    textrange = item.get("textrange", {})
+                    file_path = textrange.get("file")
+                    if file_path:
+                        file_issue_types[file_path][issue_type_name] += 1
 
             args_list = []
             for warning in self.warnings:
@@ -999,7 +1158,9 @@ class PatchGenerator:
                     self.build_tool,
                     self.project_path,
                     self.diffs_output_dir,
-                    self.single_file
+                    self.single_file,
+                    total_warnings,
+                    file_issue_types
                 )
                 args_list.append(args)
 
@@ -1031,6 +1192,22 @@ class PatchGenerator:
         finally:
             elapsed_time = time.time() - self.start_time
             self.stats['elapsed_time'] = elapsed_time
+            if hasattr(self, 'issue_introduction_stats') and self.issue_introduction_stats:
+                converted_stats = {
+                    outer_key: dict(subdict)
+                    for outer_key, subdict in self.issue_introduction_stats.items()
+                }
+                
+                table_data = []
+                for patched_issue, new_issues in converted_stats.items():
+                    for introduced_issue, count in new_issues.items():
+                        table_data.append([patched_issue, introduced_issue, count])
+                
+                table = tabulate(table_data, headers=["Patched Issue", "Introduced Issue", "Count"], tablefmt="grid")
+                
+                logger.info("Final updated issue introduction stats:\n%s", table)
+            else:
+                logger.info("No new issues were introduced during the patching process.")
             logger.info(f"Patch generation completed in {elapsed_time:.2f} seconds")
             try:
                 self.save_warnings_json()
@@ -1057,6 +1234,30 @@ class PatchGenerator:
             self.compilation_or_test_errors += 1
         if not res.get('applicable_patch', True):
             self.non_applicabale_diffs += 1
+        if res.get('introduced_new_issue', False):
+            self.introduced_new_issue += 1
+
+            newly_introduced = res.get('new_warnings_distribution', {})
+            patched_issue_type = res.get('issue_name', 'UnknownIssue')
+
+            if not hasattr(self, 'issue_introduction_stats'):
+                self.issue_introduction_stats = defaultdict(lambda: defaultdict(int))
+
+            for introduced_type, introduced_count in newly_introduced.items():
+                self.issue_introduction_stats[patched_issue_type][introduced_type] += introduced_count
+
+                logger.info(
+                    f"[IssueIntroductionStats] While patching '{patched_issue_type}', "
+                    f"introduced {introduced_count} new '{introduced_type}' issue(s)."
+                )
+
+            """ converted_stats = {
+                outer_key: dict(subdict)
+                for outer_key, subdict in self.issue_introduction_stats.items()
+            }
+
+            logger.info("Updated issue introduction stats:\n%s", json.dumps(converted_stats, indent=2)) """
+
 
         if 'input_tokens' in res and res['input_tokens']:
             self.input_tokens.extend(res['input_tokens'])
