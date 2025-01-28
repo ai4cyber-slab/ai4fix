@@ -39,7 +39,7 @@ from generation.test_generation import TestGenerator
 ####################################
 
 
-def parse_build_output(build_tool, result_output):
+def parse_build_output(build_tool, result_output, context_for_diff_save = {}):
     """
     Parse the build output depending on the build tool.
     For Maven, we check for 'COMPILATION ERROR' and 'BUILD SUCCESS'.
@@ -50,7 +50,8 @@ def parse_build_output(build_tool, result_output):
         'compilation_error_files': [],
         'failure_details': [],
         'error_details': [],
-        'build_success': False
+        'build_success': False,
+        'mvn_test_passed' : True
     }
 
     if build_tool == 'maven':
@@ -64,9 +65,34 @@ def parse_build_output(build_tool, result_output):
             details['compilation_error'] = True
             error_files = re.findall(r'\[ERROR\] (.*?\.java):', result_output)
             details['compilation_error_files'] = error_files
+            details['mvn_test_passed'] = False
+            logger.warning(f"{build_tool} compilation failed")
+            if len(context_for_diff_save) != 0:
+                context = {
+                    'initial_content': context_for_diff_save['initial_content'],
+                    'full_file_path': context_for_diff_save['full_file_path'],
+                    'file_path': context_for_diff_save['file_path'],
+                    'attempt': context_for_diff_save['attempt'],
+                    'diffs_output_dir': context_for_diff_save['diffs_output_dir'].replace("patches", "patches_with_build_failure"),
+                    'warning_id': context_for_diff_save["warning_id"]
+                }
+                create_diff(context, f"failed at compilation process")
+        elif "BUILD SUCCESS" not in result_output:
+            logger.warning(f"{build_tool} build failed")
+            if len(context_for_diff_save) != 0:
+                context = {
+                    'initial_content': context_for_diff_save['initial_content'],
+                    'full_file_path': context_for_diff_save['full_file_path'],
+                    'file_path': context_for_diff_save['file_path'],
+                    'attempt': context_for_diff_save['attempt'],
+                    'diffs_output_dir': context_for_diff_save['diffs_output_dir'].replace("patches", "patches_with_build_failure"),
+                    'warning_id': context_for_diff_save["warning_id"]
+                }
+                create_diff(context, f"failed at build process")
 
-        if "BUILD SUCCESS" in result_output and "COMPILATION ERROR" not in result_output:
+        elif "BUILD SUCCESS" in result_output and "COMPILATION ERROR" not in result_output:
             details['build_success'] = True
+            details['mvn_test_passed'] = True
 
     elif build_tool == 'gradle':
         # 1) Check for build success/failure
@@ -107,7 +133,7 @@ def extract_json_section_from_code(code_content, start_line, end_line):
     return json.dumps(extracted_lines, indent=2)
 
 
-def validate_test_and_patch(test_file_path, result_output, build_tool):
+def validate_test_and_patch(test_file_path, result_output, build_tool, context_for_diff_file):
     """
     Validate test and patch results. 
     Uses parse_build_output to handle build_tool specific logic.
@@ -122,8 +148,8 @@ def validate_test_and_patch(test_file_path, result_output, build_tool):
 
     logger.debug(f"Test file {'exists' if decisions['test_file_exists'] else 'does not exist'} at path: {test_file_path}")
 
-    parsed = parse_build_output(build_tool, result_output)
-
+    parsed = parse_build_output(build_tool, result_output, context_for_diff_file)
+    decisions['mvn_test_passed'] = parsed['mvn_test_passed']
     decisions['failure_details'] = parsed['failure_details']
     decisions['error_details'] = parsed['error_details']
     decisions['compilation_error'] = parsed['compilation_error']
@@ -486,7 +512,7 @@ def log_retry(message, context):
         logger.info(f"{message} for warning ID {warning_id}...")
 
 
-def handle_test_error(context):
+def handle_test_error(context, issue_resolved):
     decisions = context['decisions']
     status = context['status']
     test_file_path = context['test_file_path']
@@ -511,9 +537,9 @@ def handle_test_error(context):
 
     output_after_revert = run_tests_and_collect_output(build_tool, process_project_directory_core, env)
     re_decisions = parse_build_output(build_tool, output_after_revert)
+    decisions['mvn_test_passed'] = re_decisions['mvn_test_passed']
     if re_decisions['build_success'] and not re_decisions['compilation_error']:
-        validation_passed = tools_validation_worker(name, tag, sast, symbolic, mutable_warnings)
-        if validation_passed:
+        if issue_resolved:
             local_stats['validation_passed'] = True
             local_stats['was_fixed'] = True
 
@@ -554,7 +580,7 @@ def handle_source_error(context):
     return False
 
 
-def handle_build_success(context):
+def handle_build_success(context, issue_resolved):
     name = context['name']
     tag = context['tag']
     sast = context['sast']
@@ -562,8 +588,7 @@ def handle_build_success(context):
     mutable_warnings = context['mutable_warnings']
     local_stats = context['local_stats']
 
-    validation_passed = tools_validation_worker(name, tag, sast, symbolic, mutable_warnings)
-    if validation_passed:
+    if issue_resolved:
         local_stats['validation_passed'] = True
         local_stats['was_fixed'] = True
 
@@ -587,7 +612,7 @@ def handle_build_success(context):
         return False
 
 
-def handle_test_failures(context):
+def handle_test_failures(context, issue_resolved):
     decisions = context['decisions']
     status = context['status']
     test_file_path = context['test_file_path']
@@ -626,8 +651,7 @@ def handle_test_failures(context):
         output_after_test_drop = run_tests_and_collect_output(build_tool, process_project_directory_core, env)
         re_decisions = parse_build_output(build_tool, output_after_test_drop)
         if re_decisions['build_success'] and not re_decisions['compilation_error']:
-            validation_passed = tools_validation_worker(name, tag, sast, symbolic, mutable_warnings)
-            if validation_passed:
+            if issue_resolved:
                 local_stats['validation_passed'] = True
                 local_stats['was_fixed'] = True
 
@@ -656,13 +680,13 @@ def handle_test_failures(context):
         return False
 
 
-def handle_compilation_error(context):
+def handle_compilation_error(context, issue_resolved):
     decisions = context['decisions']
 
     if decisions['compilation_error']:
         error_files = decisions['compilation_error_files']
         if any("/test/" in ef for ef in error_files):
-            return handle_test_error(context)
+            return handle_test_error(context, issue_resolved)
         else:
             return handle_source_error(context)
     return None
@@ -871,6 +895,7 @@ def process_warning_worker(args):
                             original_issue_dict_for_file,
                             new_warnings_dict
                         )
+                    issue_resolved=True
                     if introduced_new_issue == "True":
                         logger.warning("New or equal number of issues introduced by patch. Reverting patch and retrying if attempts remain.")
                         context = {
@@ -912,10 +937,12 @@ def process_warning_worker(args):
                         if previous_generated_patch is None:
                             previous_generated_patch = ""
                         previous_generated_patch += introduced_issues_text
+                        issue_resolved=False
                         continue
                     elif introduced_new_issue=="build failed":
                         local_stats['validation_passed'] = True
                         local_stats['mvn_test_passed'] = False
+                        issue_resolved=False
                         pass
 
                     if single_file is not None:
@@ -955,7 +982,15 @@ def process_warning_worker(args):
 
                     logger.info(f"Process {os.getpid()} - Running '{build_tool} test' for warning ID {warning['id']}...")
                     output = run_tests_and_collect_output(build_tool, process_project_directory_core, env)
-                    decisions = validate_test_and_patch(test_file_path, output, build_tool)
+                    context_for_diff_file = {
+                            'initial_content': initial_content,
+                            'full_file_path': full_file_path,
+                            'file_path': file_path,
+                            'attempt': attempt,
+                            'diffs_output_dir': diffs_output_dir,
+                            'warning_id': warning['id'],
+                        }
+                    decisions = validate_test_and_patch(test_file_path, output, build_tool, context_for_diff_file)
                     context = {
                         'test_file_path': test_file_path,
                         'original_test_content': original_test_content,
@@ -979,24 +1014,25 @@ def process_warning_worker(args):
                         'status': status
                     }
 
-                    compilation_result = handle_compilation_error(context)
+                    compilation_result = handle_compilation_error(context, issue_resolved)
 
                     if compilation_result is True:
                         break
                     elif compilation_result is False:
                         continue
-
+                    
+                    if decisions.get('mvn_test_passed', False):
+                        local_stats['mvn_test_passed'] = False
                     if decisions.get('build_success', False):
-                        validation_result = handle_build_success(context)
+                        validation_result = handle_build_success(context, issue_resolved)
                         if validation_result is True:
                             break
                         elif validation_result is False:
                             local_stats['validation_passed'] = True
                             continue
                     else:
-                        test_failure_result = handle_test_failures(context)
+                        test_failure_result = handle_test_failures(context, issue_resolved)
                         logger.warning("Build failed")
-                        local_stats['mvn_test_passed'] = False
                         local_stats['validation_passed'] = True
                         if test_failure_result is True:
                             break
