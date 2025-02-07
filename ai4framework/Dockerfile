@@ -1,4 +1,4 @@
-FROM eclipse-temurin:11-jdk-jammy
+FROM azul/zulu-openjdk-debian:11-latest
 
 ENV WORKDIR_PATH=/app
 WORKDIR ${WORKDIR_PATH}
@@ -26,14 +26,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     patch \
     vim \
     nano \
-    python3.10 \
-    python3.10-dev \
+    python3.11 \
+    python3.11-dev \
     python3-pip && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
-    ln -s /usr/bin/python3.10 /usr/bin/python
+    ln -s /usr/bin/python3.11 /usr/bin/python
 
 COPY requirements.txt ${WORKDIR_PATH}/requirements.txt
-RUN pip3 install --no-cache-dir -r ${WORKDIR_PATH}/requirements.txt
+RUN pip3 install --no-cache-dir --break-system-packages -r ${WORKDIR_PATH}/requirements.txt
 
 RUN wget https://downloads.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.zip -O /tmp/maven.zip && \
     unzip /tmp/maven.zip -d /opt && \
