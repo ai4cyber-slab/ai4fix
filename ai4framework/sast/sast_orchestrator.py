@@ -2,6 +2,7 @@ import sys
 import subprocess
 import os
 from pathlib import Path
+import re
 
 from utils.logger import logger
 from .tool_runner import ToolRunner
@@ -82,9 +83,16 @@ class SASTOrchestrator:
         """
         try:
             logger.info(f"{build_tool.capitalize()} compile started...")
-
             if build_tool.lower() == 'maven':
-                command = ['mvn', 'compile', '-Dmaven.compiler.incremental=true', '-DskipTests', '-T', str(os.cpu_count())]
+                command = ['mvn', 'compile', '-Dmaven.compiler.incremental=true', '-DskipTests']
+                # Check Maven version
+                try:
+                    maven_version = subprocess.check_output(['mvn', '-v'], text=True)
+                    version_match = re.search(r'Apache Maven (\d+)', maven_version)
+                    if version_match and int(version_match.group(1)) >= 3:
+                        command.extend(['-T', str(os.cpu_count())])
+                except:
+                    pass
 
             elif build_tool.lower() == 'gradle':
                 command = ['gradle', 'classes', '--no-daemon', '--parallel', f'-Dorg.gradle.workers.max={os.cpu_count()}']
