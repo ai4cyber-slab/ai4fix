@@ -46,95 +46,95 @@ RUN mkdir -p /usr/lib/jvm && \
     tar -xzf /tmp/java11.tar.gz -C /usr/lib/jvm && \
     rm -f /tmp/java*.*
 
-# Configure Java alternatives
-RUN update-alternatives --install /usr/bin/java java /usr/lib/jvm/jdk8u392-b08/bin/java 1 && \
-    update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/jdk8u392-b08/bin/javac 1 && \
-    update-alternatives --install /usr/bin/java java /usr/lib/jvm/jdk-11.0.21+9/bin/java 2 && \
-    update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/jdk-11.0.21+9/bin/javac 2 && \
+# Configure Java alternatives for all tools
+RUN for tool in java javac javadoc jar; do \
+        update-alternatives --install /usr/bin/$tool $tool /usr/lib/jvm/jdk8u392-b08/bin/$tool 100 && \
+        update-alternatives --install /usr/bin/$tool $tool /usr/lib/jvm/jdk-11.0.21+9/bin/$tool 200; \
+    done && \
     update-alternatives --set java /usr/lib/jvm/jdk-11.0.21+9/bin/java && \
     update-alternatives --set javac /usr/lib/jvm/jdk-11.0.21+9/bin/javac
 
 # Add script to switch Java versions
 RUN echo '#!/bin/bash\n\
 case $1 in\n\
-    8) update-alternatives --set java /usr/lib/jvm/jdk8u392-b08/bin/java && \
-       update-alternatives --set javac /usr/lib/jvm/jdk8u392-b08/bin/javac && \
-       echo "export JAVA_HOME=/usr/lib/jvm/jdk8u392-b08" > /etc/profile.d/javapath.sh && \
-       echo "export PATH=\${JAVA_HOME}/bin:\${PATH}" >> /etc/profile.d/javapath.sh ;;\n\
-    11) update-alternatives --set java /usr/lib/jvm/jdk-11.0.21+9/bin/java && \
-        update-alternatives --set javac /usr/lib/jvm/jdk-11.0.21+9/bin/javac && \
-        echo "export JAVA_HOME=/usr/lib/jvm/jdk-11.0.21+9" > /etc/profile.d/javapath.sh && \
-        echo "export PATH=\${JAVA_HOME}/bin:\${PATH}" >> /etc/profile.d/javapath.sh ;;\n\
-    *) echo "Usage: switch-java {8|11}" ;;\n\
+    8)\n\
+        update-alternatives --set java /usr/lib/jvm/jdk8u392-b08/bin/java\n\
+        update-alternatives --set javac /usr/lib/jvm/jdk8u392-b08/bin/javac\n\
+        echo "export JAVA_HOME=/usr/lib/jvm/jdk8u392-b08" > /etc/profile.d/javapath.sh\n\
+        ;;\n\
+    11)\n\
+        update-alternatives --set java /usr/lib/jvm/jdk-11.0.21+9/bin/java\n\
+        update-alternatives --set javac /usr/lib/jvm/jdk-11.0.21+9/bin/javac\n\
+        echo "export JAVA_HOME=/usr/lib/jvm/jdk-11.0.21+9" > /etc/profile.d/javapath.sh\n\
+        ;;\n\
+    *)\n\
+        echo "Usage: switch-java {8|11}"\n\
+        exit 1\n\
+        ;;\n\
 esac\n\
+echo "export PATH=\${JAVA_HOME}/bin:\${PATH}" >> /etc/profile.d/javapath.sh\n\
 source /etc/profile.d/javapath.sh\n\
-echo "JAVA_HOME=$JAVA_HOME"\n\
+echo "Switched to Java $1: JAVA_HOME=\${JAVA_HOME}"\n\
 java -version' > /usr/local/bin/switch-java && \
     chmod +x /usr/local/bin/switch-java
 
-# Install Maven first
+# Install Maven
 RUN wget https://archive.apache.org/dist/maven/binaries/apache-maven-${MAVEN_VERSION}-bin.zip -O /tmp/maven.zip && \
     unzip /tmp/maven.zip -d /opt && \
     mv /opt/apache-maven-${MAVEN_VERSION} /opt/maven && \
-    rm /tmp/maven.zip && \
-    ln -s /opt/maven/bin/mvn /usr/local/bin/mvn && \
-    mvn -version
+    rm /tmp/maven.zip
 
 # Install Gradle
 RUN wget https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip -O /tmp/gradle.zip && \
-    mkdir -p /opt/gradle && \
-    unzip /tmp/gradle.zip -d /opt/gradle && \
-    mv /opt/gradle/gradle-${GRADLE_VERSION}/* /opt/gradle/ && \
-    rm -rf /tmp/gradle.zip /opt/gradle/gradle-${GRADLE_VERSION} && \
-    ln -s /opt/gradle/bin/gradle /usr/local/bin/gradle && \
-    gradle --version
+    unzip /tmp/gradle.zip -d /opt && \
+    mv /opt/gradle-${GRADLE_VERSION} /opt/gradle && \
+    rm /tmp/gradle.zip
 
-ENV PATH="$MAVEN_HOME/bin:$GRADLE_HOME/bin:$PATH"
-
-# Now create the wrapper scripts after Maven and Gradle are installed
-RUN mv /usr/local/bin/mvn /usr/local/bin/mvn.real && \
+# Create wrapper scripts that source JAVA_HOME
+RUN mv /opt/maven/bin/mvn /opt/maven/bin/mvn.real && \
     echo '#!/bin/bash\n\
 source /etc/profile.d/javapath.sh\n\
-/usr/local/bin/mvn.real "$@"' > /usr/local/bin/mvn && \
-    chmod +x /usr/local/bin/mvn
+/opt/maven/bin/mvn.real "$@"' > /opt/maven/bin/mvn && \
+    chmod +x /opt/maven/bin/mvn && \
+    ln -sf /opt/maven/bin/mvn /usr/local/bin/mvn
 
-RUN mv /usr/local/bin/gradle /usr/local/bin/gradle.real && \
+RUN mv /opt/gradle/bin/gradle /opt/gradle/bin/gradle.real && \
     echo '#!/bin/bash\n\
 source /etc/profile.d/javapath.sh\n\
-/usr/local/bin/gradle.real "$@"' > /usr/local/bin/gradle && \
-    chmod +x /usr/local/bin/gradle
+/opt/gradle/bin/gradle.real "$@"' > /opt/gradle/bin/gradle && \
+    chmod +x /opt/gradle/bin/gradle && \
+    ln -sf /opt/gradle/bin/gradle /usr/local/bin/gradle
 
-# Create initial Java environment file
+# Set initial Java environment
 RUN echo "export JAVA_HOME=/usr/lib/jvm/jdk-11.0.21+9" > /etc/profile.d/javapath.sh && \
     echo "export PATH=\${JAVA_HOME}/bin:\${PATH}" >> /etc/profile.d/javapath.sh && \
-    echo "export MAVEN_OPTS=\"-Dmaven.ext.class.path=\${JAVA_HOME}/lib\"" >> /etc/profile.d/javapath.sh
-
-# Set initial JAVA_HOME and add to bashrc for persistence
-ENV JAVA_HOME=/usr/lib/jvm/jdk-11.0.21+9
-RUN echo "source /etc/profile.d/javapath.sh" >> /root/.bashrc
+    echo "source /etc/profile.d/javapath.sh" >> /root/.bashrc
 
 COPY requirements.txt ${WORKDIR_PATH}/requirements.txt
 RUN pip3 install --no-cache-dir --break-system-packages -r ${WORKDIR_PATH}/requirements.txt
 
+# Install PMD
 RUN wget https://github.com/pmd/pmd/releases/download/pmd_releases%2F${PMD_VERSION}/pmd-dist-${PMD_VERSION}-bin.zip -O /tmp/pmd.zip && \
     unzip /tmp/pmd.zip -d /opt && rm /tmp/pmd.zip
 
+# Install SpotBugs with FindSecBugs
 RUN wget https://github.com/spotbugs/spotbugs/releases/download/${SPOTBUGS_VERSION}/spotbugs-${SPOTBUGS_VERSION}.tgz -O /tmp/spotbugs.tgz && \
     tar -xzf /tmp/spotbugs.tgz -C /opt && rm /tmp/spotbugs.tgz && \
     chmod +x /opt/spotbugs-${SPOTBUGS_VERSION}/bin/spotbugs && \
     wget https://repo1.maven.org/maven2/com/h3xstream/findsecbugs/findsecbugs-plugin/${FINDSECBUGS_PLUGIN_VERSION}/findsecbugs-plugin-${FINDSECBUGS_PLUGIN_VERSION}.jar -O /opt/spotbugs-${SPOTBUGS_VERSION}/plugin/findsecbugs-plugin.jar
 
+# Install code-server
 RUN curl -fsSL https://code-server.dev/install.sh | sh
 
+# Setup AI4VULN analyzer
 COPY slab-9.19-d45fdf7b5.tgz /opt/
 RUN tar -xvzf /opt/slab-9.19-d45fdf7b5.tgz -C /opt/ && \
     rm /opt/slab-9.19-d45fdf7b5.tgz && \
     mv /opt/slab-9.19-d45fdf7b5 /opt/AI4VULN
 
-RUN mkdir -p /root/.local/share/code-server/User
-
-RUN echo '{ "files.autoSave": "off" }' \
-    > /root/.local/share/code-server/User/settings.json
+# Configure code-server
+RUN mkdir -p /root/.local/share/code-server/User && \
+    echo '{ "files.autoSave": "off" }' > /root/.local/share/code-server/User/settings.json
 
 COPY . ${WORKDIR_PATH}
 
@@ -143,15 +143,10 @@ RUN code-server --install-extension /opt/aifix4seccode-vscode-1.0.39.vsix
 
 EXPOSE 8080
 
-ENV PROJECT_PATH=''
-ENV USER=user
-ENV USERNAME=user
-
-# Create an entrypoint script
+# Entrypoint setup
 RUN echo '#!/bin/bash\n\
 source /etc/profile.d/javapath.sh\n\
 code-server --bind-addr 0.0.0.0:8080 --auth none /' > /usr/local/bin/docker-entrypoint.sh && \
     chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Use the entrypoint script
 CMD ["/usr/local/bin/docker-entrypoint.sh"]
