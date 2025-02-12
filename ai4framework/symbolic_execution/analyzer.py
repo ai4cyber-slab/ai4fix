@@ -42,25 +42,26 @@ class Analyzer:
         except Exception as e:
             logger.error(f"An error occurred while writing to the filter file: {e}")
 
+    def switch_java_version(self, version):
+        """Switch Java versions using the provided switch-java script."""
+        script_path = os.path.join(os.sep, 'usr', 'local', 'bin', 'switch-java')
+        result = subprocess.run(f"bash -c 'source {script_path} {version}'", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
     def run_analysis(self):
-        """
-        Run the analysis on the specified project.
-
-        This method executes the analyzer tool with the given project parameters,
-        captures and logs the output, and returns the path to the generated JSON file.
-
-        Returns:
-            str: Path to the generated JSON file containing analysis results.
-
-        Raises:
-            Exception: If an error occurs during the analysis process.
-        """
+        """Run the analysis on the specified project."""
         if not self.project_name:
             logger.warning("Project root path is missing. Either set it as the PROJECT_PATH environment variable, or provide it as a command-line argument (-r/--project_root).")
             sys.exit(1)
-            
+        
         logger.info(f"Analyzing project: {self.project_name}")
-
+        
+        # Switch to Java 11 before analysis
+        self.switch_java_version('11')
+        
+        new_env = os.environ.copy()
+        new_env['JAVA_HOME'] = '/usr/lib/jvm/jdk-11.0.21+9'
+        new_env['PATH'] = f"/usr/lib/jvm/jdk-11.0.21+9/bin:{new_env['PATH']}"
+        
         command = (
             f'{self.analyzer} '
             f'-projectName={self.project_name} '
@@ -79,6 +80,7 @@ class Analyzer:
         )
 
         start_time = time.time()
+        return_code = None
 
         try:
             with subprocess.Popen(
@@ -87,7 +89,8 @@ class Analyzer:
                 stderr=subprocess.PIPE,
                 text=True,
                 shell=True,
-                bufsize=1
+                bufsize=1,
+                env=new_env
             ) as process:
                 while True:
                     output = process.stdout.readline()
@@ -109,6 +112,9 @@ class Analyzer:
             logger.warning(f"Symbolic execution failed. Your hardware may not support symbolic execution. Skipping analysis. {e}")
             raise
         finally:
+            # Switch back to Java 8
+            self.switch_java_version('8')
+            
             end_time = time.time()
             execution_time = end_time - start_time
             if return_code == 127:
