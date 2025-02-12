@@ -44,15 +44,6 @@ class SymbolicExecution:
         Note: This method doesn't return a value, as its purpose is to execute
         the analysis process and log the results.
         """
-        with subprocess.Popen(["java", "-version"], stderr=subprocess.PIPE, stdout=subprocess.PIPE, text=True) as process:
-            java_version = process.communicate()[1]
-            pattern = r'version "(\d+\.\d+\.\d+)"'
-            match = re.search(pattern, java_version)
-            if match:
-                version = match.group(1)
-                if not "11." in version:
-                    logger.warning("Java version over 11 detected. Skipping Symbolic execution analysis.")
-                    return
         analyzer = Analyzer(self.analyzer_path, self.project_name, self.project_path, self.results_path, self.filter_list, self.single_file)
         try:
             logger.info("Symbolic Execution Started ...")
