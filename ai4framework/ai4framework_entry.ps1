@@ -7,6 +7,8 @@ param(
     [string]$CONTAINER_PROJECT_PATH,
     [int]$PORT = 8080,
 
+    [string]$MAVEN_REPO_PATH,
+
     [switch]$RunWithBash,
 
     [string]$MavenVersion = "3.9.5",
@@ -14,7 +16,7 @@ param(
 )
 
 function Show-Usage {
-    Write-Host "Usage: ai4framework_entry.ps1 -LOCAL_PROJECT_PATH <string> -CONTAINER_PROJECT_PATH <string> [-RunWithBash] [-PORT <int>] [-MavenVersion <string>] [-GradleVersion <string>]" -ForegroundColor Cyan
+    Write-Host "Usage: ai4framework_entry.ps1 -LOCAL_PROJECT_PATH <string> -CONTAINER_PROJECT_PATH <string> [-RunWithBash] [-PORT <int>] [-MavenVersion <string>] [-GradleVersion <string>] [-MAVEN_REPO_PATH <string>]" -ForegroundColor Cyan
     Write-Host "Options:"
     Write-Host "  -LOCAL_PROJECT_PATH      Path to the local project directory." -ForegroundColor Yellow
     Write-Host "  -CONTAINER_PROJECT_PATH  Path to the project directory inside the container." -ForegroundColor Yellow
@@ -22,6 +24,7 @@ function Show-Usage {
     Write-Host "  -PORT                    (Optional) Specify the port number to use for the container. Default is 8080." -ForegroundColor Yellow
     Write-Host "  -MavenVersion            (Optional) Specify the Maven version. Default is 3.9.5." -ForegroundColor Yellow
     Write-Host "  -GradleVersion           (Optional) Specify the Gradle version. Default is 7.6." -ForegroundColor Yellow
+    Write-Host "  -MAVEN_REPO_PATH         (Optional) Path to local Maven repository (.m2 directory)." -ForegroundColor Yellow
     Write-Host "  -h, -usage               Display this help message." -ForegroundColor Yellow
     exit 0
 }
@@ -183,6 +186,30 @@ function Validate-ConfigProperties {
     Write-Host "'config.properties' file validated successfully." -ForegroundColor Green
 }
 
+function Validate-MavenRepo {
+    param([string]$MavenRepoPath)
+    
+    if ($MavenRepoPath -and -not (Test-Path $MavenRepoPath)) {
+        Write-Host "Warning: Maven repository path '$MavenRepoPath' does not exist." -ForegroundColor Yellow
+        Write-Host "Would you like to:" -ForegroundColor Yellow
+        Write-Host "1. Use default Maven repository" -ForegroundColor Yellow
+        Write-Host "2. Exit and fix the path" -ForegroundColor Yellow
+        $choice = Read-Host "Enter your choice (1 or 2)"
+        
+        if ($choice -eq "2") {
+            exit 1
+        }
+        return $false
+    }
+    
+    if ($MavenRepoPath -and -not (Test-Path (Join-Path $MavenRepoPath "settings.xml"))) {
+        Write-Host "Warning: settings.xml not found in Maven repository path" -ForegroundColor Yellow
+        return $false
+    }
+    
+    return $true
+}
+
 Show-Banner
 
 Manage-ConfigProperties
@@ -196,15 +223,28 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Docker image built successfully."
 
 Write-Host "Starting the Docker container..."
-if ($RunWithBash) {
-    $ContainerID = docker run -dit -p $PORT`:8080 `
-        -e PROJECT_PATH="$CONTAINER_PROJECT_PATH" `
-        ai4framework-analyzer bash
+$dockerRunArgs = @(
+    "-dit"
+    "-p", "${PORT}:8080"
+    "-e", "PROJECT_PATH=$CONTAINER_PROJECT_PATH"
+)
+
+if ($MAVEN_REPO_PATH -and (Validate-MavenRepo $MAVEN_REPO_PATH)) {
+    Write-Host "Using Maven repository from: $MAVEN_REPO_PATH" -ForegroundColor Green
+    $dockerRunArgs += "-v"
+    $dockerRunArgs += "${MAVEN_REPO_PATH}:/root/.m2"
 } else {
-    $ContainerID = docker run -dit -p $PORT`:8080 `
-        -e PROJECT_PATH="$CONTAINER_PROJECT_PATH" `
-        ai4framework-analyzer
+    Write-Host "Using default Maven repository configuration" -ForegroundColor Yellow
 }
+
+if ($RunWithBash) {
+    $dockerRunArgs += "ai4framework-analyzer"
+    $dockerRunArgs += "bash"
+} else {
+    $dockerRunArgs += "ai4framework-analyzer"
+}
+
+$ContainerID = docker run @dockerRunArgs
 
 if (!$ContainerID) {
     Write-Host "Error: Failed to start the Docker container." -ForegroundColor Red
