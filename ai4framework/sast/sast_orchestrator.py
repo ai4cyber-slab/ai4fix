@@ -8,6 +8,7 @@ from utils.logger import logger
 from .tool_runner import ToolRunner
 from .report_merger import ReportMerger
 from management.repo_manager import RepoManager
+from utils.switcher import switch_java_version
 
 
 class SASTOrchestrator:
@@ -82,9 +83,10 @@ class SASTOrchestrator:
             ValueError: If an unsupported build tool is provided.
         """
         try:
+            switch_java_version('6')
             logger.info(f"{build_tool.capitalize()} compile started...")
             if build_tool.lower() == 'maven':
-                command = ['mvn', 'compile', '-Dmaven.compiler.incremental=true', '-DskipTests']
+                command = ['mvn', '-o', 'compile', '-Dmaven.compiler.incremental=true', '-DskipTests']
                 # Check Maven version
                 try:
                     maven_version = subprocess.check_output(['mvn', '-v'], text=True)
@@ -130,4 +132,6 @@ class SASTOrchestrator:
         except Exception as e:
             logger.error(f"An error occurred during {build_tool.capitalize()} compile: {str(e)}")
             sys.exit(1)
+        finally:
+            switch_java_version('11')
             
