@@ -6,6 +6,7 @@ import subprocess
 import platform
 from utils.logger import logger
 from management.repo_manager import RepoManager
+from utils.switcher import switch_java_version
 
 
 class Analyzer:
@@ -42,11 +43,6 @@ class Analyzer:
         except Exception as e:
             logger.error(f"An error occurred while writing to the filter file: {e}")
 
-    def switch_java_version(self, version):
-        """Switch Java versions using the provided switch-java script."""
-        script_path = os.path.join(os.sep, 'usr', 'local', 'bin', 'switch-java')
-        result = subprocess.run(f"bash -c 'source {script_path} {version}'", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
     def run_analysis(self):
         """Run the analysis on the specified project."""
         if not self.project_name:
@@ -56,11 +52,11 @@ class Analyzer:
         logger.info(f"Analyzing project: {self.project_name}")
         
         # Switch to Java 11 before analysis
-        self.switch_java_version('11')
-        
+        switch_java_version('11')
         new_env = os.environ.copy()
         new_env['JAVA_HOME'] = '/usr/lib/jvm/jdk-11.0.21+9'
         new_env['PATH'] = f"/usr/lib/jvm/jdk-11.0.21+9/bin:{new_env['PATH']}"
+        #########################################################
         
         command = (
             f'{self.analyzer} '
@@ -112,8 +108,8 @@ class Analyzer:
             logger.warning(f"Symbolic execution failed. Your hardware may not support symbolic execution. Skipping analysis. {e}")
             raise
         finally:
-            # Switch back to Java 8
-            self.switch_java_version('8')
+            # Switch back to Java 11
+            switch_java_version('11')
             
             end_time = time.time()
             execution_time = end_time - start_time
