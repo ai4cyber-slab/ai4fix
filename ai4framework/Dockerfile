@@ -4,6 +4,8 @@ ENV WORKDIR_PATH=/app
 WORKDIR ${WORKDIR_PATH}
 
 # Java versions
+ENV JAVA_5_VERSION="5.0.22"
+ENV JAVA_6_VERSION="6.0.45"
 ENV JAVA_8_VERSION="8.0.392"
 ENV JAVA_11_VERSION="11.0.21"
 
@@ -44,21 +46,34 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     ln -s /usr/bin/python3.11 /usr/bin/python
 
-# First copy the JDK file
-COPY j2sdk-1_4_2_19-linux-i586.bin /tmp/jdk.bin
+# First copy the JDK files
+COPY j2sdk-1_4_2_19-linux-i586.bin /tmp/jdk4.bin
+COPY jdk-1_5_0_22-linux-i586.bin /tmp/jdk5.bin
+COPY jdk-6u45-linux-i586.bin /tmp/jdk6.bin
 
 # Then use RUN for the installation steps
 RUN mkdir -p /usr/lib/jvm && \
     mkdir -p /usr/java && \
+    # Install Java 1.4
     cd /tmp && \
-    chmod +x jdk.bin && \
-    (echo yes | ./jdk.bin) && \
+    chmod +x jdk4.bin && \
+    (echo yes | ./jdk4.bin) && \
     mv j2sdk1.4.2_19 /usr/java/ && \
-    rm -f jdk.bin && \
-    # Set Java 1.4 environment variables
+    rm -f jdk4.bin && \
+    # Install Java 5
+    chmod +x jdk5.bin && \
+    (echo yes | ./jdk5.bin) && \
+    mv jdk1.5.0_22 /usr/java/ && \
+    rm -f jdk5.bin && \
+    # Install Java 6
+    chmod +x jdk6.bin && \
+    (echo yes | ./jdk6.bin) && \
+    mv jdk1.6.0_45 /usr/java/ && \
+    rm -f jdk6.bin && \
+    # Set Java environment variables
     export JAVA_HOME=/usr/java/j2sdk1.4.2_19 && \
     export PATH=$JAVA_HOME/bin:$PATH && \
-    # Verify Java 1.4 installation
+    # Verify Java installations
     java -version && \
     # Install Java 8
     wget https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u392-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u392b08.tar.gz -O /tmp/java8.tar.gz && \
@@ -75,9 +90,13 @@ RUN for tool in java javac javadoc jar; do \
     done && \
     update-alternatives --set java /usr/lib/jvm/jdk-11.0.21+9/bin/java && \
     update-alternatives --set javac /usr/lib/jvm/jdk-11.0.21+9/bin/javac && \
-    # Java 1.4 has a different directory structure
+    # Java 1.4, 1.5 and 1.6 have a different directory structure
     update-alternatives --install /usr/bin/java java /usr/java/j2sdk1.4.2_19/bin/java 50 && \
-    update-alternatives --install /usr/bin/javac javac /usr/java/j2sdk1.4.2_19/bin/javac 50
+    update-alternatives --install /usr/bin/javac javac /usr/java/j2sdk1.4.2_19/bin/javac 50 && \
+    update-alternatives --install /usr/bin/java java /usr/java/jdk1.5.0_22/bin/java 75 && \
+    update-alternatives --install /usr/bin/javac javac /usr/java/jdk1.5.0_22/bin/javac 75 && \
+    update-alternatives --install /usr/bin/java java /usr/java/jdk1.6.0_45/bin/java 85 && \
+    update-alternatives --install /usr/bin/javac javac /usr/java/jdk1.6.0_45/bin/javac 85
 
 # Add script to switch Java versions
 RUN echo '#!/bin/bash\n\
@@ -86,6 +105,16 @@ case $1 in\n\
         update-alternatives --set java /usr/java/j2sdk1.4.2_19/bin/java\n\
         update-alternatives --set javac /usr/java/j2sdk1.4.2_19/bin/javac\n\
         echo "export JAVA_HOME=/usr/java/j2sdk1.4.2_19" > /etc/profile.d/javapath.sh\n\
+        ;;\n\
+    5)\n\
+        update-alternatives --set java /usr/java/jdk1.5.0_22/bin/java\n\
+        update-alternatives --set javac /usr/java/jdk1.5.0_22/bin/javac\n\
+        echo "export JAVA_HOME=/usr/java/jdk1.5.0_22" > /etc/profile.d/javapath.sh\n\
+        ;;\n\
+    6)\n\
+        update-alternatives --set java /usr/java/jdk1.6.0_45/bin/java\n\
+        update-alternatives --set javac /usr/java/jdk1.6.0_45/bin/javac\n\
+        echo "export JAVA_HOME=/usr/java/jdk1.6.0_45" > /etc/profile.d/javapath.sh\n\
         ;;\n\
     8)\n\
         update-alternatives --set java /usr/lib/jvm/jdk8u392-b08/bin/java\n\
@@ -98,7 +127,7 @@ case $1 in\n\
         echo "export JAVA_HOME=/usr/lib/jvm/jdk-11.0.21+9" > /etc/profile.d/javapath.sh\n\
         ;;\n\
     *)\n\
-        echo "Usage: switch-java {4|8|11}"\n\
+        echo "Usage: switch-java {4|5|6|8|11}"\n\
         exit 1\n\
         ;;\n\
 esac\n\
@@ -139,6 +168,24 @@ source /etc/profile.d/javapath.sh\n\
 RUN echo "export JAVA_HOME=/usr/lib/jvm/jdk-11.0.21+9" > /etc/profile.d/javapath.sh && \
     echo "export PATH=\${JAVA_HOME}/bin:\${PATH}" >> /etc/profile.d/javapath.sh && \
     echo "source /etc/profile.d/javapath.sh" >> /root/.bashrc
+
+# Add after Java environment setup and before COPY requirements.txt
+# Create Maven local repository directory and add default settings
+RUN mkdir -p /root/.m2 && \
+    echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">\n\
+    <localRepository>/root/.m2/repository</localRepository>\n\
+    <mirrors>\n\
+        <mirror>\n\
+            <id>local-repository</id>\n\
+            <url>file:///root/.m2/repository</url>\n\
+            <mirrorOf>*</mirrorOf>\n\
+        </mirror>\n\
+    </mirrors>\n\
+    <offline>true</offline>\n\
+</settings>' > /root/.m2/settings.xml
+
+# Add volume mount point for Maven repository
+VOLUME ["/root/.m2"]
 
 COPY requirements.txt ${WORKDIR_PATH}/requirements.txt
 RUN pip3 install --no-cache-dir --break-system-packages -r ${WORKDIR_PATH}/requirements.txt
