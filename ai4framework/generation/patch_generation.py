@@ -26,6 +26,7 @@ from generation.mesure import BenchmarkVisualizer
 from symbolic_execution.execution import SymbolicExecution
 from generation.warnings_mapping import ALL_WARNINGS
 from generation.test_generation import TestGenerator
+from utils.switcher import switch_java_version
 
 
 
@@ -230,11 +231,12 @@ def update_java_file_worker(java_file_path, initial_json, updated_json):
 
 
 def run_tests_worker(build_tool, cwd, env):
+    switch_java_version('6')
     try:
         if build_tool.lower() == 'maven':
-            command = ['mvn', 'clean', 'test', '-Dmaven.compiler.incremental=true', '-T', str(os.cpu_count())]
+            command = ['mvn', '-o', 'clean', 'test', '-Dmaven.compiler.incremental=true', '-T', str(os.cpu_count())]
         elif build_tool.lower() == 'gradle':
-            command = ['gradle', 'clean', 'test', '--no-daemon', '--parallel', f'-Dorg.gradle.workers.max={os.cpu_count()}']
+            command = ['gradle', '--offline', 'clean', 'test', '--no-daemon', '--parallel', f'-Dorg.gradle.workers.max={os.cpu_count()}']
         elif build_tool.lower() == 'javac':
             java_files = [str(file) for file in Path(cwd, 'src', 'main', 'java').rglob('*.java')]
             if java_files:
@@ -255,6 +257,8 @@ def run_tests_worker(build_tool, cwd, env):
     except Exception as e:
         logger.error(f"Error running tests with {build_tool}: {e}")
         return subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr=str(e))
+    finally:
+        switch_java_version('11')
 
 
 def tools_validation_worker(name, tag, sast, symbolic, mutable_warnings):
