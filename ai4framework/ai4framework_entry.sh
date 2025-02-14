@@ -202,6 +202,21 @@ function validate_maven_repo {
     return 0
 }
 
+function validate_port {
+    local port=$1
+    if ! [[ "$port" =~ ^[0-9]+$ ]] || [ "$port" -lt 1024 ] || [ "$port" -gt 65535 ]; then
+        echo "Error: Port must be a number between 1024 and 65535"
+        return 1
+    fi
+    
+    if nc -z localhost "$port" 2>/dev/null; then
+        echo "Error: Port $port is already in use"
+        return 1
+    fi
+    
+    return 0
+}
+
 show_banner
 
 manage_config_properties
@@ -215,7 +230,12 @@ fi
 echo "Docker image built successfully."
 
 echo "Starting the Docker container..."
-DOCKER_RUN_ARGS=("-dit" "-p" "$PORT:8080" "-e" "PROJECT_PATH=$CONTAINER_PROJECT_PATH")
+if ! validate_port "$PORT"; then
+    echo "Please choose a different port"
+    exit 1
+fi
+
+DOCKER_RUN_ARGS=("-dit" "-p" "$PORT:8080" "-e" "PROJECT_PATH=$CONTAINER_PROJECT_PATH" "-e" "PORT=8080")
 
 if [[ -n "$MAVEN_REPO_PATH" ]] && validate_maven_repo "$MAVEN_REPO_PATH"; then
     echo "Using Maven repository from: $MAVEN_REPO_PATH"

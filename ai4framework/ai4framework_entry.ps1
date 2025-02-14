@@ -5,6 +5,8 @@ param(
 
     [string]$LOCAL_PROJECT_PATH,
     [string]$CONTAINER_PROJECT_PATH,
+    [Parameter(Mandatory=$false)]
+    [ValidateRange(1024, 65535)]
     [int]$PORT = 8080,
 
     [string]$MAVEN_REPO_PATH,
@@ -226,6 +228,20 @@ function Validate-MavenRepo {
     return $true
 }
 
+function Validate-Port {
+    param([int]$Port)
+    
+    try {
+        $listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, $Port)
+        $listener.Start()
+        $listener.Stop()
+        return $true
+    } catch {
+        Write-Host "Port $Port is already in use. Please choose a different port." -ForegroundColor Red
+        return $false
+    }
+}
+
 Show-Banner
 
 Manage-ConfigProperties
@@ -239,10 +255,15 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Docker image built successfully."
 
 Write-Host "Starting the Docker container..."
+if (-not (Validate-Port $PORT)) {
+    exit 1
+}
+
 $dockerRunArgs = @(
     "-dit"
     "-p", "${PORT}:8080"
     "-e", "PROJECT_PATH=$CONTAINER_PROJECT_PATH"
+    "-e", "PORT=8080"
 )
 
 if ($MAVEN_REPO_PATH -and (Validate-MavenRepo $MAVEN_REPO_PATH)) {
