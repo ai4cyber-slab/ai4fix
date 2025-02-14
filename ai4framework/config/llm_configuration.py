@@ -11,6 +11,8 @@ def llm_response(provider, model, api_key, messages, endpoint=None, api_v=None):
     try:
         if provider.lower() == 'openai':
             return client_response(OpenAI(api_key=api_key), model, messages)
+        elif provider.lower() == 'deepseek':
+            return client_response(OpenAI(api_key=api_key, base_url="https://api.deepseek.com"), model, messages)
         elif provider.lower() == 'azureopenai':
             return client_response(AzureOpenAI(api_key=api_key, azure_endpoint=endpoint, api_version=api_v), model, messages)
         elif provider.lower() == 'groq':
@@ -21,7 +23,7 @@ def llm_response(provider, model, api_key, messages, endpoint=None, api_v=None):
             )
             response = client.messages.create(
                 model=model,
-                max_tokens=1024,
+                max_tokens=6000,
                 messages=messages,
             )
             return {
