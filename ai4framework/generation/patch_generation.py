@@ -237,7 +237,7 @@ def run_tests_worker(build_tool, cwd, env, jdk_compiler_version, build_mode):
             command = ['mvn']
             if build_mode.lower() == 'offline':
                 command.append('-o')
-            command.extend(['test', '-Dmaven.compiler.incremental=true'])
+            command.extend(['clean', 'test', '-Dmaven.compiler.incremental=true'])
             if is_parallel_build_supported(build_tool):
                 command.extend(['-T', str(os.cpu_count())])
         elif build_tool.lower() == 'gradle':
@@ -952,7 +952,7 @@ def process_warning_worker(args):
                             'warning_id': warning['id'],
                         }
                         if len(newly_introduced_issues) > 0:
-                            create_diff(context, f"introduced issue: {newly_introduced_issues}")
+                            create_diff(context, f"introduced issue: {len(newly_introduced_issues)}")
                         else:
                             create_diff(context, f"did not solve the issue")
                         try:
@@ -997,25 +997,26 @@ def process_warning_worker(args):
                         except Exception as e:
                             logger.error(f"Error reading file {full_file_path}: {e}")
                             return None
+                        
+                        # commented out for now as we are not generating test files for next release
+                        # diff = difflib.unified_diff(
+                        #     initial_content.splitlines(keepends=True),
+                        #     new_file_content.splitlines(keepends=True),
+                        #     fromfile=file_path,
+                        #     tofile=file_path,
+                        #     n=2
+                        # )
+                        # diff_text = ''.join(diff)
 
-                        diff = difflib.unified_diff(
-                            initial_content.splitlines(keepends=True),
-                            new_file_content.splitlines(keepends=True),
-                            fromfile=file_path,
-                            tofile=file_path,
-                            n=2
-                        )
-                        diff_text = ''.join(diff)
-
-                        full_import = derive_full_import_from_path(file_path=full_file_path)
-                        test_file_path, status, original_test_content = generate_test_file(
-                            java_file_path=full_file_path,
-                            updated_section=generated_patch,
-                            full_import=full_import,
-                            test_generator=test_generator,
-                            initial_section=extract_json_section,
-                            diff_content=diff_text
-                        )
+                        # full_import = derive_full_import_from_path(file_path=full_file_path)
+                        # test_file_path, status, original_test_content = generate_test_file(
+                        #     java_file_path=full_file_path,
+                        #     updated_section=generated_patch,
+                        #     full_import=full_import,
+                        #     test_generator=test_generator,
+                        #     initial_section=extract_json_section,
+                        #     diff_content=diff_text
+                        # )
 
                     if test_file_path and os.path.exists(test_file_path):
                         try:
