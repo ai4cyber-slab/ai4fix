@@ -178,7 +178,7 @@ function validate_config_properties {
     echo "'config.properties' file validated successfully."
 }
 
-function validate_maven_repo {
+function validate_maven_repo() {
     local maven_repo_path="$1"
     
     if [[ -n "$maven_repo_path" && ! -d "$maven_repo_path" ]]; then
@@ -192,26 +192,33 @@ function validate_maven_repo {
             exit 1
         fi
         return 1
-    }
+    fi
     
     if [[ -n "$maven_repo_path" && ! -f "$maven_repo_path/settings.xml" ]]; then
         echo "Warning: settings.xml not found in Maven repository path"
         return 1
-    }
+    fi
     
     return 0
 }
 
-function validate_port {
+function validate_port() {
     local port=$1
     if ! [[ "$port" =~ ^[0-9]+$ ]] || [ "$port" -lt 1024 ] || [ "$port" -gt 65535 ]; then
         echo "Error: Port must be a number between 1024 and 65535"
         return 1
     fi
     
-    if nc -z localhost "$port" 2>/dev/null; then
-        echo "Error: Port $port is already in use"
-        return 1
+    if command -v nc >/dev/null 2>&1; then
+        if nc -z localhost "$port" 2>/dev/null; then
+            echo "Error: Port $port is already in use"
+            return 1
+        fi
+    else
+        if (echo >/dev/tcp/localhost/$port) 2>/dev/null; then
+            echo "Error: Port $port is already in use"
+            return 1
+        fi
     fi
     
     return 0
