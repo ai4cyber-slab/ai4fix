@@ -142,6 +142,8 @@ function Validate-ConfigProperties {
     $providerValue = $null
     $keyValue = $null
     $modelValue = $null
+    $jdkVersion = $null
+    $buildMode = $null
 
     foreach ($line in $configContent) {
         if (-not $line.Trim().StartsWith("#")) {
@@ -156,6 +158,12 @@ function Validate-ConfigProperties {
             }
             if (-not $modelValue) {
                 $modelValue = Get-CleanedValue -Line $line -Key 'config\.model'
+            }
+            if (-not $jdkVersion) {
+                $jdkVersion = Get-CleanedValue -Line $line -Key 'config\.jdk_compiler_version'
+            }
+            if (-not $buildMode) {
+                $buildMode = Get-CleanedValue -Line $line -Key 'config\.build_mode'
             }
         }
     }
@@ -174,6 +182,14 @@ function Validate-ConfigProperties {
 
     if (-not ($modelValue -and -not [string]::IsNullOrWhiteSpace($modelValue) -and $modelValue -ne "None")) {
         $errors += "Invalid 'config.model'. It cannot be empty, whitespace-only, or set to 'None'."
+    }
+
+    if (-not ($jdkVersion -in @('4', '5', '6', '8', '11'))) {
+        $errors += "Invalid or missing 'config.jdk_compiler_version'. It must be one of: '4', '5', '6', '8', '11'."
+    }
+
+    if (-not ($buildMode -in @('online', 'offline'))) {
+        $errors += "Invalid or missing 'config.build_mode'. It must be either 'online' or 'offline'."
     }
 
     if ($errors.Count -gt 0) {
