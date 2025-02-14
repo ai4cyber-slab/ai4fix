@@ -88,10 +88,13 @@ For reference, the content of the `config.properties` template is as follows:
 config.filter=test # packages/folders to filter files (if present in file paths, those files will be ignored). Leave empty to analyze all files.
 config.rounds_count=1 # Number of times to run the process. Useful for auto patching with '--auto' option.
 config.build_tool=maven # (maven, gradle, or javac)
-config.issue_type_exclusion = AtLeastOneConstructor # Issue types that should be excluded from the analysis process
+config.jdk_compiler_version=6 # (4, 5, 6, 8, 11)
+config.build_mode=offline # (online, offline)
+config.parallel_workers=1 # Number of parallel worker processes to use during patch generation
+config.issue_type_exclusion = AtLeastOneConstructor # Issue types that should be excluded
 
 [API]
-config.provider=azureopenai # Service to use ('groq', 'openai', 'claude', 'azureopenai')
+config.provider=azureopenai # Service to use ('groq', 'openai', 'claude', 'azureopenai', 'deepseek')
 config.key=your_api_key # Enter your API key directly
 config.azure_endpoint=https://xxxxxx.azure.com/openai/deployments/xxxxxx
 config.azure_api_version=2024-08-01-preview
@@ -105,6 +108,54 @@ config.pmd_ruleset=/app/utils/PMD-config.xml # Leave as default or change if nee
 plugin.use_diff_mode=view Diffs # Do not change
 plugin.script_path=/app # Do not change
 ```
+
+### Key Configuration Options
+
+1. **JDK Version Selection**
+   - Set `config.jdk_compiler_version` to one of: 4, 5, 6, 8, or 11
+   - This determines which Java version will be used for compilation
+
+2. **Build Mode**
+   - Set `config.build_mode` to either:
+     - `online`: For normal build with internet access
+     - `offline`: For builds without internet access (requires pre-downloaded dependencies)
+
+3. **LLM Provider Selection**
+   - Set `config.provider` to one of:
+     - `openai`: For OpenAI models
+     - `groq`: For Groq models
+     - `claude`: For Anthropic's Claude
+     - `azureopenai`: For Azure OpenAI deployment
+     - `deepseek`: For DeepSeek models
+
+4. **Maven Repository Configuration**
+   - Use `--MAVEN_REPO_PATH` to specify a local Maven repository
+   - Example: `--MAVEN_REPO_PATH "/path/to/.m2"`
+   - Must contain a valid `settings.xml` file
+
+5. **Port Configuration**
+   - Use `--PORT` to specify a custom port (range: 1024-65535)
+   - Default is 8080
+   - The script will validate port availability
+
+### Offline Build Setup
+
+For offline builds, follow these steps:
+
+1. First, on your local machine:
+Build your project and make sure the repository folder and settings.xml are populated correctly under your .m2 folder.
+
+2. Copy your local `.m2` repository to a location accessible by the script:
+   ```bash
+   # Example path - adjust based on your setup
+   --MAVEN_REPO_PATH "/path/to/local/.m2"
+   ```
+
+3. Update the configuration file to use offline mode:
+   ```properties
+   # Disable online dependency resolution
+   config.build_mode=offline
+   ```
 
 ---
 
@@ -238,14 +289,40 @@ If you prefer using the command line without the web editor, run Docker with an 
 **On Windows:**
 
 ```powershell
-.\ai4framework_entry.ps1 -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/project" -PORT 8080 -RunWithBash
+# Basic usage
+.\ai4framework_entry.ps1 -LOCAL_PROJECT_PATH "C:\path\to\your\project" -CONTAINER_PROJECT_PATH "/sample_project" -RunWithBash
+
+# Full usage with offline mode support
+.\ai4framework_entry.ps1 `
+    -LOCAL_PROJECT_PATH "C:\path\to\your\project" `
+    -CONTAINER_PROJECT_PATH "/sample_project" `
+    -RunWithBash `
+    -PORT 8080 `                    # Optional: Default is 8080
+    -MAVEN_REPO_PATH "C:\path\to\.m2" ` # Optional: Required for offline mode
+    -MavenVersion "X.Y.Z"          # Optional: Required if using specific Maven version
 ```
 
 **On Linux or macOS:**
 
 ```bash
-bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/project" --PORT 8080 --RunWithBash
+# Basic usage
+bash ai4framework_entry.sh --LOCAL_PROJECT_PATH "/path/to/your/project" --CONTAINER_PROJECT_PATH "/sample_project" --RunWithBash
+
+# Full usage with offline mode support
+bash ai4framework_entry.sh \
+    --LOCAL_PROJECT_PATH "/path/to/your/project" \
+    --CONTAINER_PROJECT_PATH "/sample_project" \
+    --RunWithBash \
+    --PORT 8080 \                    # Optional: Default is 8080
+    --MAVEN_REPO_PATH "/path/to/.m2" \ # Optional: Required for offline mode
+    --MAVEN_VERSION "X.Y.Z"          # Optional: Required if using specific Maven version
 ```
+
+**Note about Optional Arguments:**
+- `PORT`: Only needed if port 8080 is already in use
+- `MAVEN_REPO_PATH`: Only required when running in offline mode
+- `MAVEN_VERSION`/`GRADLE_VERSION`: Only needed when using a specific version
+- For online mode with default settings, you only need `LOCAL_PROJECT_PATH` and `CONTAINER_PROJECT_PATH`
 
 #### Step 2: Run the Analysis Inside the Container
 
@@ -256,11 +333,11 @@ The analysis and process will directly start when the config file is modified, a
 If you decide to open code-server support after the end of the analysis, you can do so by running the following command inside the container:  
 
 ```bash
-code-server --bind-addr 0.0.0.0:8080 --auth none /project
+code-server --bind-addr 0.0.0.0:8080 --auth none /sample_project
 ```  
 
 - Replace `8080` with the port already in use if applicable.  
-- `/project` is the path within the container to your project directory.
+- `/sample_project` is the path within the container to your project directory.
 
 
 ---
