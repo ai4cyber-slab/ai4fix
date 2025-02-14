@@ -138,7 +138,8 @@ java -version' > /usr/local/bin/switch-java && \
     chmod +x /usr/local/bin/switch-java
 
 # Install Maven
-RUN wget https://archive.apache.org/dist/maven/binaries/apache-maven-${MAVEN_VERSION}-bin.zip -O /tmp/maven.zip && \
+RUN wget https://archive.apache.org/dist/maven/binaries/apache-maven-${MAVEN_VERSION}-bin.zip -O /tmp/maven.zip || \
+    wget https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.zip -O /tmp/maven.zip && \
     unzip /tmp/maven.zip -d /opt && \
     mv /opt/apache-maven-${MAVEN_VERSION} /opt/maven && \
     rm /tmp/maven.zip
