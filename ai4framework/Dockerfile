@@ -177,15 +177,6 @@ RUN echo "export JAVA_HOME=/usr/lib/jvm/jdk-11.0.21+9" > /etc/profile.d/javapath
 # Create Maven local repository directory and add default settings
 RUN mkdir -p /root/.m2 && \
     echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">\n\
-    <localRepository>/root/.m2/repository</localRepository>\n\
-    <mirrors>\n\
-        <mirror>\n\
-            <id>local-repository</id>\n\
-            <url>file:///root/.m2/repository</url>\n\
-            <mirrorOf>*</mirrorOf>\n\
-        </mirror>\n\
-    </mirrors>\n\
-    <offline>true</offline>\n\
 </settings>' > /root/.m2/settings.xml
 
 # Add volume mount point for Maven repository
