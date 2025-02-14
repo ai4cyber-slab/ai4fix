@@ -230,13 +230,23 @@ def update_java_file_worker(java_file_path, initial_json, updated_json):
         return False
 
 
-def run_tests_worker(build_tool, cwd, env):
-    switch_java_version('6')
+def run_tests_worker(build_tool, cwd, env, jdk_compiler_version, build_mode):
+    switch_java_version(str(jdk_compiler_version))
     try:
         if build_tool.lower() == 'maven':
-            command = ['mvn', '-o', 'clean', 'test', '-Dmaven.compiler.incremental=true', '-T', str(os.cpu_count())]
+            command = ['mvn']
+            if build_mode.lower() == 'offline':
+                command.append('-o')
+            command.extend(['test', '-Dmaven.compiler.incremental=true'])
+            if is_parallel_build_supported(build_tool):
+                command.extend(['-T', str(os.cpu_count())])
         elif build_tool.lower() == 'gradle':
-            command = ['gradle', '--offline', 'clean', 'test', '--no-daemon', '--parallel', f'-Dorg.gradle.workers.max={os.cpu_count()}']
+            command = ['gradle']
+            if build_mode.lower() == 'offline':
+                command.append('--offline')
+            command.extend(['test', '--no-daemon'])
+            if is_parallel_build_supported(build_tool):
+                command.extend(['--parallel', f'-Dorg.gradle.workers.max={os.cpu_count()}'])
         elif build_tool.lower() == 'javac':
             java_files = [str(file) for file in Path(cwd, 'src', 'main', 'java').rglob('*.java')]
             if java_files:
@@ -331,9 +341,31 @@ def extracted_section(json_output, start_key, end_key):
     extracted_json = json.dumps(extracted_dict, indent=2)
     return extracted_json
 
+def is_parallel_build_supported(build_tool):
+    if build_tool == 'gradle':
+        ex = 'gradle'
+    elif build_tool == 'maven':
+        ex = 'mvn'
+    result = subprocess.run([ex, '-v'], capture_output=True, text=True)
+    if result.returncode == 0:
+        if build_tool == 'maven':
+            version_match = re.search(r'Apache Maven (\d+\.\d+\.\d+)', result.stdout)
+            if version_match:
+                version = version_match.group(1)
+                major_version = int(version.split('.')[0])
+                return major_version >= 3
+        elif build_tool == 'gradle':
+            version_match = re.search(r'Gradle (\d+\.\d+)', result.stdout)
+            if version_match:
+                version = version_match.group(1)
+                major_version = int(version.split('.')[0])
+                return major_version >= 4
+    return False
 
-def run_tests_and_collect_output(build_tool, process_project_directory_core, env):
-    result = run_tests_worker(build_tool, process_project_directory_core, env)
+
+
+def run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode):
+    result = run_tests_worker(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
     output = result.stdout + result.stderr
     return output
 
@@ -529,6 +561,9 @@ def handle_test_error(context, issue_resolved):
     mutable_warnings = context['mutable_warnings']
     local_stats = context['local_stats']
     build_tool = context['build_tool']
+    jdk_compiler_version = context['jdk_compiler_version']
+    build_mode = context['build_mode']
+
 
     error_files = decisions['compilation_error_files']
     is_test_error = any("/test/" in ef for ef in error_files)
@@ -539,7 +574,7 @@ def handle_test_error(context, issue_resolved):
     else:
         revert_test_content(context)
 
-    output_after_revert = run_tests_and_collect_output(build_tool, process_project_directory_core, env)
+    output_after_revert = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
     re_decisions = parse_build_output(build_tool, output_after_revert)
     decisions['mvn_test_passed'] = re_decisions['mvn_test_passed']
     if re_decisions['build_success'] and not re_decisions['compilation_error']:
@@ -625,6 +660,8 @@ def handle_test_failures(context, issue_resolved):
     sast = context['sast']
     symbolic = context['symbolic']
     mutable_warnings = context['mutable_warnings']
+    jdk_compiler_version = context['jdk_compiler_version']
+    build_mode = context['build_mode']
     local_stats = context['local_stats']
     process_project_directory_core = context['process_project_directory_core']
     env = context['env']
@@ -652,7 +689,7 @@ def handle_test_failures(context, issue_resolved):
         else:
             revert_test_content(context)
 
-        output_after_test_drop = run_tests_and_collect_output(build_tool, process_project_directory_core, env)
+        output_after_test_drop = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
         re_decisions = parse_build_output(build_tool, output_after_test_drop)
         if re_decisions['build_success'] and not re_decisions['compilation_error']:
             if issue_resolved:
@@ -772,6 +809,8 @@ def process_warning_worker(args):
         provider,
         api_key,
         build_tool,
+        jdk_compiler_version,
+        build_mode,
         base_project_path,
         diffs_output_dir,
         single_file,
@@ -907,6 +946,8 @@ def process_warning_worker(args):
                             'full_file_path': full_file_path,
                             'file_path': file_path,
                             'attempt': attempt,
+                            'jdk_compiler_version': jdk_compiler_version,
+                            'build_mode': build_mode,
                             'diffs_output_dir': diffs_output_dir.replace("patches","patches_with_validation_errors"),
                             'warning_id': warning['id'],
                         }
@@ -985,7 +1026,7 @@ def process_warning_worker(args):
                             logger.error(f"Error reading original test file content: {e}")
 
                     logger.info(f"Process {os.getpid()} - Running '{build_tool} test' for warning ID {warning['id']}...")
-                    output = run_tests_and_collect_output(build_tool, process_project_directory_core, env)
+                    output = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
                     context_for_diff_file = {
                             'initial_content': initial_content,
                             'full_file_path': full_file_path,
@@ -1005,6 +1046,8 @@ def process_warning_worker(args):
                         'name': name,
                         'tag': tag,
                         'sast': sast,
+                        'jdk_compiler_version': jdk_compiler_version,
+                        'build_mode': build_mode,
                         'symbolic': symbolic,
                         'mutable_warnings': mutable_warnings,
                         'local_stats': local_stats,
@@ -1087,6 +1130,8 @@ class PatchGenerator:
         self.model_name = self.config.get('API', 'config.model')
         self.api_key = self.config.get('API', 'config.key', fallback='').strip()
         self.build_tool = self.config.get('DEFAULT', 'config.build_tool', fallback='maven').lower()
+        self.jdk_compiler_version = self.config.get('DEFAULT', 'config.jdk_compiler_version')
+        self.build_mode = self.config.get('DEFAULT', 'config.build_mode', fallback='online')
         self.single_file = single_file
         if self.api_key == '':
             logger.warning("API key not found. Please set it in the configuration.")
@@ -1196,6 +1241,8 @@ class PatchGenerator:
                     self.provider,
                     self.api_key,
                     self.build_tool,
+                    self.jdk_compiler_version,
+                    self.build_mode,
                     self.project_path,
                     self.diffs_output_dir,
                     self.single_file,
