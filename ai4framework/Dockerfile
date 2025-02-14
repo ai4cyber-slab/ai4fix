@@ -23,6 +23,9 @@ ENV ANALYZER_PATH=/opt/AI4VULN
 ENV ANALYZER_BIN=/opt/AI4VULN/Java/AnalyzerJava
 ENV ANALYZER_RESULTS_PATH=${WORKDIR_PATH}/results
 
+# Add PORT environment variable with default
+ENV PORT=8080
+
 # Initial system setup and dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
@@ -47,9 +50,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ln -s /usr/bin/python3.11 /usr/bin/python
 
 # First copy the JDK files
-COPY j2sdk-1_4_2_19-linux-i586.bin /tmp/jdk4.bin
-COPY jdk-1_5_0_22-linux-i586.bin /tmp/jdk5.bin
-COPY jdk-6u45-linux-i586.bin /tmp/jdk6.bin
+COPY bins/j2sdk-1_4_2_19-linux-i586.bin /tmp/jdk4.bin
+COPY bins/jdk-1_5_0_22-linux-i586.bin /tmp/jdk5.bin
+COPY bins/jdk-6u45-linux-i586.bin /tmp/jdk6.bin
 
 # Then use RUN for the installation steps
 RUN mkdir -p /usr/lib/jvm && \
@@ -219,7 +222,7 @@ COPY . ${WORKDIR_PATH}
 COPY aifix4seccode-vscode-1.0.39.vsix /opt/
 RUN code-server --install-extension /opt/aifix4seccode-vscode-1.0.39.vsix
 
-EXPOSE 8080
+EXPOSE ${PORT}
 
 ENV PROJECT_PATH=''
 ENV USER=user
@@ -227,7 +230,7 @@ ENV USERNAME=user
 # Entrypoint setup
 RUN echo '#!/bin/bash\n\
 source /etc/profile.d/javapath.sh\n\
-code-server --bind-addr 0.0.0.0:8080 --auth none /' > /usr/local/bin/docker-entrypoint.sh && \
+code-server --bind-addr 0.0.0.0:${PORT} --auth none /' > /usr/local/bin/docker-entrypoint.sh && \
     chmod +x /usr/local/bin/docker-entrypoint.sh
 
 CMD ["/usr/local/bin/docker-entrypoint.sh"]
