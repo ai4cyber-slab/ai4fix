@@ -124,6 +124,8 @@ function validate_config_properties {
     PROVIDER=""
     KEY=""
     MODEL=""
+    JDK_VERSION=""
+    BUILD_MODE=""
 
     while IFS= read -r line; do
         line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
@@ -140,6 +142,10 @@ function validate_config_properties {
             KEY=$(echo "${line#*=}" | sed 's/[[:space:]]*#.*//g' | xargs)
         elif [[ $line =~ ^config\.model= ]]; then
             MODEL=$(echo "${line#*=}" | sed 's/[[:space:]]*#.*//g' | xargs)
+        elif [[ $line =~ ^config\.jdk_compiler_version= ]]; then
+            JDK_VERSION=$(echo "${line#*=}" | sed 's/[[:space:]]*#.*//g' | xargs)
+        elif [[ $line =~ ^config\.build_mode= ]]; then
+            BUILD_MODE=$(echo "${line#*=}" | sed 's/[[:space:]]*#.*//g' | xargs)
         fi
     done <<< "$CONFIG_CONTENT"
 
@@ -154,6 +160,12 @@ function validate_config_properties {
     fi
     if [[ -z "$MODEL" || "$MODEL" == "None" ]]; then
         ERRORS+=("Invalid 'config.model'. Cannot be empty or 'None'.")
+    fi
+    if [[ ! "$JDK_VERSION" =~ ^(4|5|6|8|11)$ ]]; then
+        ERRORS+=("Invalid 'config.jdk_compiler_version'. Must be one of '4', '5', '6', '8', '11'.")
+    fi
+    if [[ ! "$BUILD_MODE" =~ ^(online|offline)$ ]]; then
+        ERRORS+=("Invalid 'config.build_mode'. Must be 'online' or 'offline'.")
     fi
 
     if [[ ${#ERRORS[@]} -gt 0 ]]; then
