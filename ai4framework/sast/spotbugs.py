@@ -77,7 +77,7 @@ class SpotBugsRunner:
 
         spotbugs_bin = os.environ.get('SPOTBUGS_BIN')
         temp_file = self.create_temp_file(files_to_analyze)
-        command = f"{spotbugs_bin} -textui -xml:withMessages={self.report_path} -analyzeFromFile {temp_file}"
+        command = f"{spotbugs_bin} -textui -xml:withMessages={self.report_path} -analyzeFromFile {temp_file} -effort:max -low"
 
         try:
             process = subprocess.run(

@@ -24,7 +24,7 @@ class WorkflowFramework:
     of a software project.
     """
 
-    def __init__(self, commit_sha, skip_patches=False, sast_rerun=False, automatic_application=False, single_file=None, count_issues=False):
+    def __init__(self, commit_sha, skip_patches=False, sast_rerun=False, automatic_application=False, single_file=None, count_issues=False, external_json=False):
         try:
             self.config = ConfigManager.get_config(commit_sha)
         except Exception as e:
@@ -36,11 +36,12 @@ class WorkflowFramework:
             self.skip_patches = skip_patches
             self.automatic_application = automatic_application
             self.count_issues = count_issues
+            self.external_json = external_json
 
             self.sast = SASTOrchestrator(self.config, self.single_file)
             self.security_classifier = SecurityClassifier(self.config)
             self.symbolic_execution = SymbolicExecution(self.config, self.single_file)
-            self.issues_merger = JSONCombiner(self.config, single_file=self.single_file)
+            self.issues_merger = JSONCombiner(self.config, single_file=self.single_file, skip_patches=self.skip_patches, external_json = self.external_json)
             self.json_converter = JsonPluginConverter(self.config, single_file=self.single_file)
             signal.signal(signal.SIGINT, self.handle_signal)
             signal.signal(signal.SIGTERM, self.handle_signal)
@@ -61,11 +62,17 @@ class WorkflowFramework:
 
             for i in range(1, rounds_count + 1):
                 logger.info(f"Starting round {i}")
-                self.sast.run_all() if i == 1 else self.sast.run_all(is_initial_round=False)
-
+                if self.skip_patches and self.external_json:
+                    self.sast.run_all() if i == 1 else self.sast.run_all(is_initial_round=False)
+                if not self.external_json:
+                    self.sast.run_all() if i == 1 else self.sast.run_all(is_initial_round=False)
                 if not self.sast_rerun:
-                    self.security_classifier.classify()
-                    self.symbolic_execution.analyze()
+                    if self.skip_patches and self.external_json:
+                        self.security_classifier.classify()
+                        self.symbolic_execution.analyze()
+                    if not self.external_json:
+                        self.security_classifier.classify()
+                        self.symbolic_execution.analyze()
                     logger.info("Analysis completed")
 
                     warnings_dict_original = self.issues_merger.run(self.count_issues)
@@ -73,7 +80,7 @@ class WorkflowFramework:
                     logger.info("Issues merger run completed")
 
                     if not self.skip_patches and not self.sast_rerun and not self.count_issues:
-                        patch_generator = PatchGenerator(self.config, warnings_dict_original, i, single_file=self.single_file)
+                        patch_generator = PatchGenerator(self.config, warnings_dict_original, i, single_file=self.single_file, external_json = self.external_json)
                         patch_generator.main()
                         logger.info("Patch generation completed")
                     if not self.count_issues:
@@ -126,6 +133,7 @@ if __name__ == "__main__":
         parser.add_argument("--auto", action="store_true", help="If provided, patches will be applied automatically after the analysis complete.")
         parser.add_argument("--single-file", help="The path of the file to be analyzed.")
         parser.add_argument("--count-issues", action="store_true", help="If provided, only the count of the issues found will be returned.")
+        parser.add_argument("--external-json", action="store_true", help="If provided, working with an exteral JSON file named output.json.")
         args = parser.parse_args()
 
         framework = WorkflowFramework(
@@ -134,7 +142,8 @@ if __name__ == "__main__":
             sast_rerun=args.sast_rerun,
             automatic_application=args.auto,
             single_file=args.single_file,
-            count_issues=args.count_issues
+            count_issues=args.count_issues,
+            external_json=args.external_json
         )
 
         framework.execute_workflow()

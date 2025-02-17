@@ -8,6 +8,7 @@ import json
 import random
 import statistics
 import subprocess
+from config.common_config import ConfigManager
 import commentjson as cjson
 import difflib
 import shutil
@@ -23,6 +24,7 @@ from utils.findMethod import get_method_info_if_any
 from sast.sast_orchestrator import SASTOrchestrator
 from config.llm_configuration import llm_response
 from generation.mesure import BenchmarkVisualizer
+from generation.java_parser import JavaParser
 from symbolic_execution.execution import SymbolicExecution
 from generation.warnings_mapping import ALL_WARNINGS
 from generation.test_generation import TestGenerator
@@ -50,7 +52,7 @@ def parse_build_output(build_tool, result_output, context_for_diff_save = {}):
         'compilation_error_files': [],
         'failure_details': [],
         'error_details': [],
-        'build_success': False,
+        'build_success': True,
         'mvn_test_passed' : True
     }
 
@@ -60,12 +62,40 @@ def parse_build_output(build_tool, result_output, context_for_diff_save = {}):
 
         details['failure_details'] = failure_details
         details['error_details'] = error_details
+        line_counter=0
+        for line in result_output.split("\n"):
+            if "[ERROR]" in line:
+                line_counter += 1
+                if "cannot" in line:
+                    if line_counter == 2:
+                        split_line = line.split("] ")
+                        if len(split_line) > 2:
+                            error_message_key = split_line[2]
+                            error_message = error_message_key
+                        else:
+                            error_message = line
+                        
+                        lines = result_output.split("\n")
+                        next_line_index = lines.index(line) + 1
+                        if next_line_index < len(lines):
+                            next_line = lines[next_line_index]
+                            error_message += " " + next_line
+                        break
+                else:
+                    if line_counter == 2:
+                        split_line = line.split("] ")
+                        if len(split_line) > 2:
+                            error_message = split_line[2]
+                        else:
+                            error_message = line
+                        break
 
         if "COMPILATION ERROR" in result_output:
             details['compilation_error'] = True
             error_files = re.findall(r'\[ERROR\] (.*?\.java):', result_output)
             details['compilation_error_files'] = error_files
             details['mvn_test_passed'] = False
+            details['build_success'] = False
             logger.warning(f"{build_tool} compilation failed")
             if len(context_for_diff_save) != 0:
                 context = {
@@ -76,7 +106,7 @@ def parse_build_output(build_tool, result_output, context_for_diff_save = {}):
                     'diffs_output_dir': context_for_diff_save['diffs_output_dir'].replace("patches", "patches_with_build_failure"),
                     'warning_id': context_for_diff_save["warning_id"]
                 }
-                create_diff(context, f"failed at compilation process")
+                create_diff(context, f"failed at compilation process", error_message)
         elif "BUILD SUCCESS" not in result_output:
             logger.warning(f"{build_tool} build failed")
             if len(context_for_diff_save) != 0:
@@ -88,11 +118,10 @@ def parse_build_output(build_tool, result_output, context_for_diff_save = {}):
                     'diffs_output_dir': context_for_diff_save['diffs_output_dir'].replace("patches", "patches_with_build_failure"),
                     'warning_id': context_for_diff_save["warning_id"]
                 }
-                create_diff(context, f"failed at build process")
+                create_diff(context, f"failed at build process", error_message)
 
         elif "BUILD SUCCESS" in result_output and "COMPILATION ERROR" not in result_output:
             details['build_success'] = True
-            details['mvn_test_passed'] = True
 
     elif build_tool == 'gradle':
         # 1) Check for build success/failure
@@ -146,7 +175,7 @@ def validate_test_and_patch(test_file_path, result_output, build_tool, context_f
         'test_file_exists': os.path.exists(test_file_path) if test_file_path else False
     }
 
-    logger.debug(f"Test file {'exists' if decisions['test_file_exists'] else 'does not exist'} at path: {test_file_path}")
+    logger.info(f"Test file {'exists' if decisions['test_file_exists'] else 'does not exist'} at path: {test_file_path}")
 
     parsed = parse_build_output(build_tool, result_output, context_for_diff_file)
     decisions['mvn_test_passed'] = parsed['mvn_test_passed']
@@ -175,9 +204,9 @@ def generate_test_file(java_file_path, updated_section, full_import, test_genera
             diff_content=diff_content
         )
         if status:
-            logger.debug(f"Updated test file at path: {test_file_path}")
+            logger.info(f"Updated test file at path: {test_file_path}")
         else:
-            logger.debug(f"Created new test file at path: {test_file_path}")
+            logger.info(f"Created new test file at path: {test_file_path}")
         return test_file_path, status, original_test_content
     except Exception as e:
         logger.error(f"Error generating test file: {e}")
@@ -341,61 +370,97 @@ def get_prompt(explanation, startLine, endLine, attempt, previous_generated_patc
             "Line:35": "    System.out.println(\"Hello, World!\");",
             "Line:36": "}"
         }
-        ouput_example = {
+        output_example = {
             "Line:34": "public void exampleMethod() {",
             "Line:35": "    System.out.println(\"Updated Message!\");",
             "Line:36": "}"
         }
-        prompt = f"""
-                    You are a GPT that generates programmatic solutions to fix Java code issues. Your task is to modify the provided JSON content to resolve the issue. Follow these guidelines:
-                    1. **Objective**:
-                    - Update the provided JSON content to fix the issue as specified in the problem description.
-                    2. **Modification Rules**:
-                    - Replace any incorrect or problematic lines in the JSON content with the corrected lines.
-                    - If necessary, remove redundant lines or add new lines to ensure the solution is valid and complete.
-                    - Ensure the updated JSON contains all required lines and remains syntactically valid Java code.
-                    3. **Output Requirements**:
-                    - Return the full modified JSON content, structured similarly to the input JSON.
-                    - Preserve the format of the original JSON, including keys like `Line:<line_number>` and their corresponding values.
-                    4. **Validation**:
-                    - Ensure the updated JSON represents valid, compilable Java code.
-                    - Avoid redundant or conflicting changes.
-                    - If no valid solution is possible, respond with `"I DO NOT KNOW"`.
-                    5. **Input Context**:
-                    - Use the provided JSON snippet as the basis for your solution update it entirely:
-                        ```json
-                        {extract_json_section}
-                        ```
-                    6. **Example**:
-                    Input JSON:
-                    ```json
-                    {json.dumps(input_example, indent=2)}
-                    ```
-                    Updated JSON:
-                    ```json
-                    {json.dumps(ouput_example, indent=2)}
-                    ```
-                    7. **Change Request**:
-                    - Fix the static analysis tool warning: `{explanation}` as follows {SOLVE_COMMAND}:
-                        - The issue starts at line {startLine} and ends at line {endLine}.
-                        - Solve the issue by performing the required changes to the JSON content directly.
-                    - If no valid solution is possible, respond with `"I DO NOT KNOW"`.
-                    """
-    else:
-        prompt = f"""
-                    The previous attempt to fix the issue did not resolve it.
-                    Here is the strategy you gave me in last attempt:
-                    {previous_generated_patch}
-                    Explanation of the issue: {explanation}
-                    the issue is between line {startLine} and line {endLine}
-                    Here is the full original file code in json format with lines as the keys use them when providing the strategy accurately:
-                    {extract_json_section}
-                    Instructions:
-                    Analyze the previous attempt and identify why it did result in incorrect java code.
-                    Solve it by: {SOLVE_COMMAND}
-                    Provide the output in same format and only that no further explanation is needed.
-                    """
 
+        prompt = f"""
+            You are a GPT that generates programmatic solutions to fix Java code issues, strictly following these rules:
+
+            1. **Objective**  
+            - Update the provided JSON content to fix the issue specified in the problem description.
+
+            2. **Modification Rules**  
+            - **Never** remove or add any comment line from the original file. Comments must remain exactly as they appear.
+                - This applies to both `//` style comments and block/javadoc comments like `/* ... */` or `/** ... */` or `*`.
+            - Replace or correct only the non-comment lines that are relevant to the fix. 
+            - If necessary, remove redundant code lines (not comments) or add new code lines, but do **not** touch existing comments.
+            - Ensure the updated JSON remains syntactically valid Java code (it should compile).
+
+            3. **Output Requirements**  
+            - Return the **entire** modified JSON content, preserving the same JSON structure:
+                ```json
+                {{
+                    "Line:<line_number>": "<line_content>"
+                }}
+                ```
+            - Maintain the same ordering of lines and their keys (`"Line:X"`).
+            - Do not insert extra comments or remove existing ones.  
+            - Any new lines of code should follow the same JSON format with `"Line:<new_line_number>"` as the key.
+
+            4. **Validation**  
+            - Ensure the updated JSON represents valid, compilable Java code.
+            - If no valid solution is possible, respond with `"I DO NOT KNOW"`.
+
+            5. **Input Context**  
+            - Use the provided JSON snippet below as the **sole basis** for your modifications:
+                ```json
+                {extract_json_section}
+                ```
+
+            6. **Examples**  
+            - Input JSON:
+                ```json
+                {json.dumps(input_example, indent=2)}
+                ```
+            - Updated JSON:
+                ```json
+                {json.dumps(output_example, indent=2)}
+                ```
+
+            7. **Change Request**  
+            - Fix the static analysis tool warning: **{explanation}**
+            - Lines involved in the issue: from line **{startLine}** to line **{endLine}** 
+            - Resolve it by performing the required changes (e.g., renaming variables, adding final, removing duplicates, etc.) in the JSON content directly. 
+            - If a fix is not possible, respond with `"I DO NOT KNOW"`.
+
+            **Important**: 
+            - Under no circumstances add or remove any comment line from the code. 
+            - Failure to preserve comments exactly (including formatting) invalidates the solution.  
+
+            Now, **modify** the snippet accordingly:
+            """
+    else:
+            prompt = f"""
+                The previous attempt to fix the issue did not resolve it.
+                Explanation of the issue: {explanation}
+                The issue is between line {startLine} and line {endLine}.
+                Previous (incorrect) patch:
+                {previous_generated_patch}
+
+                Below is the full original file code in JSON format:
+
+                {extract_json_section}
+
+                Your **new** task:
+                1. Identify why the previous attempt failed (or produced incorrect code).
+                2. Correctly fix the issue by performing the required changes, but:
+                - **Do not touch any existing comments.** 
+                - Do not add new comments.
+                - Only modify lines relevant to the issue or needed for the solution.
+                3. Return the updated snippet as **valid Java code** in JSON form, preserving the same line structure:
+                ```json
+                {{
+                    "Line:<line_number>": "<line_content>"
+                }}
+                If no valid fix is possible, output "I DO NOT KNOW" exactly.
+                Remember:
+
+                Comments must remain exactly the same.
+                Do not remove or insert any comments.
+                Proceed with the fix: """
     return prompt
 
 
@@ -429,9 +494,8 @@ def update_build_env_vars(temp_dir_for_build_tool, build_tool):
 def remove_file_if_exists(file_path):
     if file_path and os.path.exists(file_path):
         try:
-            logger.debug(f"Attempting to remove file: {file_path}")
             os.remove(file_path)
-            logger.debug(f"Removed file: {file_path}")
+            logger.info(f"Removed file: {file_path}")
         except Exception as e:
             logger.error(f"Error removing file {file_path}: {e}")
 
@@ -444,7 +508,7 @@ def revert_test_content(context):
         try:
             with open(test_file_path, 'w') as f:
                 f.write(original_test_content)
-            logger.debug(f"Reverted test content to original in {test_file_path}")
+            logger.info(f"Reverted test content to original in {test_file_path}")
         except Exception as e:
             logger.error(f"Error restoring original test content to {test_file_path}: {e}")
 
@@ -456,12 +520,12 @@ def revert_patch(context):
     try:
         with open(full_file_path, 'w') as f:
             f.write(initial_content)
-        logger.debug(f"Reverted patch in {full_file_path}")
+        logger.info(f"Reverted patch in {full_file_path.split('/')[-1]}")
     except Exception as e:
         logger.error(f"Error restoring original content to {full_file_path}: {e}")
 
 
-def create_diff(context, extra=""):
+def create_diff(context, extra="", err_message=""):
     full_file_path = context['full_file_path']
     initial_content = context['initial_content']
     file_path = context['file_path']
@@ -484,21 +548,26 @@ def create_diff(context, extra=""):
         n=2
     )
     diff_text = ''.join(diff)
-    if extra=="":
+
+    if err_message:
+        diff_text = f"# {err_message}\n\n{diff_text}"
+
+    if extra == "":
         diff_file_name = f"{os.path.splitext(os.path.basename(full_file_path))[0]}_patch_{warning_id}_attempt_{attempt}_{str(int(time.time()))}.diff"
     else:
-        diff_file_name = f"{os.path.splitext(os.path.basename(full_file_path))[0]}_patch_{warning_id}_attempt_{attempt}_{extra.replace(':','-')}.diff"
+        diff_file_name = f"{os.path.splitext(os.path.basename(full_file_path))[0]}_patch_{warning_id}_attempt_{attempt}_{extra.replace(':', '-')}.diff"
+
     os.makedirs(diffs_output_dir, exist_ok=True)
     diff_file_path = os.path.join(diffs_output_dir, diff_file_name)
 
     try:
         with open(diff_file_path, 'w') as diff_file:
             diff_file.write(diff_text)
-        logger.debug(f"Created diff file: {diff_file_path}")
         return diff_file_name, diff_file_path
     except Exception as e:
         logger.error(f"Error writing diff to {diff_file_path}: {e}")
         return None, None
+
 
 
 def log_retry(message, context):
@@ -538,6 +607,7 @@ def handle_test_error(context, issue_resolved):
     output_after_revert = run_tests_and_collect_output(build_tool, process_project_directory_core, env)
     re_decisions = parse_build_output(build_tool, output_after_revert)
     decisions['mvn_test_passed'] = re_decisions['mvn_test_passed']
+    decisions['build_success'] = re_decisions['build_success']
     if re_decisions['build_success'] and not re_decisions['compilation_error']:
         if issue_resolved:
             local_stats['validation_passed'] = True
@@ -580,7 +650,7 @@ def handle_source_error(context):
     return False
 
 
-def handle_build_success(context, issue_resolved):
+def handle_build_success(context, issue_resolved, parsed):
     name = context['name']
     tag = context['tag']
     sast = context['sast']
@@ -591,8 +661,10 @@ def handle_build_success(context, issue_resolved):
     if issue_resolved:
         local_stats['validation_passed'] = True
         local_stats['was_fixed'] = True
-
-        diff_file_name, diff_file_path = create_diff(context)
+        if parsed:
+            diff_file_name, diff_file_path = create_diff(context, "after_parsing")
+        else:
+            diff_file_name, diff_file_path = create_diff(context)
         if diff_file_name and diff_file_path:
             local_stats['diff_file_name'] = diff_file_name
             local_stats['diff_file_path'] = diff_file_path
@@ -741,6 +813,120 @@ def check_new_issues(file_path, original_file_issue_count):
         "new_warnings_dict": new_warnings_dict
     }
 
+def check_new_external_issues(file_path, original_file_issue_count, temp_dir):
+    """
+    1. Temporarily set config.project_root to temp_dir
+    2. Spawn the orchestrator with --skip-patches and --external-json, streaming its output
+    3. Extract issue data for the specified file
+    4. Determine if a new issue was introduced based on the counts
+    5. Restore the original config.project_root after the command completes
+    """
+    logger.info(f"original_file_issue_count: {original_file_issue_count}")
+    introduced_new_issue = "False"
+    new_warnings_dict = {}
+
+    # 1) Get the global config
+    config_data = ConfigManager.get_config(commit_sha=None)
+
+    old_project_root = config_data.get("DEFAULT", "config.project_root", fallback="")
+    old_env_project_path = os.environ.get("PROJECT_PATH")
+
+    try:
+        config_data.set("DEFAULT", "config.project_root", temp_dir)
+        os.environ["PROJECT_PATH"] = temp_dir
+
+        cmd = [
+            "python",
+            "/app/orchestrator.py",
+            "--skip-patches",         
+            "--external-json"
+        ]
+        logger.info(f"Running orchestrator for counting issue in {temp_dir}")
+
+        process = subprocess.Popen(
+            cmd,
+            cwd=temp_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True
+        )
+        process.stdout.close()
+
+        return_code = process.wait()
+        if return_code != 0:
+            logger.warning(f"Orchestrator returned non-zero exit code: {return_code}")
+
+        json_file_path = config_data.get('DEFAULT', 'config.issues_path')
+
+        # 4) Parse issues from the newly generated JSON
+        file_issues = extract_issues_for_file(json_file_path, file_path)
+
+        if file_issues and file_path in file_issues:
+            new_count = file_issues[file_path]["Total issue count"]
+            new_warnings_dict = file_issues[file_path]["warnings_dict_original"]
+            logger.info(
+                f"Orchestrator found {new_count} issues in {file_path}; "
+                f"originally had {original_file_issue_count}"
+            )
+
+            # Determine if a new issue was introduced
+            if new_count >= original_file_issue_count:
+                introduced_new_issue = "True"
+        else:
+            introduced_new_issue = "build failed"
+
+    except Exception as e:
+        logger.error(f"Error checking new issues in {file_path}: {e}")
+        introduced_new_issue = "build failed"
+
+    finally:
+        if old_project_root:
+            config_data.set("DEFAULT", "config.project_root", old_project_root)
+            logger.info(f"Restored project_root back to: {old_project_root}")
+        if old_env_project_path:
+            os.environ["PROJECT_PATH"] = old_env_project_path
+        else:
+            os.environ.pop("PROJECT_PATH", None)
+    return {
+        "introduced_new_issue": introduced_new_issue,
+        "new_warnings_dict": new_warnings_dict
+    }
+
+
+def extract_issues_for_file(json_path: str, file_path: str):
+    """
+    Reads a JSON file and extracts issue data for the specified file.
+
+    :param json_path: Path to the JSON file containing issue data.
+    :param file_path: The file path for which issue data should be extracted.
+    :return: A dictionary with issue counts and warning details for the specified file.
+    """
+    # Load JSON data from file
+    with open(json_path, "r") as file:
+        data = json.load(file)
+
+    # Dictionary to store issues for the specified file
+    issues_data = {"Total issue count": 0, "warnings_dict_original": defaultdict(int)}
+
+    # Process the JSON data
+    for entry in data:
+        warning_name = entry["name"]
+        for item in entry["items"]:
+            textrange = item["textrange"]
+            current_file = textrange["file"]
+
+            # Only process the specified file
+            if current_file == file_path:
+                # Increment total issue count for the file
+                issues_data["Total issue count"] += 1
+
+                # Increment warning type count
+                issues_data["warnings_dict_original"][warning_name] += 1
+
+    issues_data["warnings_dict_original"] = dict(issues_data["warnings_dict_original"])
+
+    return {file_path: issues_data} if issues_data["Total issue count"] > 0 else {}
+
 def get_newly_introduced_issues(original_issue_dict, new_issue_dict):
     """
     Return a dictionary of only the issue types that have
@@ -753,6 +939,24 @@ def get_newly_introduced_issues(original_issue_dict, new_issue_dict):
         if diff > 0:
             newly_introduced[issue_type] = diff
     return newly_introduced
+
+
+def transform_issues(json_file):
+    """Transforms the JSON data into a dictionary with issue counts per file."""
+    with open(json_file, "r", encoding="utf-8") as f:
+        json_data = json.load(f)
+
+    issue_warnings = defaultdict(lambda: {"Total issue count": 0, "warnings_dict_original": defaultdict(int)})
+    
+    for issue in json_data:
+        issue_name = issue["name"]
+        for item in issue["items"]:
+            file_path = item["textrange"]["file"]
+            issue_warnings[file_path]["Total issue count"] += 1
+            issue_warnings[file_path]["warnings_dict_original"][issue_name] += 1
+    
+    # Convert defaultdicts to regular dicts
+    return {k: {"Total issue count": v["Total issue count"], "warnings_dict_original": dict(v["warnings_dict_original"])} for k, v in issue_warnings.items()}
 
 ####################################
 # Main Logic
@@ -772,12 +976,15 @@ def process_warning_worker(args):
         diffs_output_dir,
         single_file,
         total_warnings,
-        file_issue_types
+        file_issue_types,
+        issue_warnings,
+        external_json
     ) = args
 
     local_stats = {
         'warning_id': warning['id'],
         'passed': False,
+        'build_success': True,
         'validation_passed': False,
         'mvn_test_passed': True,
         'applicable_patch': True,
@@ -821,6 +1028,7 @@ def process_warning_worker(args):
             items = warning['items']
             name = warning['name']
             tag = warning['tags']
+            parsed=False
 
             for item in items:
                 textrange = item['textrange']
@@ -841,6 +1049,7 @@ def process_warning_worker(args):
 
                 max_attempts = 2
                 attempt = 0
+                issue_resolved=True
                 previous_generated_patch = None
                 test_file_path, status, original_test_content = None, False, None
 
@@ -871,9 +1080,7 @@ def process_warning_worker(args):
                         continue
 
                     generated_patch = extract_patch_from_response_worker(response['message'])
-                    previous_generated_patch = generated_patch
-                    local_stats['input_tokens'].append(response.get('input_tokens', 0))
-                    local_stats['response_tokens'].append(response.get('output_tokens', 0))
+
 
                     update_success = update_java_file_worker(full_file_path, extract_json_section, generated_patch)
                     if not update_success:
@@ -881,69 +1088,23 @@ def process_warning_worker(args):
                         try:
                             with open(full_file_path, 'w') as f:
                                 f.write(initial_content)
-                            logger.debug(f"Reverted patch in {full_file_path} due to unsuccessful patch application.")
+                            logger.info(f"Reverted patch in {full_file_path.split('/')[-1]} due to unsuccessful patch application.")
                         except Exception as e:
                             logger.error(f"Error while restoring original content to {full_file_path}: {e}")
                         continue
-                    else:
-                        original_issue_dict_for_file = file_issue_types.get(file_path, {})
-                        original_count_for_this_file = sum(original_issue_dict_for_file.values())
-                        check_result = check_new_issues(full_file_path, original_count_for_this_file)
-                        introduced_new_issue = check_result["introduced_new_issue"]
-                        new_warnings_dict = check_result["new_warnings_dict"]
-                        newly_introduced_issues = get_newly_introduced_issues(
-                            original_issue_dict_for_file,
-                            new_warnings_dict
-                        )
-                    issue_resolved=True
-                    if introduced_new_issue == "True":
-                        logger.warning("New or equal number of issues introduced by patch. Reverting patch and retrying if attempts remain.")
-                        context = {
-                            'initial_content': initial_content,
-                            'full_file_path': full_file_path,
-                            'file_path': file_path,
-                            'attempt': attempt,
-                            'diffs_output_dir': diffs_output_dir.replace("patches","patches_with_validation_errors"),
-                            'warning_id': warning['id'],
-                        }
-                        if len(newly_introduced_issues) > 0:
-                            create_diff(context, f"introduced issue: {newly_introduced_issues}")
-                        else:
-                            create_diff(context, f"did not solve the issue")
-                        try:
-                            with open(full_file_path, 'w') as f:
-                                f.write(initial_content)
-                            logger.debug(f"Reverted patch in {full_file_path} due to newly introduced issues.")
-                        except Exception as e:
-                            logger.error(f"Error while restoring original content to {full_file_path}: {e}")
-
-                        # 1) Mark stats
-                        local_stats['introduced_new_issue'] = True
-                        local_stats['validation_passed'] = True
-                        local_stats['issue_name'] = name
-                        local_stats['new_warnings_distribution'] = newly_introduced_issues
-
-                        # 2) Incorporate the newly introduced issues into the next attempt's "previous_generated_patch"
-                        if len(newly_introduced_issues) > 0:
-                            introduced_issues_text = "\n\nThe previous patch introduced these new issues:\n"
-                        else:
-                            introduced_issues_text = "\n\nThe previous patch didn't solve the issue.\n"
-                        for introduced_type, introduced_count in newly_introduced_issues.items():
-                            introduced_issues_text += f"  - {introduced_type} (count: {introduced_count})\n"
-                            new_issue_solve_command = ALL_WARNINGS.get(introduced_type, "")
-                            if new_issue_solve_command:
-                                introduced_issues_text += f"    Possible fix command: {new_issue_solve_command}\n"
-                            
-                        if previous_generated_patch is None:
-                            previous_generated_patch = ""
-                        previous_generated_patch += introduced_issues_text
-                        issue_resolved=False
-                        continue
-                    elif introduced_new_issue=="build failed":
-                        local_stats['validation_passed'] = True
-                        local_stats['mvn_test_passed'] = False
-                        issue_resolved=False
+                
+                    line_numbers = re.findall(r'"Line:(\d+)"', generated_patch)
+    
+                    line_numbers = list(map(int, line_numbers))
+                    
+                    if not line_numbers:
                         pass
+                    else:   
+                        min_line_number = min(line_numbers)
+                        max_line_number = max(line_numbers)
+                    previous_generated_patch = generated_patch
+                    local_stats['input_tokens'].append(response.get('input_tokens', 0))
+                    local_stats['response_tokens'].append(response.get('output_tokens', 0))
 
                     if single_file is not None:
                         try:
@@ -961,7 +1122,6 @@ def process_warning_worker(args):
                             n=2
                         )
                         diff_text = ''.join(diff)
-
                         full_import = derive_full_import_from_path(file_path=full_file_path)
                         test_file_path, status, original_test_content = generate_test_file(
                             java_file_path=full_file_path,
@@ -976,7 +1136,7 @@ def process_warning_worker(args):
                         try:
                             with open(test_file_path, 'r') as f:
                                 original_test_content = f.read()
-                                logger.debug(f"Saved original content for existing test file: {test_file_path}")
+                                logger.info(f"Saved original content for existing test file: {test_file_path}")
                         except Exception as e:
                             logger.error(f"Error reading original test file content: {e}")
 
@@ -991,6 +1151,146 @@ def process_warning_worker(args):
                             'warning_id': warning['id'],
                         }
                     decisions = validate_test_and_patch(test_file_path, output, build_tool, context_for_diff_file)
+                    if not decisions.get('build_success', False):
+                        try:
+                            with open(full_file_path, 'r') as f:
+                                new_file_content = f.read()
+                        except Exception as e:
+                            logger.error(f"Error reading file {full_file_path}: {e}")
+                            return None
+                        diff = difflib.unified_diff(
+                            initial_content.splitlines(keepends=True),
+                            new_file_content.splitlines(keepends=True),
+                            fromfile=file_path,
+                            tofile=file_path,
+                            n=2
+                        )
+                        diff_text = ''.join(diff)
+                        java_parser = JavaParser(path=full_file_path,
+                                                line_number_min=min_line_number,
+                                                line_number_max=max_line_number)
+                        
+                        # Call the method to remove braces
+                        logger.info("Build failed. Attempting to remove extra braces on lines %s..%s", min_line_number, max_line_number)
+                        java_parser.remove_extra_braces()
+
+                        # Optionally re-run the build/test if you want to see if it's now fixed
+                        output_2 = run_tests_and_collect_output(build_tool, process_project_directory_core, env)
+                        decisions_2 = validate_test_and_patch(test_file_path, output_2, build_tool, context_for_diff_file)
+                        if not decisions_2.get('build_success', False):
+                            logger.warning("Even after parsing, build still fails.")
+                            line_counter=0
+                            for line in output_2.split("\n"):
+                                if "[ERROR]" in line:
+                                    line_counter += 1
+                                    if "cannot" in line:
+                                        if line_counter == 2:
+                                            split_line = line.split("] ")
+                                            if len(split_line) > 2:
+                                                error_message_key = split_line[2]
+                                                error_message = error_message_key
+                                            else:
+                                                error_message = line
+                                            
+                                            lines = output_2.split("\n")
+                                            next_line_index = lines.index(line) + 1
+                                            if next_line_index < len(lines):
+                                                next_line = lines[next_line_index]
+                                                error_message += " " + next_line
+                                            break
+                                    else:
+                                        if line_counter == 2:
+                                            split_line = line.split("] ")
+                                            if len(split_line) > 2:
+                                                error_message = split_line[2]
+                                            else:
+                                                error_message = line
+                                            break
+                            logger.info(f"build failed for ID {warning['id']} due to: {error_message}")
+                            previous_generated_patch += '\n\nPatch Failed due to: ' + error_message
+                            local_stats['build_success'] = False
+                        else:
+                            parsed = True
+                            #create_diff(context, f"Succeeded_after_parsing_code")
+                            logger.info("Build succeeded after removing braces!")
+                        output = output_2
+                        decisions = decisions_2
+                    
+                    #issue_warnings = transform_issues(config_data.get("DEFAULT", "config.issues_path"))
+                    
+
+                    if decisions.get('build_success', False):
+                        if external_json:
+                            original_issue_dict_for_file = issue_warnings.get(file_path, {}).get("warnings_dict_original", {})
+                            original_count_for_this_file = sum(original_issue_dict_for_file.values())
+                            check_result = check_new_external_issues(file_path, original_count_for_this_file, temp_dir)
+                        else:
+                            original_issue_dict_for_file = file_issue_types.get(file_path, {})
+                            original_count_for_this_file = sum(original_issue_dict_for_file.values())
+                            check_result = check_new_issues(full_file_path, original_count_for_this_file)
+
+                        introduced_new_issue = check_result["introduced_new_issue"]
+                        new_warnings_dict = check_result["new_warnings_dict"]
+                        newly_introduced_issues = get_newly_introduced_issues(
+                            original_issue_dict_for_file,
+                            new_warnings_dict
+                        )
+                        
+                        if introduced_new_issue == "True":
+                            logger.warning("New or equal number of issues introduced by patch. Reverting patch and retrying if attempts remain.")
+                            context = {
+                                'initial_content': initial_content,
+                                'full_file_path': full_file_path,
+                                'file_path': file_path,
+                                'attempt': attempt,
+                                'diffs_output_dir': diffs_output_dir.replace("patches","patches_with_validation_errors"),
+                                'warning_id': warning['id'],
+                            }
+                            if len(newly_introduced_issues) > 0:
+                                if parsed:
+                                    create_diff(context, f"Code parsed but introduced {newly_introduced_issues} new issue")
+                                else:
+                                    create_diff(context, f"introduced {newly_introduced_issues} issue: ")
+                            else:
+                                if parsed:
+                                    create_diff(context, f"Parsed but did not solve the issue")
+                                else:
+                                    create_diff(context, f"did not solve the issue")
+                            try:
+                                with open(full_file_path, 'w') as f:
+                                    f.write(initial_content)
+                                logger.info(f"Reverted patch in {full_file_path.split('/')[-1]} due to newly introduced issues.")
+                            except Exception as e:
+                                logger.error(f"Error while restoring original content to {full_file_path}: {e}")
+
+                            # 1) Mark stats
+                            local_stats['introduced_new_issue'] = True
+                            local_stats['validation_passed'] = True
+                            local_stats['issue_name'] = name
+                            local_stats['new_warnings_distribution'] = newly_introduced_issues
+
+                            # 2) Incorporate the newly introduced issues into the next attempt's "previous_generated_patch"
+                            if len(newly_introduced_issues) > 0:
+                                introduced_issues_text = "\n\nThe previous patch introduced these new issues:\n"
+                            else:
+                                introduced_issues_text = "\n\nThe previous patch didn't solve the issue.\n"
+                            for introduced_type, introduced_count in newly_introduced_issues.items():
+                                introduced_issues_text += f"  - {introduced_type} (count: {introduced_count})\n"
+                                new_issue_solve_command = ALL_WARNINGS.get(introduced_type, "")
+                                if new_issue_solve_command:
+                                    introduced_issues_text += f"    Possible fix command: {new_issue_solve_command}\n"
+                                
+                            if previous_generated_patch is None:
+                                previous_generated_patch = ""
+                            previous_generated_patch += introduced_issues_text
+                            issue_resolved=False
+                            continue
+                        elif introduced_new_issue=="build failed":
+                            local_stats['validation_passed'] = True
+                            local_stats['build_success'] = False
+                            issue_resolved=False
+                        else:
+                            issue_resolved = True
                     context = {
                         'test_file_path': test_file_path,
                         'original_test_content': original_test_content,
@@ -1015,29 +1315,25 @@ def process_warning_worker(args):
                     }
 
                     compilation_result = handle_compilation_error(context, issue_resolved)
-
                     if compilation_result is True:
                         break
                     elif compilation_result is False:
                         continue
                     
-                    if decisions.get('mvn_test_passed', False):
-                        local_stats['mvn_test_passed'] = False
                     if decisions.get('build_success', False):
-                        validation_result = handle_build_success(context, issue_resolved)
+                        validation_result = handle_build_success(context, issue_resolved, parsed)
                         if validation_result is True:
                             break
                         elif validation_result is False:
                             local_stats['validation_passed'] = True
                             continue
                     else:
+                        local_stats['build_success'] = False
                         test_failure_result = handle_test_failures(context, issue_resolved)
-                        logger.warning("Build failed")
                         local_stats['validation_passed'] = True
                         if test_failure_result is True:
                             break
                         elif test_failure_result is False:
-
                             continue
 
                 if test_file_path and os.path.exists(test_file_path): # TODO: Update to check validation later
@@ -1049,11 +1345,11 @@ def process_warning_worker(args):
                             os.makedirs(os.path.dirname(new_test_path), exist_ok=True)
                             shutil.move(test_file_path, new_test_path)
                             local_stats['test_file_path'] = new_test_path
-                            logger.debug(f"Moved test file from {test_file_path} to {new_test_path}")
+                            logger.info(f"Moved test file from {test_file_path} to {new_test_path}")
                     except Exception as e:
                         logger.error(f"Error moving test file to project path: {e}")
                 else:
-                    logger.debug("Test file not moved because it does not exist.")
+                    logger.info("Test file not moved because it does not exist.")
 
     except Exception as e:
         logger.error(f"Process {os.getpid()} - Unexpected error processing warning ID {warning['id']}: {e}")
@@ -1075,7 +1371,7 @@ def nested_defaultdict_int():
 
 
 class PatchGenerator:
-    def __init__(self, config, warning_dict, num_of_rounds, single_file=None):
+    def __init__(self, config, warning_dict, num_of_rounds, single_file=None, external_json=None):
         dotenv_path = find_dotenv()
         load_dotenv(dotenv_path)
         self.config = config
@@ -1084,6 +1380,7 @@ class PatchGenerator:
         self.api_key = self.config.get('API', 'config.key', fallback='').strip()
         self.build_tool = self.config.get('DEFAULT', 'config.build_tool', fallback='maven').lower()
         self.single_file = single_file
+        self.external_json = external_json
         if self.api_key == '':
             logger.warning("API key not found. Please set it in the configuration.")
             sys.exit(1)
@@ -1181,6 +1478,31 @@ class PatchGenerator:
                     file_path = textrange.get("file")
                     if file_path:
                         file_issue_types[file_path][issue_type_name] += 1
+            if self.external_json:
+                cmd = [
+                    "python",
+                    "/app/orchestrator.py",
+                    "--skip-patches",
+                    "--external-json"
+                ]
+                logger.info(f"Running orchestrator with command for base issue counts")
+
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True
+                )
+
+                for line in process.stdout:
+                    sys.stdout.write(line)
+                process.stdout.close()
+
+                # Wait for the process to finish
+                return_code = process.wait()
+                if return_code != 0:
+                    logger.warning(f"Orchestrator returned non-zero exit code: {return_code}")
+            issue_warnings = transform_issues(self.config.get("DEFAULT", "config.issues_path"))
 
             args_list = []
             for warning in self.warnings:
@@ -1196,7 +1518,9 @@ class PatchGenerator:
                     self.diffs_output_dir,
                     self.single_file,
                     total_warnings,
-                    file_issue_types
+                    file_issue_types,
+                    issue_warnings,
+                    self.external_json
                 )
                 args_list.append(args)
 
@@ -1266,7 +1590,7 @@ class PatchGenerator:
             self.successful_patches += 1
         if not res.get('validation_passed', True):
             self.validation_errors += 1
-        if not res.get('mvn_test_passed', True):
+        if not res.get('build_success', True):
             self.compilation_or_test_errors += 1
         if not res.get('applicable_patch', True):
             self.non_applicabale_diffs += 1
@@ -1318,7 +1642,7 @@ class PatchGenerator:
                     test_entry = {}
                     if res.get('test_file_path'):
                         test_entry["path"] = res['test_file_path']
-                        logger.debug(f"Test file recorded at path: {res['test_file_path']}")
+                        logger.info(f"Test file recorded at path: {res['test_file_path']}")
 
                     if test_entry:
                         item['tests'].append(test_entry)

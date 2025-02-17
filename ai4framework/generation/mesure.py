@@ -95,23 +95,20 @@ class BenchmarkVisualizer:
                 'Successful Patches',
                 'Build Failures',
                 'Validation Failures',
-                'Introduced New Issues',
                 'Non-Applicable Diffs'
             ]
             sizes = [
                 model_data.get('successful_patches', 0),
                 model_data.get('build_failures', 0),
-                model_data.get('validation_failures', 0),
                 model_data.get('introduced_new_issue', 0),
                 model_data.get('non_applicabale_diffs', 0)
             ]
-            colors = ['#66c2a5', '#fc8d62', '#ffd92f', '#8da0cb', '#a6d854']
-            explode = [0, 0.1, 0.1, 0.1, 0.1]
+            colors = ['#66c2a5', '#fc8d62', '#ffd92f', '#8da0cb']
+            explode = [0, 0.1, 0.1, 0.1]
 
             sizes = [
                 max(0, np.nan_to_num(model_data.get('successful_patches', 0), nan=0.0, posinf=0.0, neginf=0.0)),
                 max(0, np.nan_to_num(model_data.get('build_failures', 0), nan=0.0, posinf=0.0, neginf=0.0)),
-                max(0, np.nan_to_num(model_data.get('validation_failures', 0), nan=0.0, posinf=0.0, neginf=0.0)),
                 max(0, np.nan_to_num(model_data.get('introduced_new_issue', 0), nan=0.0, posinf=0.0, neginf=0.0)),
                 max(0, np.nan_to_num(model_data.get('non_applicabale_diffs', 0), nan=0.0, posinf=0.0, neginf=0.0))
             ]
