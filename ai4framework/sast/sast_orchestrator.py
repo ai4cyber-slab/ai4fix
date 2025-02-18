@@ -85,9 +85,12 @@ class SASTOrchestrator:
             ValueError: If an unsupported build tool is provided.
         """
         try:
-            # First run clean online to fetch maven-clean-plugin
-            clean_command = ['mvn', 'clean']
-            subprocess.run(clean_command, cwd=self.project_path, check=True)
+            try:
+                # First run clean online to fetch maven-clean-plugin
+                clean_command = ['mvn', 'clean']
+                subprocess.run(clean_command, cwd=self.project_path, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except Exception:
+                pass
             switch_java_version(self.jdk_compiler_version)
             logger.info(f"{build_tool.capitalize()} compile started...")
             if build_tool.lower() == 'maven':

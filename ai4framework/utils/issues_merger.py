@@ -13,7 +13,7 @@ class JSONCombiner:
         if self.external_json and self.skip_patches:
             self.sast_issues_path = self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "sast_issues.json")
         elif self.external_json:
-            self.sast_issues_path = '/project/output.json'
+            self.sast_issues_path = os.path.join(os.environ.get('PROJECT_PATH'), 'output.json')
         else:
             self.sast_issues_path = self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "sast_issues.json")
         self.results_path = self.config.get("DEFAULT", "config.analyzer_results_path")
@@ -52,7 +52,7 @@ class JSONCombiner:
 
     def save_combined_json(self, combined_data):
         """Saves the combined data to a JSON file."""
-        with open('/project/.ai4framework/issues.json', 'w') as file:
+        with open(os.path.join(os.environ.get('PROJECT_PATH'), '.ai4framework', 'issues.json'), 'w') as file:
             json.dump(combined_data, file, indent=4)
 
     def run(self, count_issues=False):

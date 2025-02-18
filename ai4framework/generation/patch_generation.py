@@ -56,6 +56,7 @@ def parse_build_output(build_tool, result_output, context_for_diff_save = {}):
         'build_success': True,
         'mvn_test_passed' : True
     }
+    error_message = ""
 
     if build_tool == 'maven':
         failure_details = re.findall(r'\[ERROR\]\s+Failures:\s+(.*?):(\d+)\s+(.*)', result_output)
@@ -176,7 +177,7 @@ def validate_test_and_patch(test_file_path, result_output, build_tool, context_f
         'test_file_exists': os.path.exists(test_file_path) if test_file_path else False
     }
 
-    logger.info(f"Test file {'exists' if decisions['test_file_exists'] else 'does not exist'} at path: {test_file_path}")
+    # logger.info(f"Test file {'exists' if decisions['test_file_exists'] else 'does not exist'} at path: {test_file_path}")
 
     parsed = parse_build_output(build_tool, result_output, context_for_diff_file)
     decisions['mvn_test_passed'] = parsed['mvn_test_passed']
@@ -411,92 +412,56 @@ def get_prompt(explanation, startLine, endLine, attempt, previous_generated_patc
             "Line:35": "    System.out.println(\"Updated Message!\");",
             "Line:36": "}"
         }
-
         prompt = f"""
-            You are a GPT that generates programmatic solutions to fix Java code issues, strictly following these rules:
-
-            1. **Objective**  
-            - Update the provided JSON content to fix the issue specified in the problem description.
-
-            2. **Modification Rules**  
-            - **Never** remove or add any comment line from the original file. Comments must remain exactly as they appear.
-                - This applies to both `//` style comments and block/javadoc comments like `/* ... */` or `/** ... */` or `*`.
-            - Replace or correct only the non-comment lines that are relevant to the fix. 
-            - If necessary, remove redundant code lines (not comments) or add new code lines, but do **not** touch existing comments.
-            - Ensure the updated JSON remains syntactically valid Java code (it should compile).
-
-            3. **Output Requirements**  
-            - Return the **entire** modified JSON content, preserving the same JSON structure:
-                ```json
-                {{
-                    "Line:<line_number>": "<line_content>"
-                }}
-                ```
-            - Maintain the same ordering of lines and their keys (`"Line:X"`).
-            - Do not insert extra comments or remove existing ones.  
-            - Any new lines of code should follow the same JSON format with `"Line:<new_line_number>"` as the key.
-
-            4. **Validation**  
-            - Ensure the updated JSON represents valid, compilable Java code.
-            - If no valid solution is possible, respond with `"I DO NOT KNOW"`.
-
-            5. **Input Context**  
-            - Use the provided JSON snippet below as the **sole basis** for your modifications:
-                ```json
-                {extract_json_section}
-                ```
-
-            6. **Examples**  
-            - Input JSON:
-                ```json
-                {json.dumps(input_example, indent=2)}
-                ```
-            - Updated JSON:
-                ```json
-                {json.dumps(output_example, indent=2)}
-                ```
-
-            7. **Change Request**  
-            - Fix the static analysis tool warning: **{explanation}**
-            - Lines involved in the issue: from line **{startLine}** to line **{endLine}** 
-            - Resolve it by performing the required changes (e.g., renaming variables, adding final, removing duplicates, etc.) in the JSON content directly. 
-            - If a fix is not possible, respond with `"I DO NOT KNOW"`.
-
-            **Important**: 
-            - Under no circumstances add or remove any comment line from the code. 
-            - Failure to preserve comments exactly (including formatting) invalidates the solution.  
-
-            Now, **modify** the snippet accordingly:
-            """
+                    You are a GPT that generates programmatic solutions to fix Java code issues. Your task is to modify the provided JSON content to resolve the issue. Follow these guidelines:
+                    1. **Objective**:
+                    - Update the provided JSON content to fix the issue as specified in the problem description.
+                    2. **Modification Rules**:
+                    - Replace any incorrect or problematic lines in the JSON content with the corrected lines.
+                    - If necessary, remove redundant lines or add new lines to ensure the solution is valid and complete.
+                    - Ensure the updated JSON contains all required lines and remains syntactically valid Java code.
+                    3. **Output Requirements**:
+                    - Return the full modified JSON content, structured similarly to the input JSON.
+                    - Preserve the format of the original JSON, including keys like `Line:<line_number>` and their corresponding values.
+                    4. **Validation**:
+                    - Ensure the updated JSON represents valid, compilable Java code.
+                    - Avoid redundant or conflicting changes.
+                    - If no valid solution is possible, respond with `"I DO NOT KNOW"`.
+                    5. **Input Context**:
+                    - Use the provided JSON snippet as the basis for your solution update it entirely:
+                        ```json
+                        {extract_json_section}
+                        ```
+                    6. **Example**:
+                    Input JSON:
+                    ```json
+                    {json.dumps(input_example, indent=2)}
+                    ```
+                    Updated JSON:
+                    ```json
+                    {json.dumps(output_example, indent=2)}
+                    ```
+                    7. **Change Request**:
+                    - Fix the static analysis tool warning: `{explanation}` as follows {SOLVE_COMMAND}:
+                        - The issue starts at line {startLine} and ends at line {endLine}.
+                        - Solve the issue by performing the required changes to the JSON content directly.
+                    - If no valid solution is possible, respond with `"I DO NOT KNOW"`.
+                    """
     else:
-            prompt = f"""
-                The previous attempt to fix the issue did not resolve it.
-                Explanation of the issue: {explanation}
-                The issue is between line {startLine} and line {endLine}.
-                Previous (incorrect) patch:
-                {previous_generated_patch}
+        prompt = f"""
+                    The previous attempt to fix the issue did not resolve it.
+                    Here is the strategy you gave me in last attempt:
+                    {previous_generated_patch}
+                    Explanation of the issue: {explanation}
+                    the issue is between line {startLine} and line {endLine}
+                    Here is the full original file code in json format with lines as the keys use them when providing the strategy accurately:
+                    {extract_json_section}
+                    Instructions:
+                    Analyze the previous attempt and identify why it did result in incorrect java code.
+                    Solve it by: {SOLVE_COMMAND}
+                    Provide the output in same format and only that no further explanation is needed.
+                    """
 
-                Below is the full original file code in JSON format:
-
-                {extract_json_section}
-
-                Your **new** task:
-                1. Identify why the previous attempt failed (or produced incorrect code).
-                2. Correctly fix the issue by performing the required changes, but:
-                - **Do not touch any existing comments.** 
-                - Do not add new comments.
-                - Only modify lines relevant to the issue or needed for the solution.
-                3. Return the updated snippet as **valid Java code** in JSON form, preserving the same line structure:
-                ```json
-                {{
-                    "Line:<line_number>": "<line_content>"
-                }}
-                If no valid fix is possible, output "I DO NOT KNOW" exactly.
-                Remember:
-
-                Comments must remain exactly the same.
-                Do not remove or insert any comments.
-                Proceed with the fix: """
     return prompt
 
 
@@ -1090,7 +1055,7 @@ def process_warning_worker(args):
                     logger.error(f"Error reading file {full_file_path}: {e}")
                     continue
 
-                max_attempts = 2
+                max_attempts = 1
                 attempt = 0
                 issue_resolved=True
                 previous_generated_patch = None
@@ -1260,7 +1225,7 @@ def process_warning_worker(args):
                         output = output_2
                         decisions = decisions_2
                     
-                    #issue_warnings = transform_issues(config_data.get("DEFAULT", "config.issues_path"))
+                    issue_warnings = transform_issues(config_data.get("DEFAULT", "config.issues_path"))
                     
 
                     if decisions.get('build_success', False):
@@ -1292,9 +1257,9 @@ def process_warning_worker(args):
                             }
                             if len(newly_introduced_issues) > 0:
                                 if parsed:
-                                    create_diff(context, f"Code parsed but introduced {newly_introduced_issues} new issue")
+                                    create_diff(context, f"Code parsed but introduced {len(newly_introduced_issues)} new issue")
                                 else:
-                                    create_diff(context, f"introduced {newly_introduced_issues} issue: ")
+                                    create_diff(context, f"introduced {len(newly_introduced_issues)} issue: ")
                             else:
                                 if parsed:
                                     create_diff(context, f"Parsed but did not solve the issue")
