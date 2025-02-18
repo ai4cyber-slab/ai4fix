@@ -77,7 +77,10 @@ class SpotBugsRunner:
 
         spotbugs_bin = os.environ.get('SPOTBUGS_BIN')
         temp_file = self.create_temp_file(files_to_analyze)
-        command = f"{spotbugs_bin} -textui -xml:withMessages={self.report_path} -analyzeFromFile {temp_file} -effort:max -low"
+        aux_paths = self.find_classes_directories(self.project_path, self.build_tool)
+        aux_classpath = ":".join(aux_paths) if os.name != 'nt' else ";".join(aux_paths)
+
+        command = f"{spotbugs_bin} -textui -xml:withMessages={self.report_path} {'-auxclasspath ' + aux_classpath if aux_classpath else ''} -analyzeFromFile {temp_file} -effort:max -low"
 
         try:
             process = subprocess.run(

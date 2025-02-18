@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 function show_usage {
-    echo "Usage: ai4framework_entry.sh --LOCAL_PROJECT_PATH <string> --CONTAINER_PROJECT_PATH <string> [--RunWithBash] [--PORT <int>] [--MAVEN_VERSION <string>] [--GRADLE_VERSION <string>]"
+    echo "Usage: ai4framework_entry.sh --LOCAL_PROJECT_PATH <string> --CONTAINER_PROJECT_PATH <string> [--RunWithBash] [--PORT <int>] [--MAVEN_VERSION <string>] [--GRADLE_VERSION <string>] [--MAVEN_REPO_PATH <string>]"
     echo "Options:"
     echo "  --LOCAL_PROJECT_PATH      Path to the local project directory."
     echo "  --CONTAINER_PROJECT_PATH  Path to the project directory inside the container."
@@ -9,6 +9,7 @@ function show_usage {
     echo "  --PORT                    (Optional) Specify the port number to use for the container. Default is 8080."
     echo "  --MAVEN_VERSION           (Optional) Specify the Maven version. Default is 3.9.5."
     echo "  --GRADLE_VERSION          (Optional) Specify the Gradle version. Default is 7.6."
+    echo "  --MAVEN_REPO_PATH         (Optional) Path to local Maven repository (.m2 directory)."
     echo "  -h, --help                Display this help message."
     exit 0
 }
@@ -22,6 +23,7 @@ while [[ "$#" -gt 0 ]]; do
         --RunWithBash) RUN_WITH_BASH=true ;;
         --MAVEN_VERSION) MAVEN_VERSION="$2"; shift ;;
         --GRADLE_VERSION) GRADLE_VERSION="$2"; shift ;;
+        --MAVEN_REPO_PATH) MAVEN_REPO_PATH="$2"; shift ;;
         *) echo "Unknown parameter passed: $1"; show_usage ;;
     esac
     shift
@@ -122,6 +124,8 @@ function validate_config_properties {
     PROVIDER=""
     KEY=""
     MODEL=""
+    JDK_VERSION=""
+    BUILD_MODE=""
 
     while IFS= read -r line; do
         line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
@@ -138,20 +142,30 @@ function validate_config_properties {
             KEY=$(echo "${line#*=}" | sed 's/[[:space:]]*#.*//g' | xargs)
         elif [[ $line =~ ^config\.model= ]]; then
             MODEL=$(echo "${line#*=}" | sed 's/[[:space:]]*#.*//g' | xargs)
+        elif [[ $line =~ ^config\.jdk_compiler_version= ]]; then
+            JDK_VERSION=$(echo "${line#*=}" | sed 's/[[:space:]]*#.*//g' | xargs)
+        elif [[ $line =~ ^config\.build_mode= ]]; then
+            BUILD_MODE=$(echo "${line#*=}" | sed 's/[[:space:]]*#.*//g' | xargs)
         fi
     done <<< "$CONFIG_CONTENT"
 
     if [[ ! "$BUILD_TOOL" =~ ^(maven|gradle|javac)$ ]]; then
         ERRORS+=("Invalid 'config.build_tool'. Must be 'maven', 'gradle', or 'javac'.")
     fi
-    if [[ ! "$PROVIDER" =~ ^(openai|groq|claude|azureopenai)$ ]]; then
-        ERRORS+=("Invalid 'config.provider'. Must be one of 'openai', 'groq', 'claude', 'azureopenai'.")
+    if [[ ! "$PROVIDER" =~ ^(openai|groq|claude|azureopenai|deepseek)$ ]]; then
+        ERRORS+=("Invalid 'config.provider'. Must be one of 'openai', 'groq', 'claude', 'azureopenai', 'deepseek'.")
     fi
     if [[ -z "$KEY" || "$KEY" == "None" ]]; then
         ERRORS+=("Invalid 'config.key'. Cannot be empty or 'None'.")
     fi
     if [[ -z "$MODEL" || "$MODEL" == "None" ]]; then
         ERRORS+=("Invalid 'config.model'. Cannot be empty or 'None'.")
+    fi
+    if [[ ! "$JDK_VERSION" =~ ^(4|5|6|8|11)$ ]]; then
+        ERRORS+=("Invalid 'config.jdk_compiler_version'. Must be one of '4', '5', '6', '8', '11'.")
+    fi
+    if [[ ! "$BUILD_MODE" =~ ^(online|offline)$ ]]; then
+        ERRORS+=("Invalid 'config.build_mode'. Must be 'online' or 'offline'.")
     fi
 
     if [[ ${#ERRORS[@]} -gt 0 ]]; then
@@ -162,6 +176,52 @@ function validate_config_properties {
         exit 1
     fi
     echo "'config.properties' file validated successfully."
+}
+
+function validate_maven_repo() {
+    local maven_repo_path="$1"
+    
+    if [[ -n "$maven_repo_path" && ! -d "$maven_repo_path" ]]; then
+        echo "Warning: Maven repository path '$maven_repo_path' does not exist."
+        echo "Would you like to:"
+        echo "1. Use default Maven repository"
+        echo "2. Exit and fix the path"
+        read -p "Enter your choice (1 or 2): " choice
+        
+        if [[ "$choice" == "2" ]]; then
+            exit 1
+        fi
+        return 1
+    fi
+    
+    if [[ -n "$maven_repo_path" && ! -f "$maven_repo_path/settings.xml" ]]; then
+        echo "Warning: settings.xml not found in Maven repository path"
+        return 1
+    fi
+    
+    return 0
+}
+
+function validate_port() {
+    local port=$1
+    if ! [[ "$port" =~ ^[0-9]+$ ]] || [ "$port" -lt 1024 ] || [ "$port" -gt 65535 ]; then
+        echo "Error: Port must be a number between 1024 and 65535"
+        return 1
+    fi
+    
+    if command -v nc >/dev/null 2>&1; then
+        if nc -z localhost "$port" 2>/dev/null; then
+            echo "Error: Port $port is already in use"
+            return 1
+        fi
+    else
+        if (echo >/dev/tcp/localhost/$port) 2>/dev/null; then
+            echo "Error: Port $port is already in use"
+            return 1
+        fi
+    fi
+    
+    return 0
 }
 
 show_banner
@@ -177,11 +237,27 @@ fi
 echo "Docker image built successfully."
 
 echo "Starting the Docker container..."
-if [[ "$RUN_WITH_BASH" == true ]]; then
-    CONTAINER_ID=$(docker run -dit -p "$PORT:8080" -e PROJECT_PATH="$CONTAINER_PROJECT_PATH" ai4framework-analyzer bash)
-else
-    CONTAINER_ID=$(docker run -dit -p "$PORT:8080" -e PROJECT_PATH="$CONTAINER_PROJECT_PATH" ai4framework-analyzer)
+if ! validate_port "$PORT"; then
+    echo "Please choose a different port"
+    exit 1
 fi
+
+DOCKER_RUN_ARGS=("-dit" "-p" "$PORT:8080" "-e" "PROJECT_PATH=$CONTAINER_PROJECT_PATH" "-e" "PORT=8080")
+
+if [[ -n "$MAVEN_REPO_PATH" ]] && validate_maven_repo "$MAVEN_REPO_PATH"; then
+    echo "Using Maven repository from: $MAVEN_REPO_PATH"
+    DOCKER_RUN_ARGS+=("-v" "$MAVEN_REPO_PATH:/root/.m2")
+else
+    echo "Using default Maven repository configuration"
+fi
+
+if [[ "$RUN_WITH_BASH" == true ]]; then
+    DOCKER_RUN_ARGS+=("ai4framework-analyzer" "bash")
+else
+    DOCKER_RUN_ARGS+=("ai4framework-analyzer")
+fi
+
+CONTAINER_ID=$(docker run "${DOCKER_RUN_ARGS[@]}")
 
 if [[ -z "$CONTAINER_ID" ]]; then
     echo "Error: Failed to start the Docker container."

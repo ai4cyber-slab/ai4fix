@@ -5,7 +5,11 @@ param(
 
     [string]$LOCAL_PROJECT_PATH,
     [string]$CONTAINER_PROJECT_PATH,
+    [Parameter(Mandatory=$false)]
+    [ValidateRange(1024, 65535)]
     [int]$PORT = 8080,
+
+    [string]$MAVEN_REPO_PATH,
 
     [switch]$RunWithBash,
 
@@ -14,7 +18,7 @@ param(
 )
 
 function Show-Usage {
-    Write-Host "Usage: ai4framework_entry.ps1 -LOCAL_PROJECT_PATH <string> -CONTAINER_PROJECT_PATH <string> [-RunWithBash] [-PORT <int>] [-MavenVersion <string>] [-GradleVersion <string>]" -ForegroundColor Cyan
+    Write-Host "Usage: ai4framework_entry.ps1 -LOCAL_PROJECT_PATH <string> -CONTAINER_PROJECT_PATH <string> [-RunWithBash] [-PORT <int>] [-MavenVersion <string>] [-GradleVersion <string>] [-MAVEN_REPO_PATH <string>]" -ForegroundColor Cyan
     Write-Host "Options:"
     Write-Host "  -LOCAL_PROJECT_PATH      Path to the local project directory." -ForegroundColor Yellow
     Write-Host "  -CONTAINER_PROJECT_PATH  Path to the project directory inside the container." -ForegroundColor Yellow
@@ -22,6 +26,7 @@ function Show-Usage {
     Write-Host "  -PORT                    (Optional) Specify the port number to use for the container. Default is 8080." -ForegroundColor Yellow
     Write-Host "  -MavenVersion            (Optional) Specify the Maven version. Default is 3.9.5." -ForegroundColor Yellow
     Write-Host "  -GradleVersion           (Optional) Specify the Gradle version. Default is 7.6." -ForegroundColor Yellow
+    Write-Host "  -MAVEN_REPO_PATH         (Optional) Path to local Maven repository (.m2 directory)." -ForegroundColor Yellow
     Write-Host "  -h, -usage               Display this help message." -ForegroundColor Yellow
     exit 0
 }
@@ -73,7 +78,7 @@ config.rounds_count=1 # Number of times to run the process. Useful for auto patc
 config.build_tool=maven # (maven, gradle, or javac)
 
 [API]
-config.provider=openai # Service to use ('groq', 'openai', 'claude', 'azureopenai')
+config.provider=openai # Service to use ('groq', 'openai', 'claude', 'azureopenai', 'deepseek')
 config.key=your_api_key # Enter your API key directly
 config.model=gpt-4o-mini # Desired model name
 config.temperature=0 # Desired temperature
@@ -139,6 +144,8 @@ function Validate-ConfigProperties {
     $providerValue = $null
     $keyValue = $null
     $modelValue = $null
+    $jdkVersion = $null
+    $buildMode = $null
 
     foreach ($line in $configContent) {
         if (-not $line.Trim().StartsWith("#")) {
@@ -154,6 +161,12 @@ function Validate-ConfigProperties {
             if (-not $modelValue) {
                 $modelValue = Get-CleanedValue -Line $line -Key 'config\.model'
             }
+            if (-not $jdkVersion) {
+                $jdkVersion = Get-CleanedValue -Line $line -Key 'config\.jdk_compiler_version'
+            }
+            if (-not $buildMode) {
+                $buildMode = Get-CleanedValue -Line $line -Key 'config\.build_mode'
+            }
         }
     }
 
@@ -161,8 +174,8 @@ function Validate-ConfigProperties {
         $errors += "Invalid or missing 'config.build_tool'. It must be either 'maven', 'gradle', or 'javac'."
     }
 
-    if (-not ($providerValue -in @('openai', 'groq', 'claude', 'azureopenai'))) {
-        $errors += "Invalid or missing 'config.provider'. It must be one of: 'openai', 'groq', 'claude', 'azureopenai'."
+    if (-not ($providerValue -in @('openai', 'groq', 'claude', 'azureopenai', 'deepseek'))) {
+        $errors += "Invalid or missing 'config.provider'. It must be one of: 'openai', 'groq', 'claude', 'azureopenai', 'deepseek'."
     }
 
     if (-not ($keyValue -and -not [string]::IsNullOrWhiteSpace($keyValue) -and $keyValue -ne "None")) {
@@ -173,6 +186,14 @@ function Validate-ConfigProperties {
         $errors += "Invalid 'config.model'. It cannot be empty, whitespace-only, or set to 'None'."
     }
 
+    if (-not ($jdkVersion -in @('4', '5', '6', '8', '11'))) {
+        $errors += "Invalid or missing 'config.jdk_compiler_version'. It must be one of: '4', '5', '6', '8', '11'."
+    }
+
+    if (-not ($buildMode -in @('online', 'offline'))) {
+        $errors += "Invalid or missing 'config.build_mode'. It must be either 'online' or 'offline'."
+    }
+
     if ($errors.Count -gt 0) {
         Write-Host "Validation errors found in 'config.properties':" -ForegroundColor Red
         $errors | ForEach-Object { Write-Host $_ -ForegroundColor Red }
@@ -181,6 +202,44 @@ function Validate-ConfigProperties {
     }
 
     Write-Host "'config.properties' file validated successfully." -ForegroundColor Green
+}
+
+function Validate-MavenRepo {
+    param([string]$MavenRepoPath)
+    
+    if ($MavenRepoPath -and -not (Test-Path $MavenRepoPath)) {
+        Write-Host "Warning: Maven repository path '$MavenRepoPath' does not exist." -ForegroundColor Yellow
+        Write-Host "Would you like to:" -ForegroundColor Yellow
+        Write-Host "1. Use default Maven repository" -ForegroundColor Yellow
+        Write-Host "2. Exit and fix the path" -ForegroundColor Yellow
+        $choice = Read-Host "Enter your choice (1 or 2)"
+        
+        if ($choice -eq "2") {
+            exit 1
+        }
+        return $false
+    }
+    
+    if ($MavenRepoPath -and -not (Test-Path (Join-Path $MavenRepoPath "settings.xml"))) {
+        Write-Host "Warning: settings.xml not found in Maven repository path" -ForegroundColor Yellow
+        return $false
+    }
+    
+    return $true
+}
+
+function Validate-Port {
+    param([int]$Port)
+    
+    try {
+        $listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, $Port)
+        $listener.Start()
+        $listener.Stop()
+        return $true
+    } catch {
+        Write-Host "Port $Port is already in use. Please choose a different port." -ForegroundColor Red
+        return $false
+    }
 }
 
 Show-Banner
@@ -196,15 +255,33 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Docker image built successfully."
 
 Write-Host "Starting the Docker container..."
-if ($RunWithBash) {
-    $ContainerID = docker run -dit -p $PORT`:8080 `
-        -e PROJECT_PATH="$CONTAINER_PROJECT_PATH" `
-        ai4framework-analyzer bash
-} else {
-    $ContainerID = docker run -dit -p $PORT`:8080 `
-        -e PROJECT_PATH="$CONTAINER_PROJECT_PATH" `
-        ai4framework-analyzer
+if (-not (Validate-Port $PORT)) {
+    exit 1
 }
+
+$dockerRunArgs = @(
+    "-dit"
+    "-p", "${PORT}:8080"
+    "-e", "PROJECT_PATH=$CONTAINER_PROJECT_PATH"
+    "-e", "PORT=8080"
+)
+
+if ($MAVEN_REPO_PATH -and (Validate-MavenRepo $MAVEN_REPO_PATH)) {
+    Write-Host "Using Maven repository from: $MAVEN_REPO_PATH" -ForegroundColor Green
+    $dockerRunArgs += "-v"
+    $dockerRunArgs += "${MAVEN_REPO_PATH}:/root/.m2"
+} else {
+    Write-Host "Using default Maven repository configuration" -ForegroundColor Yellow
+}
+
+if ($RunWithBash) {
+    $dockerRunArgs += "ai4framework-analyzer"
+    $dockerRunArgs += "bash"
+} else {
+    $dockerRunArgs += "ai4framework-analyzer"
+}
+
+$ContainerID = docker run @dockerRunArgs
 
 if (!$ContainerID) {
     Write-Host "Error: Failed to start the Docker container." -ForegroundColor Red

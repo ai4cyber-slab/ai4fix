@@ -2,11 +2,13 @@ import sys
 import subprocess
 import os
 from pathlib import Path
+import re
 
 from utils.logger import logger
 from .tool_runner import ToolRunner
 from .report_merger import ReportMerger
 from management.repo_manager import RepoManager
+from utils.switcher import switch_java_version
 
 
 class SASTOrchestrator:
@@ -31,6 +33,8 @@ class SASTOrchestrator:
         self.report_merger = ReportMerger(config)
         self.project_path = config.get('DEFAULT', 'config.project_root')
         self.build_tool = config.get('DEFAULT', 'config.build_tool').lower()
+        self.jdk_compiler_version = config.get('DEFAULT', 'config.jdk_compiler_version')
+        self.build_mode= config.get('DEFAULT', 'config.build_mode').lower()
 
     def run_all(self, validation=False, tool=None, is_initial_round=True):
         """
@@ -81,13 +85,26 @@ class SASTOrchestrator:
             ValueError: If an unsupported build tool is provided.
         """
         try:
+            # First run clean online to fetch maven-clean-plugin
+            clean_command = ['mvn', 'clean']
+            subprocess.run(clean_command, cwd=self.project_path, check=True)
+            switch_java_version(self.jdk_compiler_version)
             logger.info(f"{build_tool.capitalize()} compile started...")
-
             if build_tool.lower() == 'maven':
-                command = ['mvn', 'compile', '-Dmaven.compiler.incremental=true', '-DskipTests', '-T', str(os.cpu_count())]
+                # Then run the actual compile command
+                command = ['mvn', 'compile', '-Dmaven.compiler.incremental=true', '-DskipTests']
+                if self.build_mode == 'offline':
+                    command.insert(1, '-o')
+                if is_parallel_build_supported('maven'):
+                    command.extend(['-T', str(os.cpu_count())])
 
             elif build_tool.lower() == 'gradle':
-                command = ['gradle', 'classes', '--no-daemon', '--parallel', f'-Dorg.gradle.workers.max={os.cpu_count()}']
+                command = ['gradle', '--no-daemon']
+                if self.build_mode == 'offline':
+                    command.append('--offline')
+                if is_parallel_build_supported('gradle'):
+                    command.extend([f'-Dorg.gradle.workers.max={os.cpu_count()}', '--parallel'])
+                command.append('classes')
             
             elif build_tool.lower() == 'javac':
                 build_dir = os.path.join('build', 'classes', 'java', 'main')
@@ -122,4 +139,37 @@ class SASTOrchestrator:
         except Exception as e:
             logger.error(f"An error occurred during {build_tool.capitalize()} compile: {str(e)}")
             sys.exit(1)
+        finally:
+            switch_java_version('11')
+
+
+
+
+
+
+
+##################
+# Helper functions
+##################
+
+def is_parallel_build_supported(build_tool):
+    if build_tool == 'gradle':
+        ex = 'gradle'
+    elif build_tool == 'maven':
+        ex = 'mvn'
+    result = subprocess.run([ex, '-v'], capture_output=True, text=True)
+    if result.returncode == 0:
+        if build_tool == 'maven':
+            version_match = re.search(r'Apache Maven (\d+\.\d+\.\d+)', result.stdout)
+            if version_match:
+                version = version_match.group(1)
+                major_version = int(version.split('.')[0])
+                return major_version >= 3
+        elif build_tool == 'gradle':
+            version_match = re.search(r'Gradle (\d+\.\d+)', result.stdout)
+            if version_match:
+                version = version_match.group(1)
+                major_version = int(version.split('.')[0])
+                return major_version >= 4
+    return False
             
