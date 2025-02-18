@@ -196,23 +196,23 @@ def derive_full_import_from_path(file_path):
     return without_ext.replace('/', '.')
 
 
-def generate_test_file(java_file_path, updated_section, full_import, test_generator, initial_section, diff_content):
-    try:
-        test_file_path, status, original_test_content = test_generator.generate_test(
-            java_file_path=java_file_path,
-            updated_section=updated_section,
-            full_import=full_import,
-            initial_section=initial_section,
-            diff_content=diff_content
-        )
-        if status:
-            logger.info(f"Updated test file at path: {test_file_path}")
-        else:
-            logger.info(f"Created new test file at path: {test_file_path}")
-        return test_file_path, status, original_test_content
-    except Exception as e:
-        logger.error(f"Error generating test file: {e}")
-        return None, False, None
+# def generate_test_file(java_file_path, updated_section, full_import, test_generator, initial_section, diff_content):
+#     try:
+#         test_file_path, status, original_test_content = test_generator.generate_test(
+#             java_file_path=java_file_path,
+#             updated_section=updated_section,
+#             full_import=full_import,
+#             initial_section=initial_section,
+#             diff_content=diff_content
+#         )
+#         if status:
+#             logger.info(f"Updated test file at path: {test_file_path}")
+#         else:
+#             logger.info(f"Created new test file at path: {test_file_path}")
+#         return test_file_path, status, original_test_content
+#     except Exception as e:
+#         logger.error(f"Error generating test file: {e}")
+#         return None, False, None
 
 
 def extract_patch_from_response_worker(response_text):
@@ -629,7 +629,8 @@ def handle_test_error(context, issue_resolved):
                 revert_test_content(context)
             except TypeError as e:
                 if "NoneType" in str(e):
-                    logger.info("Test was not reverted.")
+                    # logger.info("Test was not reverted.") #TODO Turn off Test
+                    pass
                 else:
                     raise
             except Exception as e:
@@ -679,7 +680,8 @@ def handle_build_success(context, issue_resolved, parsed):
             revert_test_content(context)
         except TypeError as e:
             if "NoneType" in str(e):
-                logger.info("Test was not reverted.")
+                # logger.info("Test was not reverted.") #TODO Turn off Test
+                pass
             else:
                 raise
         except Exception as e:
@@ -1055,7 +1057,7 @@ def process_warning_worker(args):
                     logger.error(f"Error reading file {full_file_path}: {e}")
                     continue
 
-                max_attempts = 1
+                max_attempts = 2
                 attempt = 0
                 issue_resolved=True
                 previous_generated_patch = None
