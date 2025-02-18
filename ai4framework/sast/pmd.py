@@ -4,6 +4,7 @@ import subprocess
 import xml.etree.ElementTree as ET
 import tempfile
 from utils.logger import logger
+from pathlib import Path
 
 
 class PMDRunner:
@@ -142,7 +143,8 @@ class PMDRunner:
                             }
                         ]
                     }
-                    issues.append(issue)
+                    if 'src' in Path(file_name).parts:
+                        issues.append(issue)
 
         except ET.ParseError as e:
             logger.error(f"Failed to parse PMD report: {e}")

@@ -1,6 +1,7 @@
 import json
 import os
 from utils.logger import logger
+from pathlib import Path
 
 class JSONProcessor:
     @staticmethod
@@ -46,8 +47,8 @@ class JSONProcessor:
                         item['textrange']['file'] = make_relative_path(item['textrange']['file'], base_path)
                     if 'trace' in item:
                         del item['trace']
-
-                cleaned_issues.append(issue)
+                if 'src' in Path(item['textrange']['file']).parts:
+                    cleaned_issues.append(issue)
 
             return cleaned_issues
         

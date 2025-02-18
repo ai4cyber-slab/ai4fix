@@ -95,7 +95,7 @@ class RepoManager:
                 all_files = [
                     str(file)
                     for file in Path(project_root).rglob('*.java')
-                    if not file.name.startswith('.')
+                    if not file.name.startswith('.') and "src" in file.parts
                 ]
 
             if filter:

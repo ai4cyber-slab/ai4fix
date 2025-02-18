@@ -3,6 +3,7 @@ import sys
 import subprocess
 import xml.etree.ElementTree as ET
 from utils.logger import logger
+from pathlib import Path
 
 
 class SpotBugsRunner:
@@ -163,8 +164,8 @@ class SpotBugsRunner:
                     "endColumn": int(end_column)
                 }
                 issue["items"].append({"patches": [], "textrange": textrange})
-
-            issues.append(issue)
+            if 'src' in Path(full_path).parts:
+                issues.append(issue)
 
         return issues
 
