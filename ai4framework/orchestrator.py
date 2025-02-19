@@ -41,7 +41,7 @@ class WorkflowFramework:
             self.sast = SASTOrchestrator(self.config, self.single_file)
             self.security_classifier = SecurityClassifier(self.config)
             self.symbolic_execution = SymbolicExecution(self.config, self.single_file)
-            self.issues_merger = JSONCombiner(self.config, single_file=self.single_file, skip_patches=self.skip_patches, external_json = self.external_json)
+            self.issues_merger = JSONCombiner(self.config, single_file=self.single_file, skip_patches=self.skip_patches, external_json=self.external_json)
             self.json_converter = JsonPluginConverter(self.config, single_file=self.single_file)
             signal.signal(signal.SIGINT, self.handle_signal)
             signal.signal(signal.SIGTERM, self.handle_signal)
