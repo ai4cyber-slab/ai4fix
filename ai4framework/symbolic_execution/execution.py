@@ -1,6 +1,7 @@
 import os
 import re
 import subprocess
+from pathlib import Path
 
 from utils.logger import logger
 from symbolic_execution.analyzer import Analyzer
@@ -29,7 +30,6 @@ class SymbolicExecution:
         self.analyzer_path = os.environ.get('ANALYZER_BIN')
         self.filter_list = self.config.get('DEFAULT', 'config.filter')
         self.single_file = single_file
-    
     def analyze(self, validation=False):
         """
         Perform symbolic execution analysis on the project.
@@ -44,6 +44,13 @@ class SymbolicExecution:
         Note: This method doesn't return a value, as its purpose is to execute
         the analysis process and log the results.
         """
+        if self.single_file:
+            match = re.search(r"(/tmp/patch_[^/]+?)/", self.single_file)
+            if match:
+                temp_dir = match.group(1)
+                self.results_path = self.results_path.replace(os.environ.get("PROJECT_PATH"), temp_dir)
+                self.project_path = temp_dir
+                self.project_name = "SE_PROJ"
         analyzer = Analyzer(self.analyzer_path, self.project_name, self.project_path, self.results_path, self.filter_list, self.single_file)
         try:
             logger.info("Symbolic Execution Started ...")
