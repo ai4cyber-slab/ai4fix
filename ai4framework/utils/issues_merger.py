@@ -19,7 +19,7 @@ class JSONCombiner:
         self.results_path = self.config.get("DEFAULT", "config.analyzer_results_path")
         self.combined_output_path = self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "single_rerun_issues.json") if single_file else self.config.get('DEFAULT', 'config.issues_path')
         self.ai4vuln_issues_path = os.path.join(self.results_path, self.project_name, 'java', 'now', 'ai4vuln_issues.json')
-        self.issue_type_exclusion = self.config.get("DEFAULT", "config.issue_type_exclusion", fallback="").split(", ")
+        self.issue_type_exclusion = [x.strip() for x in self.config.get("DEFAULT", "config.issue_type_exclusion", fallback="").split(",")]
 
     def load_json(self, file_path):
         """Loads a JSON file and returns its data."""
