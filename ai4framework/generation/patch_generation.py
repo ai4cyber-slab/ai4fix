@@ -1,5 +1,6 @@
 import ast
 from collections import defaultdict
+import fcntl
 import os
 import re
 import sys
@@ -1238,7 +1239,15 @@ def process_warning_worker(args):
                         else:
                             original_issue_dict_for_file = file_issue_types.get(file_path, {})
                             original_count_for_this_file = sum(original_issue_dict_for_file.values())
-                            check_result = check_new_issues(full_file_path, original_count_for_this_file)
+                            with open(full_file_path + '.lock', 'w') as lock_file:
+                                try:
+                                    fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                                    check_result = check_new_issues(full_file_path, original_count_for_this_file)
+                                    fcntl.flock(lock_file, fcntl.LOCK_UN)
+                                except IOError:
+                                    logger.warning(f"Another process is currently checking {full_file_path}")
+                                    time.sleep(1)
+                                    check_result = check_new_issues(full_file_path, original_count_for_this_file)
 
                         introduced_new_issue = check_result["introduced_new_issue"]
                         new_warnings_dict = check_result["new_warnings_dict"]
