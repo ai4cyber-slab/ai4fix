@@ -91,7 +91,6 @@ config.build_tool=maven # (maven, gradle, or javac)
 config.jdk_compiler_version=6 # (4, 5, 6, 8, 11)
 config.build_mode=offline # (online, offline)
 config.parallel_workers=1 # Number of parallel worker processes to use during patch generation
-config.issue_type_exclusion = AtLeastOneConstructor # Issue types that should be excluded
 
 [API]
 config.provider=azureopenai # Service to use ('groq', 'openai', 'claude', 'azureopenai', 'deepseek')

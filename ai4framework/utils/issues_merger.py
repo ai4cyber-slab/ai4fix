@@ -30,7 +30,7 @@ class JSONCombiner:
                 self.ai4vuln_issues_path = os.path.join(self.results_path, 'SE_PROJ', 'java', 'now', 'ai4vuln_issues.json')
 
         #######################
-        self.issue_type_exclusion = [x.strip() for x in self.config.get("DEFAULT", "config.issue_type_exclusion", fallback="").split(",")]
+        # self.issue_type_exclusion = [x.strip() for x in self.config.get("DEFAULT", "config.issue_type_exclusion", fallback="").split(",")]
 
     def load_json(self, file_path):
         """Loads a JSON file and returns its data."""
@@ -57,8 +57,8 @@ class JSONCombiner:
 
     def filter_excluded_issues(self, data):
         """Filters out issues based on the issue_type_exclusion list."""
-        if self.issue_type_exclusion:
-            return [issue for issue in data if issue.get("name") not in self.issue_type_exclusion]
+        # if self.issue_type_exclusion:
+        #     return [issue for issue in data if issue.get("name") not in self.issue_type_exclusion]
         return data
 
     def save_combined_json(self, combined_data):
