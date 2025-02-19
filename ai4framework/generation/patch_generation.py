@@ -1186,7 +1186,7 @@ def process_warning_worker(args):
                         java_parser.remove_extra_braces()
 
                         # Optionally re-run the build/test if you want to see if it's now fixed
-                        output_2 = run_tests_and_collect_output(build_tool, process_project_directory_core, env)
+                        output_2 = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
                         decisions_2 = validate_test_and_patch(test_file_path, output_2, build_tool, context_for_diff_file)
                         if not decisions_2.get('build_success', False):
                             logger.warning("Even after parsing, build still fails.")
