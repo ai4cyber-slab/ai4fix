@@ -56,7 +56,7 @@ git lfs install
 Clone the repository:
 
 ```bash
-git clone --branch release-v1.0.0 --single-branch https://github.com/ai4cyber-slab/ai4fix.git
+git clone --branch v2.0.0 https://github.com/ai4cyber-slab/ai4fix.git
 ```
 
 If Git LFS does not retrieve large files automatically, navigate to the `ai4framework` directory and run:
