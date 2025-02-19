@@ -8,6 +8,10 @@ from utils.logger import logger
 
 import numpy as np
 
+
+
+MAX_WARNINGS_TO_DISPLAY = 15
+
 class BenchmarkVisualizer:
     def __init__(self, num_of_rounds):
         self.metrics = defaultdict(lambda: {
@@ -65,6 +69,11 @@ class BenchmarkVisualizer:
                 key=original_warnings_distribution.get,
                 reverse=True
             )
+            
+            # Take all warnings if less than MAX_WARNINGS_TO_DISPLAY, otherwise limit to MAX_WARNINGS_TO_DISPLAY
+            num_warnings = min(len(sorted_keys), MAX_WARNINGS_TO_DISPLAY)
+            sorted_keys = sorted_keys[:num_warnings]
+            
             original_counts = [original_warnings_distribution[key] for key in sorted_keys]
             after_patch_counts = [after_patch_warnings_distribution.get(key, 0) for key in sorted_keys]
 
@@ -80,7 +89,8 @@ class BenchmarkVisualizer:
 
             ax1.set_xlabel('Warning Type')
             ax1.set_ylabel('Count')
-            ax1.set_title('Warning Counts (Before vs After Patch)')
+            title_suffix = f"Top {num_warnings}" if len(original_warnings_distribution) > MAX_WARNINGS_TO_DISPLAY else "All Warnings"
+            ax1.set_title(f'Warning Counts (Before vs After Patch) - {title_suffix}')
             ax1.set_xticks(index + bar_width / 2)
             ax1.set_xticklabels(sorted_keys, rotation=45, ha="right")
             ax1.legend()
