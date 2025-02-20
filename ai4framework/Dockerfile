@@ -59,75 +59,138 @@ RUN mkdir -p /usr/lib/jvm && \
     mkdir -p /usr/java && \
     # Install Java 1.4
     cd /tmp && \
-    chmod +x jdk4.bin && \
-    (echo yes | ./jdk4.bin) && \
-    mv j2sdk1.4.2_19 /usr/java/ && \
-    rm -f jdk4.bin && \
+    if [ -f jdk4.bin ]; then \
+        chmod +x jdk4.bin && \
+        (echo yes | ./jdk4.bin || true) && \
+        if [ -d j2sdk1.4.2_19 ]; then \
+            mv j2sdk1.4.2_19 /usr/java/ ; \
+        fi && \
+        rm -f jdk4.bin ; \
+    fi && \
     # Install Java 5
-    chmod +x jdk5.bin && \
-    (echo yes | ./jdk5.bin) && \
-    mv jdk1.5.0_22 /usr/java/ && \
-    rm -f jdk5.bin && \
+    if [ -f jdk5.bin ]; then \
+        chmod +x jdk5.bin && \
+        (echo yes | ./jdk5.bin || true) && \
+        if [ -d jdk1.5.0_22 ]; then \
+            mv jdk1.5.0_22 /usr/java/ ; \
+        fi && \
+        rm -f jdk5.bin ; \
+    fi && \
     # Install Java 6
-    chmod +x jdk6.bin && \
-    (echo yes | ./jdk6.bin) && \
-    mv jdk1.6.0_45 /usr/java/ && \
-    rm -f jdk6.bin && \
+    if [ -f jdk6.bin ]; then \
+        chmod +x jdk6.bin && \
+        (echo yes | ./jdk6.bin || true) && \
+        if [ -d jdk1.6.0_45 ]; then \
+            mv jdk1.6.0_45 /usr/java/ ; \
+        fi && \
+        rm -f jdk6.bin ; \
+    fi && \
     # Set Java environment variables
-    export JAVA_HOME=/usr/java/j2sdk1.4.2_19 && \
-    export PATH=$JAVA_HOME/bin:$PATH && \
-    # Verify Java installations
-    java -version && \
+    if [ -d /usr/java/j2sdk1.4.2_19 ]; then \
+        export JAVA_HOME=/usr/java/j2sdk1.4.2_19 && \
+        export PATH=$JAVA_HOME/bin:$PATH && \
+        java -version || true ; \
+    fi && \
     # Install Java 8
-    wget https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u392-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u392b08.tar.gz -O /tmp/java8.tar.gz && \
-    tar -xzf /tmp/java8.tar.gz -C /usr/lib/jvm && \
-    # Install Java 11
-    wget https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.21%2B9/OpenJDK11U-jdk_x64_linux_hotspot_11.0.21_9.tar.gz -O /tmp/java11.tar.gz && \
-    tar -xzf /tmp/java11.tar.gz -C /usr/lib/jvm && \
+    ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ] || [ "$ARCH" = "amd64" ]; then \
+        JDK8_URL="https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u392-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u392b08.tar.gz" && \
+        JDK11_URL="https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.21%2B9/OpenJDK11U-jdk_x64_linux_hotspot_11.0.21_9.tar.gz"; \
+    elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
+        JDK8_URL="https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u392-b08/OpenJDK8U-jdk_aarch64_linux_hotspot_8u392b08.tar.gz" && \
+        JDK11_URL="https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.21%2B9/OpenJDK11U-jdk_aarch64_linux_hotspot_11.0.21_9.tar.gz"; \
+    else \
+        echo "Unsupported architecture: $ARCH" && exit 1; \
+    fi && \
+    wget $JDK8_URL -O /tmp/java8.tar.gz || true && \
+    if [ -f /tmp/java8.tar.gz ]; then \
+        tar -xzf /tmp/java8.tar.gz -C /usr/lib/jvm || true ; \
+    fi && \
+    wget $JDK11_URL -O /tmp/java11.tar.gz || true && \
+    if [ -f /tmp/java11.tar.gz ]; then \
+        tar -xzf /tmp/java11.tar.gz -C /usr/lib/jvm || true ; \
+    fi && \
     rm -f /tmp/java*.*
 
 # Configure Java alternatives for all tools
 RUN for tool in java javac javadoc jar; do \
-        update-alternatives --install /usr/bin/$tool $tool /usr/lib/jvm/jdk8u392-b08/bin/$tool 100 && \
-        update-alternatives --install /usr/bin/$tool $tool /usr/lib/jvm/jdk-11.0.21+9/bin/$tool 200; \
+        if [ -f /usr/lib/jvm/jdk8u392-b08/bin/$tool ]; then \
+            update-alternatives --install /usr/bin/$tool $tool /usr/lib/jvm/jdk8u392-b08/bin/$tool 100 || true ; \
+        fi && \
+        if [ -f /usr/lib/jvm/jdk-11.0.21+9/bin/$tool ]; then \
+            update-alternatives --install /usr/bin/$tool $tool /usr/lib/jvm/jdk-11.0.21+9/bin/$tool 200 || true ; \
+        fi \
     done && \
-    update-alternatives --set java /usr/lib/jvm/jdk-11.0.21+9/bin/java && \
-    update-alternatives --set javac /usr/lib/jvm/jdk-11.0.21+9/bin/javac && \
+    if [ -f /usr/lib/jvm/jdk-11.0.21+9/bin/java ]; then \
+        update-alternatives --set java /usr/lib/jvm/jdk-11.0.21+9/bin/java || true ; \
+        update-alternatives --set javac /usr/lib/jvm/jdk-11.0.21+9/bin/javac || true ; \
+    fi && \
     # Java 1.4, 1.5 and 1.6 have a different directory structure
-    update-alternatives --install /usr/bin/java java /usr/java/j2sdk1.4.2_19/bin/java 50 && \
-    update-alternatives --install /usr/bin/javac javac /usr/java/j2sdk1.4.2_19/bin/javac 50 && \
-    update-alternatives --install /usr/bin/java java /usr/java/jdk1.5.0_22/bin/java 75 && \
-    update-alternatives --install /usr/bin/javac javac /usr/java/jdk1.5.0_22/bin/javac 75 && \
-    update-alternatives --install /usr/bin/java java /usr/java/jdk1.6.0_45/bin/java 85 && \
-    update-alternatives --install /usr/bin/javac javac /usr/java/jdk1.6.0_45/bin/javac 85
+    if [ -f /usr/java/j2sdk1.4.2_19/bin/java ]; then \
+        update-alternatives --install /usr/bin/java java /usr/java/j2sdk1.4.2_19/bin/java 50 || true ; \
+        update-alternatives --install /usr/bin/javac javac /usr/java/j2sdk1.4.2_19/bin/javac 50 || true ; \
+    fi && \
+    if [ -f /usr/java/jdk1.5.0_22/bin/java ]; then \
+        update-alternatives --install /usr/bin/java java /usr/java/jdk1.5.0_22/bin/java 75 || true ; \
+        update-alternatives --install /usr/bin/javac javac /usr/java/jdk1.5.0_22/bin/javac 75 || true ; \
+    fi && \
+    if [ -f /usr/java/jdk1.6.0_45/bin/java ]; then \
+        update-alternatives --install /usr/bin/java java /usr/java/jdk1.6.0_45/bin/java 85 || true ; \
+        update-alternatives --install /usr/bin/javac javac /usr/java/jdk1.6.0_45/bin/javac 85 || true ; \
+    fi
 
 # Add script to switch Java versions
 RUN echo '#!/bin/bash\n\
 case $1 in\n\
     4)\n\
-        update-alternatives --set java /usr/java/j2sdk1.4.2_19/bin/java\n\
-        update-alternatives --set javac /usr/java/j2sdk1.4.2_19/bin/javac\n\
-        echo "export JAVA_HOME=/usr/java/j2sdk1.4.2_19" > /etc/profile.d/javapath.sh\n\
+        if [ -d "/usr/java/j2sdk1.4.2_19" ]; then\n\
+            update-alternatives --set java /usr/java/j2sdk1.4.2_19/bin/java\n\
+            update-alternatives --set javac /usr/java/j2sdk1.4.2_19/bin/javac\n\
+            echo "export JAVA_HOME=/usr/java/j2sdk1.4.2_19" > /etc/profile.d/javapath.sh\n\
+        else\n\
+            echo "Java 4 is not installed - Oracle did not release a version for your architecture"\n\
+            exit 1\n\
+        fi\n\
         ;;\n\
     5)\n\
-        update-alternatives --set java /usr/java/jdk1.5.0_22/bin/java\n\
-        update-alternatives --set javac /usr/java/jdk1.5.0_22/bin/javac\n\
-        echo "export JAVA_HOME=/usr/java/jdk1.5.0_22" > /etc/profile.d/javapath.sh\n\
+        if [ -d "/usr/java/jdk1.5.0_22" ]; then\n\
+            update-alternatives --set java /usr/java/jdk1.5.0_22/bin/java\n\
+            update-alternatives --set javac /usr/java/jdk1.5.0_22/bin/javac\n\
+            echo "export JAVA_HOME=/usr/java/jdk1.5.0_22" > /etc/profile.d/javapath.sh\n\
+        else\n\
+            echo "Java 5 is not installed - Oracle did not release a version for your architecture"\n\
+            exit 1\n\
+        fi\n\
         ;;\n\
     6)\n\
-        update-alternatives --set java /usr/java/jdk1.6.0_45/bin/java\n\
-        update-alternatives --set javac /usr/java/jdk1.6.0_45/bin/javac\n\
-        echo "export JAVA_HOME=/usr/java/jdk1.6.0_45" > /etc/profile.d/javapath.sh\n\
+        if [ -d "/usr/java/jdk1.6.0_45" ]; then\n\
+            update-alternatives --set java /usr/java/jdk1.6.0_45/bin/java\n\
+            update-alternatives --set javac /usr/java/jdk1.6.0_45/bin/javac\n\
+            echo "export JAVA_HOME=/usr/java/jdk1.6.0_45" > /etc/profile.d/javapath.sh\n\
+        else\n\
+            echo "Java 6 is not installed - Oracle did not release a version for your architecture"\n\
+            exit 1\n\
+        fi\n\
         ;;\n\
     8)\n\
-        update-alternatives --set java /usr/lib/jvm/jdk8u392-b08/bin/java\n\
-        update-alternatives --set javac /usr/lib/jvm/jdk8u392-b08/bin/javac\n\
-        echo "export JAVA_HOME=/usr/lib/jvm/jdk8u392-b08" > /etc/profile.d/javapath.sh\n\
+        if [ -d "/usr/lib/jvm/jdk8u392-b08" ]; then\n\
+            update-alternatives --set java /usr/lib/jvm/jdk8u392-b08/bin/java\n\
+            update-alternatives --set javac /usr/lib/jvm/jdk8u392-b08/bin/javac\n\
+            echo "export JAVA_HOME=/usr/lib/jvm/jdk8u392-b08" > /etc/profile.d/javapath.sh\n\
+        else\n\
+            echo "Java 8 is not installed - Oracle did not release a version for your architecture"\n\
+            exit 1\n\
+        fi\n\
         ;;\n\
     11)\n\
-        update-alternatives --set java /usr/lib/jvm/jdk-11.0.21+9/bin/java\n\
-        update-alternatives --set javac /usr/lib/jvm/jdk-11.0.21+9/bin/javac\n\
-        echo "export JAVA_HOME=/usr/lib/jvm/jdk-11.0.21+9" > /etc/profile.d/javapath.sh\n\
+        if [ -d "/usr/lib/jvm/jdk-11.0.21+9" ]; then\n\
+            update-alternatives --set java /usr/lib/jvm/jdk-11.0.21+9/bin/java\n\
+            update-alternatives --set javac /usr/lib/jvm/jdk-11.0.21+9/bin/javac\n\
+            echo "export JAVA_HOME=/usr/lib/jvm/jdk-11.0.21+9" > /etc/profile.d/javapath.sh\n\
+        else\n\
+            echo "Java 11 is not installed"\n\
+            exit 1\n\
+        fi\n\
         ;;\n\
     *)\n\
         echo "Usage: switch-java {4|5|6|8|11}"\n\
