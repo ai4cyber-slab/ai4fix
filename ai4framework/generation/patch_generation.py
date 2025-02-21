@@ -656,7 +656,7 @@ def handle_source_error(context):
     return False
 
 
-def handle_build_success(context, issue_resolved, parsed):
+def handle_build_success(context, issue_resolved):
     name = context['name']
     tag = context['tag']
     sast = context['sast']
@@ -667,10 +667,7 @@ def handle_build_success(context, issue_resolved, parsed):
     if issue_resolved:
         local_stats['validation_passed'] = True
         local_stats['was_fixed'] = True
-        if parsed:
-            diff_file_name, diff_file_path = create_diff(context, "after_parsing")
-        else:
-            diff_file_name, diff_file_path = create_diff(context)
+        diff_file_name, diff_file_path = create_diff(context)
         if diff_file_name and diff_file_path:
             local_stats['diff_file_name'] = diff_file_name
             local_stats['diff_file_path'] = diff_file_path
@@ -773,6 +770,7 @@ def handle_compilation_error(context, issue_resolved):
     return None
 
 def check_new_issues(file_path, original_file_issue_count):
+    logger.debug(f"Checking for new issues in {file_path}...")
     introduced_new_issue = "False"
     new_warnings_dict = {}
 
@@ -1039,7 +1037,6 @@ def process_warning_worker(args):
             items = warning['items']
             name = warning['name']
             tag = warning['tags']
-            parsed=False
 
             for item in items:
                 textrange = item['textrange']
@@ -1222,8 +1219,6 @@ def process_warning_worker(args):
                             previous_generated_patch += '\n\nPatch Failed due to: ' + error_message
                             local_stats['build_success'] = False
                         else:
-                            parsed = True
-                            #create_diff(context, f"Succeeded_after_parsing_code")
                             logger.info("Build succeeded after removing braces!")
                         output = output_2
                         decisions = decisions_2
@@ -1239,15 +1234,12 @@ def process_warning_worker(args):
                         else:
                             original_issue_dict_for_file = file_issue_types.get(file_path, {})
                             original_count_for_this_file = sum(original_issue_dict_for_file.values())
-                            with open(full_file_path + '.lock', 'w') as lock_file:
+                            with open(diffs_output_dir + '.lock', 'w') as lock_file:
                                 try:
-                                    fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                                    fcntl.flock(lock_file, fcntl.LOCK_EX)
                                     check_result = check_new_issues(full_file_path, original_count_for_this_file)
+                                finally:
                                     fcntl.flock(lock_file, fcntl.LOCK_UN)
-                                except IOError:
-                                    logger.warning(f"Another process is currently checking {full_file_path}")
-                                    time.sleep(1)
-                                    check_result = check_new_issues(full_file_path, original_count_for_this_file)
 
                         introduced_new_issue = check_result["introduced_new_issue"]
                         new_warnings_dict = check_result["new_warnings_dict"]
@@ -1267,14 +1259,14 @@ def process_warning_worker(args):
                                 'warning_id': warning['id'],
                             }
                             if len(newly_introduced_issues) > 0:
-                                if parsed:
-                                    create_diff(context, f"Code parsed but introduced {len(newly_introduced_issues)} new issue")
-                                else:
-                                    create_diff(context, f"introduced {len(newly_introduced_issues)} issue: ")
+                                issue_details = ", ".join([f"{issue}: {count}" for issue, count in newly_introduced_issues.items()])
+                                log_helper = f'introduced_{len(newly_introduced_issues)}_issue'
+                                create_diff(context, log_helper)
+                                log_patch_name = f"{os.path.splitext(os.path.basename(full_file_path))[0]}_patch_{warning['id']}_attempt_{attempt}_{log_helper.replace(':', '-')}.diff"
+                                logger.info(
+                                    f"[IssueIntroductionStats] While patching '{name}', {log_patch_name} introduced {len(newly_introduced_issues)} new issue type(s): {issue_details}"
+                                )        
                             else:
-                                if parsed:
-                                    create_diff(context, f"Parsed but did not solve the issue")
-                                else:
                                     create_diff(context, f"did not solve the issue")
                             try:
                                 with open(full_file_path, 'w') as f:
@@ -1343,7 +1335,7 @@ def process_warning_worker(args):
                         continue
                     
                     if decisions.get('build_success', False):
-                        validation_result = handle_build_success(context, issue_resolved, parsed)
+                        validation_result = handle_build_success(context, issue_resolved)
                         if validation_result is True:
                             break
                         elif validation_result is False:
@@ -1631,11 +1623,6 @@ class PatchGenerator:
 
             for introduced_type, introduced_count in newly_introduced.items():
                 self.issue_introduction_stats[patched_issue_type][introduced_type] += introduced_count
-
-                logger.info(
-                    f"[IssueIntroductionStats] While patching '{patched_issue_type}', "
-                    f"introduced {introduced_count} new '{introduced_type}' issue(s)."
-                )
 
             """ converted_stats = {
                 outer_key: dict(subdict)
