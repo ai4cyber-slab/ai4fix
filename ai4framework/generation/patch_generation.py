@@ -1175,15 +1175,15 @@ def process_warning_worker(args):
                             n=2
                         )
                         diff_text = ''.join(diff)
-                        java_parser = JavaParser(path=full_file_path,
+                        local_stats['build_success'] = False
+                        local_stats['introduced_new_issue'] = False
+                        """ java_parser = JavaParser(path=full_file_path,
                                                 line_number_min=min_line_number,
                                                 line_number_max=max_line_number)
                         
-                        # Call the method to remove braces
                         logger.info("Build failed. Attempting to remove extra braces on lines %s..%s", min_line_number, max_line_number)
                         java_parser.remove_extra_braces()
 
-                        # Optionally re-run the build/test if you want to see if it's now fixed
                         output_2 = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
                         decisions_2 = validate_test_and_patch(test_file_path, output_2, build_tool, context_for_diff_file)
                         if not decisions_2.get('build_success', False):
@@ -1221,11 +1221,10 @@ def process_warning_worker(args):
                         else:
                             logger.info("Build succeeded after removing braces!")
                         output = output_2
-                        decisions = decisions_2
+                        decisions = decisions_2"""
                     
                     issue_warnings = transform_issues(config_data.get("DEFAULT", "config.issues_path"))
                     
-
                     if decisions.get('build_success', False):
                         if external_json:
                             original_issue_dict_for_file = issue_warnings.get(file_path, {}).get("warnings_dict_original", {})
@@ -1250,6 +1249,7 @@ def process_warning_worker(args):
                         
                         if introduced_new_issue == "True":
                             logger.warning("New or equal number of issues introduced by patch. Reverting patch and retrying if attempts remain.")
+                            local_stats['build_success'] = True
                             context = {
                                 'initial_content': initial_content,
                                 'full_file_path': full_file_path,
@@ -1267,7 +1267,7 @@ def process_warning_worker(args):
                                     f"[IssueIntroductionStats] While patching '{name}', {log_patch_name} introduced {len(newly_introduced_issues)} new issue type(s): {issue_details}"
                                 )        
                             else:
-                                    create_diff(context, f"did not solve the issue")
+                                create_diff(context, f"did not solve the issue")
                             try:
                                 with open(full_file_path, 'w') as f:
                                     f.write(initial_content)
@@ -1298,10 +1298,13 @@ def process_warning_worker(args):
                             issue_resolved=False
                             continue
                         elif introduced_new_issue=="build failed":
+                            local_stats['introduced_new_issue'] = False
                             local_stats['validation_passed'] = True
                             local_stats['build_success'] = False
                             issue_resolved=False
                         else:
+                            local_stats['build_success'] = True
+                            local_stats['introduced_new_issue'] = False
                             issue_resolved = True
                     context = {
                         'test_file_path': test_file_path,
@@ -1553,7 +1556,8 @@ class PatchGenerator:
                     if res is None:
                         logger.error("Worker returned None. Skipping...")
                         continue
-                    self.process_result(res)
+                    if res['total_attempts'] == 2 or (res['total_attempts'] == 1 and not res['introduced_new_issue'] and res['build_success'] and res['applicable_patch']):
+                        self.process_result(res)
                     self.save_warnings_json()
 
                     # This line is added specifically for the plugin side to enable the notification bar. Note that the print statement is essential, and the text format must include 'PROGRESS UPDATE:' to function correctly.
@@ -1604,7 +1608,7 @@ class PatchGenerator:
             self.warnings_dict[name] -= 1
 
         self.stats['total_attempts'] += res.get('total_attempts', 0)
-        if res.get('validation_passed', False):
+        if not res['introduced_new_issue'] and res['build_success'] and res['applicable_patch']:
             self.successful_patches += 1
         if not res.get('validation_passed', True):
             self.validation_errors += 1

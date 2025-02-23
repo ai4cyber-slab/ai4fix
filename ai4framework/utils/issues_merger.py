@@ -1,13 +1,11 @@
 import os
 import json
-import re
 from utils.logger import logger
 
 
 class JSONCombiner:
     def __init__(self, config, single_file=None, skip_patches=None, external_json=None):
         self.config = config
-        self.single_file = single_file
         self.project_path = self.config.get('DEFAULT', 'config.project_root')
         self.project_name = config.get('DEFAULT', 'config.project_name')
         self.skip_patches = skip_patches
@@ -19,18 +17,9 @@ class JSONCombiner:
         else:
             self.sast_issues_path = self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "sast_issues.json")
         self.results_path = self.config.get("DEFAULT", "config.analyzer_results_path")
-        self.combined_output_path = self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "single_rerun_issues.json") if self.single_file else self.config.get('DEFAULT', 'config.issues_path')
+        self.combined_output_path = self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "single_rerun_issues.json") if single_file else self.config.get('DEFAULT', 'config.issues_path')
         self.ai4vuln_issues_path = os.path.join(self.results_path, self.project_name, 'java', 'now', 'ai4vuln_issues.json')
-        #### to be refatored ####
-        if self.single_file:
-            match = re.search(r"(/tmp/patch_[^/]+?)/", self.single_file)
-            if match:
-                temp_dir = match.group(1)
-                self.results_path = self.results_path.replace(os.environ.get("PROJECT_PATH"), temp_dir)
-                self.ai4vuln_issues_path = os.path.join(self.results_path, 'SE_PROJ', 'java', 'now', 'ai4vuln_issues.json')
-
-        #######################
-        # self.issue_type_exclusion = [x.strip() for x in self.config.get("DEFAULT", "config.issue_type_exclusion", fallback="").split(",")]
+        self.issue_type_exclusion = [x.strip() for x in self.config.get("DEFAULT", "config.issue_type_exclusion", fallback="").split(",")]
 
     def load_json(self, file_path):
         """Loads a JSON file and returns its data."""
@@ -41,11 +30,15 @@ class JSONCombiner:
         """Combines two JSON files based on the configured paths."""
         if os.path.exists(self.sast_issues_path):
             data1 = self.load_json(self.sast_issues_path)
+            if len(data1)==0:
+                data1 = []
         else:
             data1 = []
 
         if os.path.exists(self.ai4vuln_issues_path):
             data2 = self.load_json(self.ai4vuln_issues_path)
+            if len(data2)==0:
+                data2 = []
         else:
             data2 = []
 
@@ -57,8 +50,8 @@ class JSONCombiner:
 
     def filter_excluded_issues(self, data):
         """Filters out issues based on the issue_type_exclusion list."""
-        # if self.issue_type_exclusion:
-        #     return [issue for issue in data if issue.get("name") not in self.issue_type_exclusion]
+        if self.issue_type_exclusion:
+            return [issue for issue in data if issue.get("name") not in self.issue_type_exclusion]
         return data
 
     def save_combined_json(self, combined_data):
