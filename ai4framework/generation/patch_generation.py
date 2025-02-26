@@ -25,7 +25,6 @@ from utils.findMethod import get_method_info_if_any
 from sast.sast_orchestrator import SASTOrchestrator
 from config.llm_configuration import llm_response
 from generation.mesure import BenchmarkVisualizer
-from generation.java_parser import JavaParser
 from symbolic_execution.execution import SymbolicExecution
 from generation.warnings_mapping import ALL_WARNINGS
 from generation.test_generation import TestGenerator
@@ -42,8 +41,7 @@ from utils.switcher import switch_java_version
 # Helper functions
 ####################################
 
-
-def parse_build_output(build_tool, result_output, context_for_diff_save = {}):
+def parse_build_output(build_tool, result_output):
     """
     Parse the build output depending on the build tool.
     For Maven, we check for 'COMPILATION ERROR' and 'BUILD SUCCESS'.
@@ -55,7 +53,8 @@ def parse_build_output(build_tool, result_output, context_for_diff_save = {}):
         'failure_details': [],
         'error_details': [],
         'build_success': True,
-        'mvn_test_passed' : True
+        'mvn_test_passed' : True,
+        'reason': ""
     }
     error_message = ""
 
@@ -100,28 +99,10 @@ def parse_build_output(build_tool, result_output, context_for_diff_save = {}):
             details['mvn_test_passed'] = False
             details['build_success'] = False
             logger.warning(f"{build_tool} compilation failed")
-            if len(context_for_diff_save) != 0:
-                context = {
-                    'initial_content': context_for_diff_save['initial_content'],
-                    'full_file_path': context_for_diff_save['full_file_path'],
-                    'file_path': context_for_diff_save['file_path'],
-                    'attempt': context_for_diff_save['attempt'],
-                    'diffs_output_dir': context_for_diff_save['diffs_output_dir'].replace("patches", "patches_with_build_failure"),
-                    'warning_id': context_for_diff_save["warning_id"]
-                }
-                create_diff(context, f"failed at compilation process", error_message)
+            details['reason']= error_message
         elif "BUILD SUCCESS" not in result_output:
             logger.warning(f"{build_tool} build failed")
-            if len(context_for_diff_save) != 0:
-                context = {
-                    'initial_content': context_for_diff_save['initial_content'],
-                    'full_file_path': context_for_diff_save['full_file_path'],
-                    'file_path': context_for_diff_save['file_path'],
-                    'attempt': context_for_diff_save['attempt'],
-                    'diffs_output_dir': context_for_diff_save['diffs_output_dir'].replace("patches", "patches_with_build_failure"),
-                    'warning_id': context_for_diff_save["warning_id"]
-                }
-                create_diff(context, f"failed at build process", error_message)
+            details['reason']= error_message
 
         elif "BUILD SUCCESS" in result_output and "COMPILATION ERROR" not in result_output:
             details['build_success'] = True
@@ -175,18 +156,20 @@ def validate_test_and_patch(test_file_path, result_output, build_tool, context_f
         'compilation_error_files': [],
         'failure_details': [],
         'error_details': [],
-        'test_file_exists': os.path.exists(test_file_path) if test_file_path else False
+        'test_file_exists': os.path.exists(test_file_path) if test_file_path else False,
+        'reason': ""
     }
 
     # logger.info(f"Test file {'exists' if decisions['test_file_exists'] else 'does not exist'} at path: {test_file_path}")
 
-    parsed = parse_build_output(build_tool, result_output, context_for_diff_file)
+    parsed = parse_build_output(build_tool, result_output)
     decisions['mvn_test_passed'] = parsed['mvn_test_passed']
     decisions['failure_details'] = parsed['failure_details']
     decisions['error_details'] = parsed['error_details']
     decisions['compilation_error'] = parsed['compilation_error']
     decisions['compilation_error_files'] = parsed['compilation_error_files']
     decisions['build_success'] = parsed['build_success']
+    decisions['reason'] = parsed['reason']
 
     return decisions
 
@@ -769,6 +752,31 @@ def handle_compilation_error(context, issue_resolved):
             return handle_source_error(context)
     return None
 
+def remove_last_extra_closing_brace(json_str: str) -> str:
+    """
+    Removes the last occurrence of a line that consists only of a closing curly brace ('}')
+    """
+    try:
+        data = json.loads(json_str)
+    except json.JSONDecodeError as e:
+        raise ValueError("Invalid JSON input") from e
+    
+    # detect lines that are just '}'
+    brace_only_pattern = re.compile(r'^\s*\}\s*$')
+
+    # Identify the last line containing only a '}'
+    last_brace_key = None
+    for key in reversed(sorted(data.keys(), key=lambda k: int(k.split(":")[1]))):  # Sort by line number descending
+        if brace_only_pattern.match(data[key]):
+            last_brace_key = key
+            break
+
+    # Remove the last closing brace
+    if last_brace_key:
+        del data[last_brace_key]
+
+    return json.dumps(data, indent=4)
+
 def check_new_issues(file_path, original_file_issue_count):
     logger.debug(f"Checking for new issues in {file_path}...")
     introduced_new_issue = "False"
@@ -1174,54 +1182,48 @@ def process_warning_worker(args):
                             tofile=file_path,
                             n=2
                         )
-                        diff_text = ''.join(diff)
                         local_stats['build_success'] = False
                         local_stats['introduced_new_issue'] = False
-                        """ java_parser = JavaParser(path=full_file_path,
-                                                line_number_min=min_line_number,
-                                                line_number_max=max_line_number)
-                        
-                        logger.info("Build failed. Attempting to remove extra braces on lines %s..%s", min_line_number, max_line_number)
-                        java_parser.remove_extra_braces()
-
-                        output_2 = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
-                        decisions_2 = validate_test_and_patch(test_file_path, output_2, build_tool, context_for_diff_file)
-                        if not decisions_2.get('build_success', False):
-                            logger.warning("Even after parsing, build still fails.")
-                            line_counter=0
-                            for line in output_2.split("\n"):
-                                if "[ERROR]" in line:
-                                    line_counter += 1
-                                    if "cannot" in line:
-                                        if line_counter == 2:
-                                            split_line = line.split("] ")
-                                            if len(split_line) > 2:
-                                                error_message_key = split_line[2]
-                                                error_message = error_message_key
-                                            else:
-                                                error_message = line
-                                            
-                                            lines = output_2.split("\n")
-                                            next_line_index = lines.index(line) + 1
-                                            if next_line_index < len(lines):
-                                                next_line = lines[next_line_index]
-                                                error_message += " " + next_line
-                                            break
-                                    else:
-                                        if line_counter == 2:
-                                            split_line = line.split("] ")
-                                            if len(split_line) > 2:
-                                                error_message = split_line[2]
-                                            else:
-                                                error_message = line
-                                            break
-                            logger.info(f"build failed for ID {warning['id']} due to: {error_message}")
-                            previous_generated_patch += '\n\nPatch Failed due to: ' + error_message
-                            local_stats['build_success'] = False
+                        if 'class, interface, or enum expected' in decisions['reason']:
+                            try:
+                                with open(full_file_path, 'w') as f:
+                                    f.write(initial_content)
+                                logger.info(f"Reverted patch in {full_file_path.split('/')[-1]} due to class, interface, or enum expected error.")
+                            except Exception as e:
+                                logger.error(f"Error while restoring original content to {full_file_path}: {e}")
+                            
+                            diff_text = ''.join(diff)
+                            # Attempt removal of any extra braces
+                            generated_patch = remove_last_extra_closing_brace(generated_patch)
+                            logger.info("Build failed. Attempting to remove extra braces...")
+                            update_success = update_java_file_worker(full_file_path, extract_json_section, generated_patch)
+                            if update_success==False:
+                                local_stats['applicable_patch'] = False
+                                try:
+                                    with open(full_file_path, 'w') as f:
+                                        f.write(initial_content)
+                                    logger.info(f"Reverted patch in {full_file_path.split('/')[-1]} due to unsuccessful patch application.")
+                                except Exception as e:
+                                    logger.error(f"Error while restoring original content to {full_file_path}: {e}")
+                                continue
+                            output_2 = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
+                            decisions_2 = validate_test_and_patch(test_file_path, output_2, build_tool, context_for_diff_file)
+                            if not decisions_2.get('build_success', False):
+                                logger.warning("Even after parsing, build still fails.")
+                                context_for_diff_file['diffs_output_dir'] = diffs_output_dir.replace("patches", "patches_with_build_failure")
+                                create_diff(context_for_diff_file, f"failed at build process", decisions_2['reason'])
+                                context_for_diff_file['diffs_output_dir'] = diffs_output_dir
+                                logger.info(f"build failed for ID {warning['id']} due to: {decisions_2['reason']}")
+                                previous_generated_patch += '\n\nPatch Failed due to: ' + decisions_2['reason']
+                                local_stats['build_success'] = False
+                            else:
+                                logger.info("Build succeeded after removing braces!")
+                            output = output_2
+                            decisions = decisions_2
                         else:
-                            logger.info("Build succeeded after removing braces!")
-                        output = output_2
-                        decisions = decisions_2"""
+                            context_for_diff_file['diffs_output_dir'] = diffs_output_dir.replace("patches", "patches_with_build_failure")
+                            create_diff(context_for_diff_file, f"failed at build process", decisions['reason'])
+                            context_for_diff_file['diffs_output_dir'] = diffs_output_dir
                     
                     issue_warnings = transform_issues(config_data.get("DEFAULT", "config.issues_path"))
                     
