@@ -35,11 +35,10 @@ class RepoManager:
             self.repo = git.Repo(self.repo_path, search_parent_directories=True)
         except git.exc.InvalidGitRepositoryError:
             if commit_hash:
-                print(f"'{repo_path}' is not a valid Git repository. A commit hash requires a valid Git repository.")
+                logger.warning(f"'{repo_path}' is not a valid Git repository. A commit hash requires a valid Git repository.")
                 sys.exit(1)
             else:
-                logger.debug(f"'{repo_path}' is not a valid Git repository.")
-                sys.exit(1)
+                logger.debug(f"'{repo_path}' is not a valid Git repository. Continuing with full project scan...")
 
     def checkout_commit(self):
         """Checkout a specific commit in the repository."""
