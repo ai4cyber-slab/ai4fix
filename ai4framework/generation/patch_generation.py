@@ -1,5 +1,7 @@
 import ast
 from collections import defaultdict
+import csv
+from datetime import datetime
 import fcntl
 import os
 import re
@@ -98,10 +100,8 @@ def parse_build_output(build_tool, result_output):
             details['compilation_error_files'] = error_files
             details['mvn_test_passed'] = False
             details['build_success'] = False
-            logger.warning(f"{build_tool} compilation failed")
             details['reason']= error_message
         elif "BUILD SUCCESS" not in result_output:
-            logger.warning(f"{build_tool} build failed")
             details['reason']= error_message
 
         elif "BUILD SUCCESS" in result_output and "COMPILATION ERROR" not in result_output:
@@ -639,7 +639,7 @@ def handle_source_error(context):
     return False
 
 
-def handle_build_success(context, issue_resolved):
+def handle_build_success(context, issue_resolved, attempt):
     name = context['name']
     tag = context['tag']
     sast = context['sast']
@@ -651,6 +651,38 @@ def handle_build_success(context, issue_resolved):
         local_stats['validation_passed'] = True
         local_stats['was_fixed'] = True
         diff_file_name, diff_file_path = create_diff(context)
+        introduced_issue_str = "No"
+        introduced_issues_types_str = ""
+        build_failed_str = "No"
+        build_failed_reason = ""
+        issue_solved_str = "Yes"
+
+        patch_path = diff_file_path
+        if attempt == 1:
+            input_tokens_int = local_stats['input_tokens'][0]
+        else:
+            input_tokens_int = local_stats['input_tokens'][1]
+        if attempt == 1:
+            response_tokens_int = local_stats['response_tokens'][0]
+        else:
+            response_tokens_int = local_stats['response_tokens'][1]
+        # Prepare the row for CSV
+        row_data = [
+            local_stats['warning_id'],
+            name,
+            attempt,
+            introduced_issue_str,
+            introduced_issues_types_str,
+            build_failed_str,
+            build_failed_reason,
+            issue_solved_str,
+            patch_path,
+            context['validation_elapsed_time'],
+            context['test_elapsed_time'],
+            input_tokens_int,
+            response_tokens_int
+        ]
+        append_stats_to_csv(row_data, context['patch_path_csv'])
         if diff_file_name and diff_file_path:
             local_stats['diff_file_name'] = diff_file_name
             local_stats['diff_file_path'] = diff_file_path
@@ -777,8 +809,8 @@ def remove_last_extra_closing_brace(json_str: str) -> str:
 
     return json.dumps(data, indent=4)
 
-def check_new_issues(file_path, original_file_issue_count):
-    logger.debug(f"Checking for new issues in {file_path}...")
+def check_new_issues(file_path, original_file_issue_count, warning_id):
+    logger.debug(f"Checking for new issues in {file_path} for warning ID {warning_id}...")
     introduced_new_issue = "False"
     new_warnings_dict = {}
 
@@ -794,14 +826,14 @@ def check_new_issues(file_path, original_file_issue_count):
         )
 
         if result.returncode != 0:
-            logger.warning(f"Orchestrator returned non-zero exit code: {result.returncode}")
+            logger.warning(f"Orchestrator returned non-zero exit code: {result.returncode} for warning ID {warning_id}")
             # We can treat a non-zero exit as a possible build failure or skip.
 
         match_count = re.search(r"Total issue count:\s*(\d+)", result.stdout)
         if match_count:
             new_count = int(match_count.group(1))
             logger.info(
-                f"Orchestrator found {new_count} issues in {file_path}; originally had {original_file_issue_count}"
+                f"Orchestrator found {new_count} issues in {file_path}; originally had {original_file_issue_count} for warning ID {warning_id}"
             )
             # If new_count >= original_file_issue_count => we introduced new or same # issues
             if new_count >= original_file_issue_count:
@@ -816,9 +848,9 @@ def check_new_issues(file_path, original_file_issue_count):
             try:
                 new_warnings_dict = ast.literal_eval(dict_str)
             except Exception as parse_err:
-                logger.error(f"Failed to parse warnings_dict_original as Python dict: {parse_err}")
+                logger.error(f"Failed to parse warnings_dict_original as Python dict: {parse_err} for warning ID {warning_id}")
         else:
-            logger.warning("build failed.")
+            logger.warning(f"build failed for warning ID {warning_id}.")
 
     except Exception as e:
         logger.error(f"Error checking new issues in {file_path}: {e}")
@@ -973,6 +1005,39 @@ def transform_issues(json_file):
     # Convert defaultdicts to regular dicts
     return {k: {"Total issue count": v["Total issue count"], "warnings_dict_original": dict(v["warnings_dict_original"])} for k, v in issue_warnings.items()}
 
+def append_stats_to_csv(row_data, csv_path):
+    """
+    Appends a single row to a CSV, using fcntl.flock for locking.
+    """
+    file_exists = os.path.exists(csv_path)
+
+    with open(csv_path, 'a', newline='') as csvfile:
+        fcntl.flock(csvfile, fcntl.LOCK_EX)
+        try:
+            writer = csv.writer(csvfile)
+            if not file_exists:
+                writer.writerow([
+                    "warning_id",
+                    "issue_type", 
+                    "attempt", 
+                    "introduced_issue", 
+                    "introduced_issues_types", 
+                    "build_failed", 
+                    "build_failed_reason", 
+                    "issue_solved", 
+                    "patch_path",
+                    'validation_elapsed_time',
+                    'test_elapsed_time',
+                    "input_tokens",
+                    "output_tokens"
+                ])
+
+            writer.writerow(row_data)
+
+        finally:
+            fcntl.flock(csvfile, fcntl.LOCK_UN)
+
+
 ####################################
 # Main Logic
 ####################################
@@ -995,7 +1060,8 @@ def process_warning_worker(args):
         total_warnings,
         file_issue_types,
         issue_warnings,
-        external_json
+        external_json,
+        patch_path_csv
     ) = args
 
     local_stats = {
@@ -1045,12 +1111,13 @@ def process_warning_worker(args):
             items = warning['items']
             name = warning['name']
             tag = warning['tags']
-
             for item in items:
                 textrange = item['textrange']
                 file_path = textrange['file']
                 startLine = textrange['startLine']
                 endLine = textrange['endLine']
+                validation_elapsed_time = 0
+                test_elapsed_time = 0
 
                 full_file_path = os.path.join(temp_dir, file_path)
                 code_in_json_format = code_file_to_json(full_file_path)
@@ -1060,11 +1127,12 @@ def process_warning_worker(args):
                         file_content = f.readlines()
                         initial_content = ''.join(file_content)
                 except Exception as e:
-                    logger.error(f"Error reading file {full_file_path}: {e}")
+                    logger.error(f"Error reading file {full_file_path}: {e} for warning ID {warning['id']}.")
                     continue
 
                 max_attempts = 2
                 attempt = 0
+
                 issue_resolved=True
                 previous_generated_patch = None
                 test_file_path, status, original_test_content = None, False, None
@@ -1089,11 +1157,12 @@ def process_warning_worker(args):
                     prompt = get_prompt(explanation, startLine, endLine, attempt, previous_generated_patch, SOLVE_COMMAND, extract_json_section)
 
                     os.makedirs(diffs_output_dir, exist_ok=True)
-
+                    response_start_time = time.time()
                     response = call_ai_with_retries_worker(provider, model_name, api_key, prompt, config_data)
                     if response is None:
                         logger.error(f"Failed to get AI response for warning ID {warning['id']} on attempt {attempt}.")
                         continue
+                    response_elapsed_time = time.time() - response_start_time
 
                     generated_patch = extract_patch_from_response_worker(response['message'])
 
@@ -1104,20 +1173,11 @@ def process_warning_worker(args):
                         try:
                             with open(full_file_path, 'w') as f:
                                 f.write(initial_content)
-                            logger.info(f"Reverted patch in {full_file_path.split('/')[-1]} due to unsuccessful patch application.")
+                            logger.info(f"Reverted patch in {full_file_path.split('/')[-1]} due to unsuccessful patch application for warning ID {warning['id']}.")
                         except Exception as e:
-                            logger.error(f"Error while restoring original content to {full_file_path}: {e}")
+                            logger.error(f"Error while restoring original content to {full_file_path}: {e} for warning ID {warning['id']}.")
                         continue
                 
-                    line_numbers = re.findall(r'"Line:(\d+)"', generated_patch)
-    
-                    line_numbers = list(map(int, line_numbers))
-                    
-                    if not line_numbers:
-                        pass
-                    else:   
-                        min_line_number = min(line_numbers)
-                        max_line_number = max(line_numbers)
                     previous_generated_patch = generated_patch
                     local_stats['input_tokens'].append(response.get('input_tokens', 0))
                     local_stats['response_tokens'].append(response.get('output_tokens', 0))
@@ -1127,7 +1187,7 @@ def process_warning_worker(args):
                             with open(full_file_path, 'r') as f:
                                 new_file_content = f.read()
                         except Exception as e:
-                            logger.error(f"Error reading file {full_file_path}: {e}")
+                            logger.error(f"Error reading file {full_file_path}: {e} for warning ID {warning['id']}.")
                             return None
                         
                         # commented out for now as we are not generating test files for next release
@@ -1153,11 +1213,12 @@ def process_warning_worker(args):
                         try:
                             with open(test_file_path, 'r') as f:
                                 original_test_content = f.read()
-                                logger.info(f"Saved original content for existing test file: {test_file_path}")
+                                logger.info(f"Saved original content for existing test file: {test_file_path} for warning ID {warning['id']}.")
                         except Exception as e:
-                            logger.error(f"Error reading original test file content: {e}")
+                            logger.error(f"Error reading original test file content: {e} for warning ID {warning['id']}.")
 
                     logger.info(f"Process {os.getpid()} - Running '{build_tool} test' for warning ID {warning['id']}...")
+                    test_start_time = time.time()
                     output = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
                     context_for_diff_file = {
                             'initial_content': initial_content,
@@ -1168,12 +1229,15 @@ def process_warning_worker(args):
                             'warning_id': warning['id'],
                         }
                     decisions = validate_test_and_patch(test_file_path, output, build_tool, context_for_diff_file)
+                    if not decisions['build_success']:
+                        logger.warning(f"{build_tool} build failed for warning ID {warning['id']}.")
+                    test_elapsed_time = time.time() - test_start_time
                     if not decisions.get('build_success', False):
                         try:
                             with open(full_file_path, 'r') as f:
                                 new_file_content = f.read()
                         except Exception as e:
-                            logger.error(f"Error reading file {full_file_path}: {e}")
+                            logger.error(f"Error reading file {full_file_path}: {e} for warning ID {warning['id']}.")
                             return None
                         diff = difflib.unified_diff(
                             initial_content.splitlines(keepends=True),
@@ -1188,42 +1252,116 @@ def process_warning_worker(args):
                             try:
                                 with open(full_file_path, 'w') as f:
                                     f.write(initial_content)
-                                logger.info(f"Reverted patch in {full_file_path.split('/')[-1]} due to class, interface, or enum expected error.")
+                                logger.info(f"Reverted patch in {full_file_path.split('/')[-1]} due to class, interface, or enum expected error for warning ID {warning['id']}.")
                             except Exception as e:
-                                logger.error(f"Error while restoring original content to {full_file_path}: {e}")
+                                logger.error(f"Error while restoring original content to {full_file_path}: {e} for warning ID {warning['id']}.")
                             
                             diff_text = ''.join(diff)
                             # Attempt removal of any extra braces
                             generated_patch = remove_last_extra_closing_brace(generated_patch)
-                            logger.info("Build failed. Attempting to remove extra braces...")
+                            logger.info(f"Build failed. Attempting to remove extra braces for warning ID {warning['id']}...")
                             update_success = update_java_file_worker(full_file_path, extract_json_section, generated_patch)
                             if update_success==False:
                                 local_stats['applicable_patch'] = False
                                 try:
                                     with open(full_file_path, 'w') as f:
                                         f.write(initial_content)
-                                    logger.info(f"Reverted patch in {full_file_path.split('/')[-1]} due to unsuccessful patch application.")
+                                    logger.info(f"Reverted patch in {full_file_path.split('/')[-1]} due to unsuccessful patch application for warning ID {warning['id']}.")
                                 except Exception as e:
-                                    logger.error(f"Error while restoring original content to {full_file_path}: {e}")
+                                    logger.error(f"Error while restoring original content to {full_file_path}: {e} for warning ID {warning['id']}.")
                                 continue
-                            output_2 = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
+                            test_start_time2 = time.time()
+                            output_2 = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)       
                             decisions_2 = validate_test_and_patch(test_file_path, output_2, build_tool, context_for_diff_file)
+                            test_elapsed_time2 = time.time() - test_start_time2
+                            test_elapsed_time += test_elapsed_time2
                             if not decisions_2.get('build_success', False):
-                                logger.warning("Even after parsing, build still fails.")
+                                logger.warning(f"Even after parsing, build still fails for warning ID {warning['id']}.")
                                 context_for_diff_file['diffs_output_dir'] = diffs_output_dir.replace("patches", "patches_with_build_failure")
-                                create_diff(context_for_diff_file, f"failed at build process", decisions_2['reason'])
+                                diff_file_name, diff_file_path = create_diff(context_for_diff_file, f"failed at build process", decisions_2['reason'])
+                                local_stats['diff_file_name'] = diff_file_name
+                                local_stats['diff_file_path']= diff_file_path
                                 context_for_diff_file['diffs_output_dir'] = diffs_output_dir
                                 logger.info(f"build failed for ID {warning['id']} due to: {decisions_2['reason']}")
                                 previous_generated_patch += '\n\nPatch Failed due to: ' + decisions_2['reason']
                                 local_stats['build_success'] = False
+                                introduced_issue_str = "No"
+                                introduced_issues_types_str = ""
+                                build_failed_reason = ""
+                                if not local_stats['build_success']:
+                                    build_failed_str = "Yes"
+                                    build_failed_reason = decisions_2.get('reason', '')
+                                issue_solved_str = "No"
+                                patch_path = local_stats.get('diff_file_path', '')
+                                if attempt == 1:
+                                    input_tokens_int = local_stats['input_tokens'][0]
+                                else:
+                                    input_tokens_int = local_stats['input_tokens'][1]
+                                if attempt == 1:
+                                    response_tokens_int = local_stats['response_tokens'][0]
+                                else:
+                                    response_tokens_int = local_stats['response_tokens'][1]
+                                row_data = [
+                                    warning['id'],
+                                    name,
+                                    attempt,
+                                    introduced_issue_str,
+                                    introduced_issues_types_str,
+                                    build_failed_str,
+                                    build_failed_reason,
+                                    issue_solved_str,
+                                    patch_path,
+                                    validation_elapsed_time,
+                                    test_elapsed_time,
+                                    input_tokens_int,
+                                    response_tokens_int
+                                ]
+                                # Write to CSV using fcntl.flock
+                                append_stats_to_csv(row_data, patch_path_csv)
                             else:
-                                logger.info("Build succeeded after removing braces!")
+                                local_stats['build_success'] = True
+                                logger.info(f"Build succeeded after removing braces for warning ID {warning['id']}!")
                             output = output_2
                             decisions = decisions_2
                         else:
                             context_for_diff_file['diffs_output_dir'] = diffs_output_dir.replace("patches", "patches_with_build_failure")
-                            create_diff(context_for_diff_file, f"failed at build process", decisions['reason'])
+                            diff_file_name, diff_file_path = create_diff(context_for_diff_file, f"failed at build process", decisions['reason'])
+                            local_stats['diff_file_name'] = diff_file_name
+                            local_stats['diff_file_path']= diff_file_path
                             context_for_diff_file['diffs_output_dir'] = diffs_output_dir
+                            introduced_issue_str = "No"
+                            introduced_issues_types_str = ""
+                            build_failed_reason = ""
+                            if not local_stats['build_success']:
+                                build_failed_str = "Yes"
+                                build_failed_reason = decisions.get('reason', '')
+                            issue_solved_str = "No"
+                            patch_path = local_stats.get('diff_file_path', '')
+                            # Prepare the row for CSV
+                            if attempt == 1:
+                                input_tokens_int = local_stats['input_tokens'][0]
+                            else:
+                                input_tokens_int = local_stats['input_tokens'][1]
+                            if attempt == 1:
+                                response_tokens_int = local_stats['response_tokens'][0]
+                            else:
+                                response_tokens_int = local_stats['response_tokens'][1]
+                            row_data = [
+                                warning['id'],
+                                name,
+                                attempt,
+                                introduced_issue_str,
+                                introduced_issues_types_str,
+                                build_failed_str,
+                                build_failed_reason,
+                                issue_solved_str,
+                                patch_path,
+                                validation_elapsed_time,
+                                test_elapsed_time,
+                                input_tokens_int,
+                                response_tokens_int
+                            ]
+                            append_stats_to_csv(row_data, patch_path_csv)
                     
                     issue_warnings = transform_issues(config_data.get("DEFAULT", "config.issues_path"))
                     
@@ -1238,7 +1376,9 @@ def process_warning_worker(args):
                             with open(diffs_output_dir + '.lock', 'w') as lock_file:
                                 try:
                                     fcntl.flock(lock_file, fcntl.LOCK_EX)
-                                    check_result = check_new_issues(full_file_path, original_count_for_this_file)
+                                    validation_start_time = time.time()
+                                    check_result = check_new_issues(full_file_path, original_count_for_this_file, warning['id'])
+                                    validation_elapsed_time = time.time() - validation_start_time
                                 finally:
                                     fcntl.flock(lock_file, fcntl.LOCK_UN)
 
@@ -1250,7 +1390,7 @@ def process_warning_worker(args):
                         )
                         
                         if introduced_new_issue == "True":
-                            logger.warning("New or equal number of issues introduced by patch. Reverting patch and retrying if attempts remain.")
+                            logger.warning(f"New or equal number of issues introduced by patch. Reverting patch and retrying if attempts remain for warning ID {warning['id']}.")
                             local_stats['build_success'] = True
                             context = {
                                 'initial_content': initial_content,
@@ -1263,19 +1403,23 @@ def process_warning_worker(args):
                             if len(newly_introduced_issues) > 0:
                                 issue_details = ", ".join([f"{issue}: {count}" for issue, count in newly_introduced_issues.items()])
                                 log_helper = f'introduced_{len(newly_introduced_issues)}_issue'
-                                create_diff(context, log_helper)
+                                diff_file_name, diff_file_path = create_diff(context, log_helper)
+                                local_stats['diff_file_name'] = diff_file_name
+                                local_stats['diff_file_path']= diff_file_path
                                 log_patch_name = f"{os.path.splitext(os.path.basename(full_file_path))[0]}_patch_{warning['id']}_attempt_{attempt}_{log_helper.replace(':', '-')}.diff"
                                 logger.info(
-                                    f"[IssueIntroductionStats] While patching '{name}', {log_patch_name} introduced {len(newly_introduced_issues)} new issue type(s): {issue_details}"
+                                    f"[IssueIntroductionStats] While patching {warning['id']} with issue type '{name}', {log_patch_name} introduced {len(newly_introduced_issues)} new issue type(s): {issue_details}"
                                 )        
                             else:
-                                create_diff(context, f"did not solve the issue")
+                                diff_file_name, diff_file_path = create_diff(context, f"did not solve the issue")
+                                local_stats['diff_file_name'] = diff_file_name
+                                local_stats['diff_file_path']= diff_file_path
                             try:
                                 with open(full_file_path, 'w') as f:
                                     f.write(initial_content)
-                                logger.info(f"Reverted patch in {full_file_path.split('/')[-1]} due to newly introduced issues.")
+                                logger.info(f"Reverted patch in {full_file_path.split('/')[-1]} due to newly introduced issues for warning ID {warning['id']}.")
                             except Exception as e:
-                                logger.error(f"Error while restoring original content to {full_file_path}: {e}")
+                                logger.error(f"Error while restoring original content to {full_file_path}: {e} for warning ID {warning['id']}.")
 
                             # 1) Mark stats
                             local_stats['introduced_new_issue'] = True
@@ -1298,6 +1442,52 @@ def process_warning_worker(args):
                                 previous_generated_patch = ""
                             previous_generated_patch += introduced_issues_text
                             issue_resolved=False
+                            introduced_issue_str = "No"
+                            introduced_issues_types_str = ""
+                            if local_stats['introduced_new_issue']:
+                                introduced_issue_str = "Yes"
+                                introduced_issues_types_str = ", ".join(
+                                    f"{itype}({count})"
+                                    for itype, count in local_stats['new_warnings_distribution'].items()
+                                )
+                            build_failed_str = "No"
+                            build_failed_reason = ""
+                            if not local_stats['build_success']:
+                                build_failed_str = "Yes"
+                                build_failed_reason = decisions.get('reason', '')
+
+                            issue_solved_str = "No"
+                            if (not local_stats['introduced_new_issue'] and
+                                local_stats['build_success'] and
+                                local_stats['applicable_patch']):
+                                issue_solved_str = "Yes"
+
+                            patch_path = local_stats.get('diff_file_path', '')
+
+                            if attempt == 1:
+                                input_tokens_int = local_stats['input_tokens'][0]
+                            else:
+                                input_tokens_int = local_stats['input_tokens'][1]
+                            if attempt == 1:
+                                response_tokens_int = local_stats['response_tokens'][0]
+                            else:
+                                response_tokens_int = local_stats['response_tokens'][1]
+                            row_data = [
+                                warning['id'],
+                                name,
+                                attempt,
+                                introduced_issue_str,
+                                introduced_issues_types_str,
+                                build_failed_str,
+                                build_failed_reason,
+                                issue_solved_str,
+                                patch_path,
+                                validation_elapsed_time,
+                                test_elapsed_time,
+                                input_tokens_int,
+                                response_tokens_int
+                            ]
+                            append_stats_to_csv(row_data, patch_path_csv)
                             continue
                         elif introduced_new_issue=="build failed":
                             local_stats['introduced_new_issue'] = False
@@ -1330,7 +1520,12 @@ def process_warning_worker(args):
                         'diffs_output_dir': diffs_output_dir,
                         'warning_id': warning['id'],
                         'decisions': decisions,
-                        'status': status
+                        'status': status,
+                        'patch_path_csv': patch_path_csv,
+                        'output_tokens': local_stats['response_tokens'],
+                        'input_tokens': local_stats['input_tokens'],
+                        'validation_elapsed_time': validation_elapsed_time,
+                        'test_elapsed_time': test_elapsed_time
                     }
 
                     compilation_result = handle_compilation_error(context, issue_resolved)
@@ -1340,7 +1535,7 @@ def process_warning_worker(args):
                         continue
                     
                     if decisions.get('build_success', False):
-                        validation_result = handle_build_success(context, issue_resolved)
+                        validation_result = handle_build_success(context, issue_resolved, attempt)
                         if validation_result is True:
                             break
                         elif validation_result is False:
@@ -1364,11 +1559,11 @@ def process_warning_worker(args):
                             os.makedirs(os.path.dirname(new_test_path), exist_ok=True)
                             shutil.move(test_file_path, new_test_path)
                             local_stats['test_file_path'] = new_test_path
-                            logger.info(f"Moved test file from {test_file_path} to {new_test_path}")
+                            logger.info(f"Moved test file from {test_file_path} to {new_test_path} for warning ID {warning['id']}.")
                     except Exception as e:
-                        logger.error(f"Error moving test file to project path: {e}")
+                        logger.error(f"Error moving test file to project path: {e} for warning ID {warning['id']}.")
                 else:
-                    logger.info("Test file not moved because it does not exist.")
+                    logger.info(f"Test file not moved because it does not exist for warning ID {warning['id']}.")
 
     except Exception as e:
         logger.error(f"Process {os.getpid()} - Unexpected error processing warning ID {warning['id']}: {e}")
@@ -1377,10 +1572,10 @@ def process_warning_worker(args):
             if test_file_path and original_test_content is not None:
                 revert_test_content({'test_file_path': test_file_path, 'original_test_content': original_test_content})
         shutil.rmtree(temp_dir, ignore_errors=True)
-        logger.info(f"Removed temporary directory: {temp_dir}")
+        logger.info(f"Removed temporary directory: {temp_dir} for warning ID {warning['id']}.")
         if temp_dir_for_build_tool:
             shutil.rmtree(temp_dir_for_build_tool, ignore_errors=True)
-            logger.info(f"Removed process project directory: {temp_dir_for_build_tool}")
+            logger.info(f"Removed process project directory: {temp_dir_for_build_tool} for warning ID {warning['id']}.")
 
     return local_stats
 
@@ -1407,7 +1602,9 @@ class PatchGenerator:
             sys.exit(1)
 
         self.project_path = self.config.get('DEFAULT', 'config.project_root')
-        self.visualize_path = os.path.join(self.project_path, '.ai4framework', 'visualizations', str(int(time.time())))
+        self.time_for_dirs = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        self.visualize_path = os.path.join(self.project_path, '.ai4framework', 'visualizations',self.time_for_dirs)
+        self.patch_path_csv = os.path.join(self.project_path, '.ai4framework', 'logs', self.time_for_dirs, 'patch_stats.csv')
         self.diffs_output_dir = self.config.get('DEFAULT', 'config.results_path')
         self.json_file_path = self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "single_rerun_issues.json") if self.single_file else self.config.get('DEFAULT', 'config.issues_path')
         self.cores_to_use = self.config.get('DEFAULT', 'config.parallel_workers', fallback='1')
@@ -1420,6 +1617,8 @@ class PatchGenerator:
         self.input_tokens = []
         self.response_tokens = []
 
+        os.makedirs(os.path.join(self.project_path, '.ai4framework', 'logs', self.time_for_dirs), exist_ok=True)
+        
         self.stats = {
             'total_issues': 0,
             'build_failures': 0,
@@ -1543,7 +1742,8 @@ class PatchGenerator:
                     total_warnings,
                     file_issue_types,
                     issue_warnings,
-                    self.external_json
+                    self.external_json,
+                    self.patch_path_csv
                 )
                 args_list.append(args)
 
@@ -1566,9 +1766,27 @@ class PatchGenerator:
                     RESET_COLOR = "\033[0m"
                     BOLD_MAGENTA = "\033[1;35m"
                     print(f"{RESET_COLOR}{BOLD_MAGENTA}PROGRESS UPDATE: {provessed_warnings}/{total_warnings}{RESET_COLOR}", flush=True)
+            source_log_file = os.path.join(self.project_path, '.ai4framework', "logs", "ai4framework.log")
+            destination_dir = os.path.join(self.project_path, ".ai4framework", "logs", self.time_for_dirs)
+            destination_log_file = os.path.join(destination_dir, "ai4framework.log")
+            os.makedirs(destination_dir, exist_ok=True)
+            if os.path.exists(source_log_file):
+                shutil.move(source_log_file, destination_log_file)
+                logger.info(f"Log file moved to: {destination_log_file}")
+            else:
+                logger.info(f"Log file not found: {source_log_file}")
 
         except KeyboardInterrupt:
             logger.error("Keyboard interrupt detected in main. Saving progress and stopping the script gracefully.")
+            source_log_file = os.path.join(self.project_path, '.ai4framework', "log", "ai4framework.log")
+            destination_dir = os.path.join(self.project_path, ".ai4framework", "logs", self.time_for_dirs)
+            destination_log_file = os.path.join(destination_dir, "ai4framework.log")
+            os.makedirs(destination_dir, exist_ok=True)
+            if os.path.exists(source_log_file):
+                shutil.move(source_log_file, destination_log_file)
+                logger.info(f"Log file moved to: {destination_log_file}")
+            else:
+                logger.info(f"Log file not found: {source_log_file}")
             self.save_warnings_json()
             raise
         except Exception as e:
