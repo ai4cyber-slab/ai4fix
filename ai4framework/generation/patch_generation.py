@@ -1603,8 +1603,8 @@ class PatchGenerator:
 
         self.project_path = self.config.get('DEFAULT', 'config.project_root')
         self.time_for_dirs = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        self.visualize_path = os.path.join(self.project_path, '.ai4framework', 'visualizations',self.time_for_dirs)
-        self.patch_path_csv = os.path.join(self.project_path, '.ai4framework', 'logs', self.time_for_dirs, 'patch_stats.csv')
+        self.visualize_path = os.path.join(self.project_path, '.ai4framework', 'visualizations', self.time_for_dirs + "_" + self.model_name)
+        self.patch_path_csv = os.path.join(self.project_path, '.ai4framework', 'logs', self.time_for_dirs + "_" + self.model_name, 'patch_stats.csv')
         self.diffs_output_dir = self.config.get('DEFAULT', 'config.results_path')
         self.json_file_path = self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "single_rerun_issues.json") if self.single_file else self.config.get('DEFAULT', 'config.issues_path')
         self.cores_to_use = self.config.get('DEFAULT', 'config.parallel_workers', fallback='1')
@@ -1617,7 +1617,7 @@ class PatchGenerator:
         self.input_tokens = []
         self.response_tokens = []
 
-        os.makedirs(os.path.join(self.project_path, '.ai4framework', 'logs', self.time_for_dirs), exist_ok=True)
+        os.makedirs(os.path.join(self.project_path, '.ai4framework', 'logs', self.time_for_dirs + "_" + self.model_name), exist_ok=True)
         
         self.stats = {
             'total_issues': 0,
@@ -1767,7 +1767,7 @@ class PatchGenerator:
                     BOLD_MAGENTA = "\033[1;35m"
                     print(f"{RESET_COLOR}{BOLD_MAGENTA}PROGRESS UPDATE: {provessed_warnings}/{total_warnings}{RESET_COLOR}", flush=True)
             source_log_file = os.path.join(self.project_path, '.ai4framework', "logs", "ai4framework.log")
-            destination_dir = os.path.join(self.project_path, ".ai4framework", "logs", self.time_for_dirs)
+            destination_dir = os.path.join(self.project_path, ".ai4framework", "logs", (self.time_for_dirs + "_" + self.model_name))
             destination_log_file = os.path.join(destination_dir, "ai4framework.log")
             os.makedirs(destination_dir, exist_ok=True)
             if os.path.exists(source_log_file):
@@ -1778,15 +1778,6 @@ class PatchGenerator:
 
         except KeyboardInterrupt:
             logger.error("Keyboard interrupt detected in main. Saving progress and stopping the script gracefully.")
-            source_log_file = os.path.join(self.project_path, '.ai4framework', "log", "ai4framework.log")
-            destination_dir = os.path.join(self.project_path, ".ai4framework", "logs", self.time_for_dirs)
-            destination_log_file = os.path.join(destination_dir, "ai4framework.log")
-            os.makedirs(destination_dir, exist_ok=True)
-            if os.path.exists(source_log_file):
-                shutil.move(source_log_file, destination_log_file)
-                logger.info(f"Log file moved to: {destination_log_file}")
-            else:
-                logger.info(f"Log file not found: {source_log_file}")
             self.save_warnings_json()
             raise
         except Exception as e:
@@ -1811,6 +1802,18 @@ class PatchGenerator:
             else:
                 logger.info("No new issues were introduced during the patching process.")
             logger.info(f"Patch generation completed in {elapsed_time:.2f} seconds")
+            source_log_file = os.path.join(self.project_path, '.ai4framework', "logs", "ai4framework.log")
+            destination_dir = os.path.join(self.project_path, ".ai4framework", "logs", (self.time_for_dirs + "_" + self.model_name))
+            destination_log_file = os.path.join(destination_dir, "ai4framework.log")
+            try:
+                os.makedirs(destination_dir, exist_ok=True)
+                if os.path.exists(source_log_file):
+                    shutil.move(source_log_file, destination_log_file)
+                    logger.info(f"Log file moved to: {destination_log_file}")
+                else:
+                    logger.info(f"Log file not found: {source_log_file}")
+            except Exception as e:
+                logger.warning(f"Error moving log file : {e}")
             try:
                 self.save_warnings_json()
                 self.generate_visualizations_and_metrics(elapsed_time)
