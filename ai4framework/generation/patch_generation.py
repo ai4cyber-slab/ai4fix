@@ -46,8 +46,6 @@ from utils.switcher import switch_java_version
 def parse_build_output(build_tool, result_output):
     """
     Parse the build output depending on the build tool.
-    For Maven, we check for 'COMPILATION ERROR' and 'BUILD SUCCESS'.
-    For other build tools (e.g., Gradle) we can add similar logic in the future.
     """
     details = {
         'compilation_error': False,
@@ -55,7 +53,6 @@ def parse_build_output(build_tool, result_output):
         'failure_details': [],
         'error_details': [],
         'build_success': True,
-        'mvn_test_passed' : True,
         'reason': ""
     }
     error_message = ""
@@ -98,7 +95,6 @@ def parse_build_output(build_tool, result_output):
             details['compilation_error'] = True
             error_files = re.findall(r'\[ERROR\] (.*?\.java):', result_output)
             details['compilation_error_files'] = error_files
-            details['mvn_test_passed'] = False
             details['build_success'] = False
             details['reason']= error_message
         elif "BUILD SUCCESS" not in result_output:
@@ -112,22 +108,33 @@ def parse_build_output(build_tool, result_output):
         if "BUILD SUCCESSFUL" in result_output:
             details['build_success'] = True
         else:
-            logger.info("GRADLE TEST FAILED")
+            details['build_success'] = False
 
         # 2) Detect Java compilation errors
         compilation_errors = re.findall(r'(.+?\.java):(\d+):\s+error:\s+(.*)', result_output)
         if compilation_errors:
-
             details['compilation_error'] = True
-            # We'll collect just the file paths as a unique set, ignoring duplicates
             error_files = {file_path for file_path, _, _ in compilation_errors}
             details['compilation_error_files'] = sorted(error_files)
 
-        # 3) Detect test failures (if any)
+            first_error_msg = compilation_errors[0][2] if compilation_errors else "Unknown compilation error"
+            details['reason'] = first_error_msg
+
+        # 3) Detect test failures
         test_failures = re.findall(r'(.*?) > (.*?) FAILED\s*(.*)', result_output)
-        # Store them in 'failure_details' as (className, testName, extraMessage)
-        for class_name, test_name, extra_msg in test_failures:
-            details['failure_details'].append((class_name.strip(), test_name.strip(), extra_msg.strip()))
+        if test_failures:
+            for class_name, test_name, extra_msg in test_failures:
+                details['failure_details'].append((class_name.strip(), test_name.strip(), extra_msg.strip()))
+
+            if test_failures:
+                first_failure_msg = test_failures[0][2] if test_failures[0][2] else "Unknown test failure"
+                details['reason'] = first_failure_msg
+
+        # 4) If build failed but no explicit reason was found, capture the last error message
+        if not details['build_success'] and not details['reason']:
+            error_lines = [line for line in result_output.split("\n") if "FAILURE:" in line or "ERROR" in line]
+            if error_lines:
+                details['reason'] = error_lines[-1]
 
     else:
         raise NotImplementedError(f"Build tool '{build_tool}' not supported yet.")
@@ -163,7 +170,6 @@ def validate_test_and_patch(test_file_path, result_output, build_tool, context_f
     # logger.info(f"Test file {'exists' if decisions['test_file_exists'] else 'does not exist'} at path: {test_file_path}")
 
     parsed = parse_build_output(build_tool, result_output)
-    decisions['mvn_test_passed'] = parsed['mvn_test_passed']
     decisions['failure_details'] = parsed['failure_details']
     decisions['error_details'] = parsed['error_details']
     decisions['compilation_error'] = parsed['compilation_error']
@@ -594,7 +600,6 @@ def handle_test_error(context, issue_resolved):
 
     output_after_revert = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
     re_decisions = parse_build_output(build_tool, output_after_revert)
-    decisions['mvn_test_passed'] = re_decisions['mvn_test_passed']
     decisions['build_success'] = re_decisions['build_success']
     if re_decisions['build_success'] and not re_decisions['compilation_error']:
         if issue_resolved:
@@ -660,12 +665,10 @@ def handle_build_success(context, issue_resolved, attempt):
         patch_path = diff_file_path
         if attempt == 1:
             input_tokens_int = local_stats['input_tokens'][0]
-        else:
-            input_tokens_int = local_stats['input_tokens'][1]
-        if attempt == 1:
             response_tokens_int = local_stats['response_tokens'][0]
         else:
-            response_tokens_int = local_stats['response_tokens'][1]
+            input_tokens_int = local_stats['input_tokens'][1]
+            response_tokens_int = local_stats['response_tokens'][1]    
         # Prepare the row for CSV
         row_data = [
             local_stats['warning_id'],
@@ -677,8 +680,8 @@ def handle_build_success(context, issue_resolved, attempt):
             build_failed_reason,
             issue_solved_str,
             patch_path,
-            context['validation_elapsed_time'],
-            context['test_elapsed_time'],
+            f"{context['validation_elapsed_time']:.2f}",
+            f"{context['test_elapsed_time']:.2f}",
             input_tokens_int,
             response_tokens_int
         ]
@@ -1069,7 +1072,6 @@ def process_warning_worker(args):
         'passed': False,
         'build_success': True,
         'validation_passed': False,
-        'mvn_test_passed': True,
         'applicable_patch': True,
         'non_applicabale_diffs': 0,
         'validation_errors': 0,
@@ -1218,8 +1220,9 @@ def process_warning_worker(args):
                             logger.error(f"Error reading original test file content: {e} for warning ID {warning['id']}.")
 
                     logger.info(f"Process {os.getpid()} - Running '{build_tool} test' for warning ID {warning['id']}...")
-                    test_start_time = time.time()
+                    test_start_time = time.perf_counter()
                     output = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
+                    test_elapsed_time = time.perf_counter() - test_start_time 
                     context_for_diff_file = {
                             'initial_content': initial_content,
                             'full_file_path': full_file_path,
@@ -1231,7 +1234,6 @@ def process_warning_worker(args):
                     decisions = validate_test_and_patch(test_file_path, output, build_tool, context_for_diff_file)
                     if not decisions['build_success']:
                         logger.warning(f"{build_tool} build failed for warning ID {warning['id']}.")
-                    test_elapsed_time = time.time() - test_start_time
                     if not decisions.get('build_success', False):
                         try:
                             with open(full_file_path, 'r') as f:
@@ -1270,11 +1272,11 @@ def process_warning_worker(args):
                                 except Exception as e:
                                     logger.error(f"Error while restoring original content to {full_file_path}: {e} for warning ID {warning['id']}.")
                                 continue
-                            test_start_time2 = time.time()
-                            output_2 = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)       
-                            decisions_2 = validate_test_and_patch(test_file_path, output_2, build_tool, context_for_diff_file)
-                            test_elapsed_time2 = time.time() - test_start_time2
+                            test_start_time2 = time.perf_counter()
+                            output_2 = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
+                            test_elapsed_time2 = time.perf_counter() - test_start_time2
                             test_elapsed_time += test_elapsed_time2
+                            decisions_2 = validate_test_and_patch(test_file_path, output_2, build_tool, context_for_diff_file)
                             if not decisions_2.get('build_success', False):
                                 logger.warning(f"Even after parsing, build still fails for warning ID {warning['id']}.")
                                 context_for_diff_file['diffs_output_dir'] = diffs_output_dir.replace("patches", "patches_with_build_failure")
@@ -1295,12 +1297,10 @@ def process_warning_worker(args):
                                 patch_path = local_stats.get('diff_file_path', '')
                                 if attempt == 1:
                                     input_tokens_int = local_stats['input_tokens'][0]
-                                else:
-                                    input_tokens_int = local_stats['input_tokens'][1]
-                                if attempt == 1:
                                     response_tokens_int = local_stats['response_tokens'][0]
                                 else:
-                                    response_tokens_int = local_stats['response_tokens'][1]
+                                    input_tokens_int = local_stats['input_tokens'][1]
+                                    response_tokens_int = local_stats['response_tokens'][1]    
                                 row_data = [
                                     warning['id'],
                                     name,
@@ -1311,8 +1311,8 @@ def process_warning_worker(args):
                                     build_failed_reason,
                                     issue_solved_str,
                                     patch_path,
-                                    validation_elapsed_time,
-                                    test_elapsed_time,
+                                    f"{validation_elapsed_time:.2f}",
+                                    f"{test_elapsed_time:.2f}",
                                     input_tokens_int,
                                     response_tokens_int
                                 ]
@@ -1340,12 +1340,10 @@ def process_warning_worker(args):
                             # Prepare the row for CSV
                             if attempt == 1:
                                 input_tokens_int = local_stats['input_tokens'][0]
-                            else:
-                                input_tokens_int = local_stats['input_tokens'][1]
-                            if attempt == 1:
                                 response_tokens_int = local_stats['response_tokens'][0]
                             else:
-                                response_tokens_int = local_stats['response_tokens'][1]
+                                input_tokens_int = local_stats['input_tokens'][1]
+                                response_tokens_int = local_stats['response_tokens'][1]                     
                             row_data = [
                                 warning['id'],
                                 name,
@@ -1356,8 +1354,8 @@ def process_warning_worker(args):
                                 build_failed_reason,
                                 issue_solved_str,
                                 patch_path,
-                                validation_elapsed_time,
-                                test_elapsed_time,
+                                f"{validation_elapsed_time:.2f}",
+                                f"{test_elapsed_time:.2f}",
                                 input_tokens_int,
                                 response_tokens_int
                             ]
@@ -1376,9 +1374,9 @@ def process_warning_worker(args):
                             with open(diffs_output_dir + '.lock', 'w') as lock_file:
                                 try:
                                     fcntl.flock(lock_file, fcntl.LOCK_EX)
-                                    validation_start_time = time.time()
+                                    validation_start_time = time.perf_counter()
                                     check_result = check_new_issues(full_file_path, original_count_for_this_file, warning['id'])
-                                    validation_elapsed_time = time.time() - validation_start_time
+                                    validation_elapsed_time = time.perf_counter() - validation_start_time
                                 finally:
                                     fcntl.flock(lock_file, fcntl.LOCK_UN)
 
@@ -1446,7 +1444,7 @@ def process_warning_worker(args):
                             introduced_issues_types_str = ""
                             if local_stats['introduced_new_issue']:
                                 introduced_issue_str = "Yes"
-                                introduced_issues_types_str = ", ".join(
+                                introduced_issues_types_str = "; ".join(
                                     f"{itype}({count})"
                                     for itype, count in local_stats['new_warnings_distribution'].items()
                                 )
@@ -1466,12 +1464,10 @@ def process_warning_worker(args):
 
                             if attempt == 1:
                                 input_tokens_int = local_stats['input_tokens'][0]
-                            else:
-                                input_tokens_int = local_stats['input_tokens'][1]
-                            if attempt == 1:
                                 response_tokens_int = local_stats['response_tokens'][0]
                             else:
-                                response_tokens_int = local_stats['response_tokens'][1]
+                                input_tokens_int = local_stats['input_tokens'][1]
+                                response_tokens_int = local_stats['response_tokens'][1]    
                             row_data = [
                                 warning['id'],
                                 name,
@@ -1482,8 +1478,8 @@ def process_warning_worker(args):
                                 build_failed_reason,
                                 issue_solved_str,
                                 patch_path,
-                                validation_elapsed_time,
-                                test_elapsed_time,
+                                f"{validation_elapsed_time:.2f}",
+                                f"{test_elapsed_time:.2f}",
                                 input_tokens_int,
                                 response_tokens_int
                             ]
