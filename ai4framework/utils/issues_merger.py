@@ -45,6 +45,10 @@ class JSONCombiner:
         combined_data = data1 + data2
         if count_issues:
             return combined_data
+        # Save the unfiltered combined JSON for validation purposes
+        unfiltered_json_path = self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "unfiltered_issues.json")
+        with open(unfiltered_json_path, 'w', encoding='utf-8') as uf:
+            json.dump(combined_data, uf, indent=2)
         return self.filter_excluded_issues(combined_data)
         
 

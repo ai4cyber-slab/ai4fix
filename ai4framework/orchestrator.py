@@ -53,12 +53,12 @@ class WorkflowFramework:
     def execute_workflow(self):
         logger.info("Starting workflow execution")
         start_time = time.time()
-
+        total_issue_count = 0
+        warnings_dict_original = {}
         try:
             rounds_count = int(self.config.get("DEFAULT", "config.rounds_count", fallback=1))
             if self.single_file:
                 rounds_count = 1
-            logger.info(f"Rounds count: {rounds_count}")
 
             for i in range(1, rounds_count + 1):
                 logger.info(f"Starting round {i}")

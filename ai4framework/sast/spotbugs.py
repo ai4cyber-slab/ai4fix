@@ -114,6 +114,8 @@ class SpotBugsRunner:
             with open(self.report_path, 'r') as file:
                 return file.read()
         return None
+    
+
 
     def parse_report(self, limit=100, validation=False):
         """
@@ -131,9 +133,12 @@ class SpotBugsRunner:
         spotbugs_root = ET.fromstring(report_content)
 
         for bug_instance in spotbugs_root.findall('.//BugInstance'):
+            rank = int(bug_instance.get('rank', '0').strip())
+            severity = map_rank_to_severity(rank)
             issue = {
                 "id": f"SB-{str(len(issues) + 1).zfill(4)}",
                 "name": bug_instance.get('type', '').strip(),
+                "severity": severity,
                 "explanation": (bug_instance.find('LongMessage').text or "No detailed explanation available.").strip(),
                 "tags": "SB",
                 "items": []
@@ -170,6 +175,7 @@ class SpotBugsRunner:
         return issues
 
 
+
 def find_base_dir_path(project_root, target_path, test_dir=False):
     """
     Find the base directory path for a given target efficiently.
@@ -191,3 +197,15 @@ def find_base_dir_path(project_root, target_path, test_dir=False):
                 if current_file_path.endswith(norm_target_path):
                     return current_file_path
     return None
+
+def map_rank_to_severity(rank):
+    if 1 <= rank <= 4:
+        return "High"
+    elif 5 <= rank <= 9:
+        return "Medium"
+    elif 10 <= rank <= 14:
+        return "Low"
+    elif 15 <= rank <= 20:
+        return "Informational"
+    else:
+        return "Unknown"

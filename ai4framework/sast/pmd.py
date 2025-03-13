@@ -121,13 +121,16 @@ class PMDRunner:
                     end_line = violation.get('endline')
                     start_column = violation.get('begincolumn')
                     end_column = violation.get('endcolumn')
+                    priority = violation.get('priority')
 
-                    if not all([start_line, end_line, start_column, end_column]):
+                    if not all([start_line, end_line, start_column, end_column, priority]):
                         continue
 
+                    severity = map_rank_to_severity(priority)
                     issue = {
                         "id": f"PMD-{str(len(issues) + 1).zfill(4)}",
                         "name": violation.get('rule', 'Unknown Rule'),
+                        "severity": severity,
                         "explanation": (violation.text or "No explanation provided.").strip(),
                         "tags": "PMD",
                         "items": [
@@ -150,3 +153,18 @@ class PMDRunner:
             logger.error(f"Failed to parse PMD report: {e}")
 
         return issues
+    
+def map_rank_to_severity(priority):
+    priority = int(priority)
+    if priority == 1:
+        return "High"
+    elif priority == 2:
+        return "Medium-High"
+    elif priority == 3:
+        return "Medium"
+    elif priority == 4:
+        return "Medium-Low"
+    elif priority == 5:
+        return "Low"
+    else:
+        return "Unknown"

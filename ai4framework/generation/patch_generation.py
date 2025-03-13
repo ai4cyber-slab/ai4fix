@@ -135,23 +135,37 @@ def parse_build_output(build_tool, result_output):
             error_lines = [line for line in result_output.split("\n") if "FAILURE:" in line or "ERROR" in line]
             if error_lines:
                 details['reason'] = error_lines[-1]
+    elif build_tool == 'javac':
+        details['build_success'] = "error" not in result_output
+        javac_errors = re.findall(r'(.+?\.java):(\d+): error: (.+)', result_output)
+        if javac_errors:
+            details['compilation_error'] = True
+            details['compilation_error_files'] = sorted({file for file, _, _ in javac_errors})
+
+            first_error_msg = javac_errors[0][2] if javac_errors else "Unknown compilation error"
+            details['reason'] = first_error_msg
+
+        # Detect 'cannot find symbol' errors
+        symbol_errors = re.findall(
+            r'(.+?\.java):(\d+): error: cannot find symbol\n\s+symbol:\s+(.+)\n\s+location:\s+(.+)',
+            result_output
+        )
+        if symbol_errors:
+            details['compilation_error'] = True
+            details['compilation_error_files'].extend({file for file, _, _, _ in symbol_errors})
+            first_symbol_error = f"Cannot find symbol: {symbol_errors[0][2]} in {symbol_errors[0][3]}"
+            details['reason'] = first_symbol_error
+
+        # If compilation failed but no known error pattern matched, capture last error line
+        if not details['build_success'] and not details['reason']:
+            error_lines = [line for line in result_output.split("\n") if "error:" in line]
+            if error_lines:
+                details['reason'] = error_lines[-1]
 
     else:
         raise NotImplementedError(f"Build tool '{build_tool}' not supported yet.")
 
     return details
-
-
-def extract_json_section_from_code(code_content, start_line, end_line):
-    lines = code_content.split('\n')
-    extracted_lines = {}
-    for i in range(start_line - 1, end_line):
-        if i < 0 or i >= len(lines):
-            continue
-        line = lines[i].rstrip() if lines[i].strip() else ''
-        extracted_lines[f"Line:{i + 1}"] = line
-    return json.dumps(extracted_lines, indent=2)
-
 
 def validate_test_and_patch(test_file_path, result_output, build_tool, context_for_diff_file):
     """
@@ -270,7 +284,7 @@ def run_tests_worker(build_tool, cwd, env, jdk_compiler_version, build_mode):
         elif build_tool.lower() == 'javac':
             java_files = [str(file) for file in Path(cwd, 'src', 'main', 'java').rglob('*.java')]
             if java_files:
-                command = ['javac', '-d', os.path.join(cwd, 'build', 'classes', 'main', 'java')] + java_files
+                command = ['javac','-verbose', '-d', os.path.join(cwd, 'build', 'classes', 'main', 'java')] + java_files
             else:
                 raise ValueError("No Java files found to compile.")
         else:
@@ -366,6 +380,10 @@ def is_parallel_build_supported(build_tool):
         ex = 'gradle'
     elif build_tool == 'maven':
         ex = 'mvn'
+    elif build_tool == 'javac':
+        ex = 'javac'
+    else:
+        return False
     result = subprocess.run([ex, '-v'], capture_output=True, text=True)
     if result.returncode == 0:
         if build_tool == 'maven':
@@ -380,6 +398,11 @@ def is_parallel_build_supported(build_tool):
                 version = version_match.group(1)
                 major_version = int(version.split('.')[0])
                 return major_version >= 4
+        elif build_tool == 'javac':
+            version_match = re.search(r'(\d+)\.\d+\.\d+', result.stderr)
+            if version_match:
+                major_version = int(version_match.group(1))
+                return major_version >= 8
     return False
 
 
@@ -454,31 +477,22 @@ def get_prompt(explanation, startLine, endLine, attempt, previous_generated_patc
 
     return prompt
 
-
-def copy_original_project_to_temp_directory(base_project_path, temp_dir):
-    shutil.copytree(base_project_path, temp_dir, dirs_exist_ok=True)
-
-
 def update_build_env_vars(temp_dir_for_build_tool, build_tool):
     env = os.environ.copy()
+    env["TMPDIR"] = temp_dir_for_build_tool
+    env["TEMP"] = temp_dir_for_build_tool
+    env["TMP"] = temp_dir_for_build_tool
 
     if build_tool == 'maven':
         env["MAVEN_OPTS"] = "-Xms512m -Xmx2048m"
         env["MAVEN_OPTS"] += f" -Djava.io.tmpdir={temp_dir_for_build_tool}"
-
-        # Also update common system temp vars
-        env["TMPDIR"] = temp_dir_for_build_tool
-        env["TEMP"] = temp_dir_for_build_tool
-        env["TMP"] = temp_dir_for_build_tool
-
     elif build_tool == 'gradle':
         env["GRADLE_OPTS"] = "-Xms512m -Xmx2048m"
         env["GRADLE_OPTS"] += f" -Djava.io.tmpdir={temp_dir_for_build_tool}"
-
-        env["TMPDIR"] = temp_dir_for_build_tool
-        env["TEMP"] = temp_dir_for_build_tool
-        env["TMP"] = temp_dir_for_build_tool
-
+    elif build_tool == 'javac':
+        env["JAVA_TOOL_OPTIONS"] = "-Xms512m -Xmx2048m"
+        env["JAVA_TOOL_OPTIONS"] += f" -Djava.io.tmpdir={temp_dir_for_build_tool}"
+        env["JAVAC_OPTS"] = "-Xms512m -Xmx2048m"
     return env
 
 
@@ -559,8 +573,6 @@ def create_diff(context, extra="", err_message=""):
         logger.error(f"Error writing diff to {diff_file_path}: {e}")
         return None, None
 
-
-
 def log_retry(message, context):
     attempt = context['attempt']
     max_attempts = context['max_attempts']
@@ -570,7 +582,6 @@ def log_retry(message, context):
         logger.warning(f"Maximum attempts reached for warning ID {warning_id}.")
     else:
         logger.info(f"{message} for warning ID {warning_id}...")
-
 
 def handle_test_error(context, issue_resolved):
     decisions = context['decisions']
@@ -631,7 +642,6 @@ def handle_test_error(context, issue_resolved):
         log_retry("Build failed. Retrying with a new patch", context)
         return False
 
-
 def handle_source_error(context):
     status = context['status']
     test_file_path = context['test_file_path']
@@ -642,7 +652,6 @@ def handle_source_error(context):
     revert_patch(context)
     log_retry("Retrying with a new patch", context)
     return False
-
 
 def handle_build_success(context, issue_resolved, attempt):
     name = context['name']
@@ -704,7 +713,6 @@ def handle_build_success(context, issue_resolved, attempt):
             print(f"An unexpected error occurred: {e}")
         log_retry("Retrying with a new patch", context)
         return False
-
 
 def handle_test_failures(context, issue_resolved):
     decisions = context['decisions']
@@ -775,7 +783,6 @@ def handle_test_failures(context, issue_resolved):
         log_retry("Retrying with a new patch", context)
         return False
 
-
 def handle_compilation_error(context, issue_resolved):
     decisions = context['decisions']
 
@@ -827,10 +834,8 @@ def check_new_issues(file_path, original_file_issue_count, warning_id):
         result = subprocess.run(
             cmd, capture_output=True, text=True, check=False
         )
-
         if result.returncode != 0:
             logger.warning(f"Orchestrator returned non-zero exit code: {result.returncode} for warning ID {warning_id}")
-            # We can treat a non-zero exit as a possible build failure or skip.
 
         match_count = re.search(r"Total issue count:\s*(\d+)", result.stdout)
         if match_count:
@@ -888,7 +893,7 @@ def check_new_external_issues(file_path, original_file_issue_count, temp_dir):
         cmd = [
             "python",
             "/app/orchestrator.py",
-            "--skip-patches",         
+            "--skip-patches",
             "--external-json"
         ]
         logger.info(f"Running orchestrator for counting issue in {temp_dir}")
@@ -900,13 +905,12 @@ def check_new_external_issues(file_path, original_file_issue_count, temp_dir):
             stderr=subprocess.STDOUT,
             text=True
         )
-        process.stdout.close()
+        stdout, _ = process.communicate()
 
-        return_code = process.wait()
-        if return_code != 0:
-            logger.warning(f"Orchestrator returned non-zero exit code: {return_code}")
+        if process.returncode != 0:      
+            logger.warning(f"Orchestrator returned non-zero exit code: {process.returncode}")
 
-        json_file_path = config_data.get('DEFAULT', 'config.issues_path')
+        json_file_path = os.path.join(temp_dir, ".ai4framework", "issues.json")
 
         # 4) Parse issues from the newly generated JSON
         file_issues = extract_issues_for_file(json_file_path, file_path)
@@ -941,7 +945,6 @@ def check_new_external_issues(file_path, original_file_issue_count, temp_dir):
         "introduced_new_issue": introduced_new_issue,
         "new_warnings_dict": new_warnings_dict
     }
-
 
 def extract_issues_for_file(json_path: str, file_path: str):
     """
@@ -1361,7 +1364,7 @@ def process_warning_worker(args):
                             ]
                             append_stats_to_csv(row_data, patch_path_csv)
                     
-                    issue_warnings = transform_issues(config_data.get("DEFAULT", "config.issues_path"))
+                    #issue_warnings = transform_issues(config_data.get("DEFAULT", "config.issues_path"))
                     
                     if decisions.get('build_success', False):
                         if external_json:
@@ -1575,10 +1578,8 @@ def process_warning_worker(args):
 
     return local_stats
 
-
 def nested_defaultdict_int():
     return defaultdict(int)
-
 
 class PatchGenerator:
     def __init__(self, config, warning_dict, num_of_rounds, single_file=None, external_json=None):
@@ -1603,6 +1604,7 @@ class PatchGenerator:
         self.patch_path_csv = os.path.join(self.project_path, '.ai4framework', 'logs', self.time_for_dirs + "_" + self.model_name, 'patch_stats.csv')
         self.diffs_output_dir = self.config.get('DEFAULT', 'config.results_path')
         self.json_file_path = self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "single_rerun_issues.json") if self.single_file else self.config.get('DEFAULT', 'config.issues_path')
+        self.unfiltered_json_path = self.config.get("DEFAULT", "config.issues_path").replace("issues.json", "unfiltered_issues.json")
         self.cores_to_use = self.config.get('DEFAULT', 'config.parallel_workers', fallback='1')
         self.warnings = []
         self.compilation_or_test_errors = 0
@@ -1687,7 +1689,14 @@ class PatchGenerator:
             
             file_issue_types = defaultdict(nested_defaultdict_int)
 
-            for warning in self.warnings:
+            try:
+                with open(self.unfiltered_json_path, 'r') as f:
+                    self.unfiltered_warnings = json.load(f)
+            except Exception as e:
+                logger.error(f"Error reading unfiltered warnings JSON: {e}")
+                return
+            
+            for warning in self.unfiltered_warnings:
                 issue_type_name = warning["name"]
                 for item in warning["items"]:
                     textrange = item.get("textrange", {})
