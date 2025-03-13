@@ -1875,7 +1875,7 @@ class PatchGenerator:
                     if 'patches' not in item:
                         item['patches'] = []
                     explanation = res.get('explanation', '')
-                    if res.get('diff_file_name') and res.get('diff_file_path'):
+                    if res.get('diff_file_name') and res.get('diff_file_path') and "failed" not in res.get('diff_file_name') and "introduced" not in res.get('diff_file_name') and "did not solve" not in res.get('diff_file_name'):
                         item['patches'].append({
                             "path": res['diff_file_path'],
                             "explanation": explanation
