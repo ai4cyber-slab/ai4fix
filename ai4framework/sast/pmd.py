@@ -127,10 +127,13 @@ class PMDRunner:
                         continue
 
                     severity = map_rank_to_severity(priority)
+                    complexity = int(end_line) - int(start_line) + 1
+
                     issue = {
                         "id": f"PMD-{str(len(issues) + 1).zfill(4)}",
                         "name": violation.get('rule', 'Unknown Rule'),
                         "severity": severity,
+                        "complexity": complexity,
                         "explanation": (violation.text or "No explanation provided.").strip(),
                         "tags": "PMD",
                         "items": [
@@ -151,6 +154,31 @@ class PMDRunner:
 
         except ET.ParseError as e:
             logger.error(f"Failed to parse PMD report: {e}")
+
+        rule_frequency = {}
+        for issue in issues:
+            rule_name = issue["name"]
+            rule_frequency[rule_name] = rule_frequency.get(rule_name, 0) + 1
+
+        severity_mapping = {
+            "High": 5,
+            "Medium-High": 4,
+            "Medium": 3,
+            "Medium-Low": 2,
+            "Low": 1,
+            "Unknown": 0
+        }
+
+        def calculate_score(severity_numeric, complexity, frequency):
+            severity_weight = 3
+            complexity_weight = 1
+            frequency_weight = 2
+            return severity_numeric * severity_weight + complexity * complexity_weight + frequency * frequency_weight
+
+        for issue in issues:
+            sev_numeric = severity_mapping.get(issue["severity"], 0)
+            freq = rule_frequency.get(issue["name"], 1)
+            issue["score"] = calculate_score(sev_numeric, issue["complexity"], freq)
 
         return issues
     

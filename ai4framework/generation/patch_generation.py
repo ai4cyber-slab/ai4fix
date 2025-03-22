@@ -868,7 +868,7 @@ def check_new_issues(file_path, original_file_issue_count, warning_id):
         "new_warnings_dict": new_warnings_dict
     }
 
-def check_new_external_issues(file_path, original_file_issue_count, temp_dir):
+def check_new_external_issues(file_path, original_file_issue_count, temp_dir, warning_id):
     """
     1. Temporarily set config.project_root to temp_dir
     2. Spawn the orchestrator with --skip-patches and --external-json, streaming its output
@@ -876,7 +876,7 @@ def check_new_external_issues(file_path, original_file_issue_count, temp_dir):
     4. Determine if a new issue was introduced based on the counts
     5. Restore the original config.project_root after the command completes
     """
-    logger.info(f"original_file_issue_count: {original_file_issue_count}")
+    logger.debug(f"Checking for new issues in {temp_dir} for warning ID {warning_id}...")
     introduced_new_issue = "False"
     new_warnings_dict = {}
 
@@ -896,7 +896,6 @@ def check_new_external_issues(file_path, original_file_issue_count, temp_dir):
             "--skip-patches",
             "--external-json"
         ]
-        logger.info(f"Running orchestrator for counting issue in {temp_dir}")
 
         process = subprocess.Popen(
             cmd,
@@ -1370,7 +1369,7 @@ def process_warning_worker(args):
                         if external_json:
                             original_issue_dict_for_file = issue_warnings.get(file_path, {}).get("warnings_dict_original", {})
                             original_count_for_this_file = sum(original_issue_dict_for_file.values())
-                            check_result = check_new_external_issues(file_path, original_count_for_this_file, temp_dir)
+                            check_result = check_new_external_issues(file_path, original_count_for_this_file, temp_dir, warning['id'])
                         else:
                             original_issue_dict_for_file = file_issue_types.get(file_path, {})
                             original_count_for_this_file = sum(original_issue_dict_for_file.values())

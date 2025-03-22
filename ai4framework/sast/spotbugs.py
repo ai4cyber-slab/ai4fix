@@ -114,12 +114,10 @@ class SpotBugsRunner:
             with open(self.report_path, 'r') as file:
                 return file.read()
         return None
-    
-
 
     def parse_report(self, limit=100, validation=False):
         """
-        Parse the SpotBugs report XML and extract issues.
+        Parse the SpotBugs report XML and extract issues, adding a custom score metric.
 
         Returns:
             list: A list of dictionaries, each representing an issue found by SpotBugs.
@@ -161,6 +159,7 @@ class SpotBugsRunner:
                 if not all([start_line, end_line, start_column, end_column]):
                     continue
 
+                complexity = int(end_line) - int(start_line) + 1
                 textrange = {
                     "file": full_path,
                     "startLine": int(start_line),
@@ -169,11 +168,36 @@ class SpotBugsRunner:
                     "endColumn": int(end_column)
                 }
                 issue["items"].append({"patches": [], "textrange": textrange})
-            if 'src' in Path(full_path).parts:
-                issues.append(issue)
+                issue["complexity"] = complexity
+
+                if 'src' in Path(full_path).parts:
+                    issues.append(issue)
+
+        rule_frequency = {}
+        for issue in issues:
+            rule_name = issue["name"]
+            rule_frequency[rule_name] = rule_frequency.get(rule_name, 0) + 1
+
+        severity_mapping = {
+            "High": 5,
+            "Medium": 3,
+            "Low": 1,
+            "Informational": 1,
+            "Unknown": 0
+        }
+
+        def calculate_score(severity_numeric, complexity, frequency):
+            severity_weight = 3
+            complexity_weight = 1
+            frequency_weight = 2
+            return severity_numeric * severity_weight + complexity * complexity_weight + frequency * frequency_weight
+
+        for issue in issues:
+            sev_numeric = severity_mapping.get(issue["severity"], 0)
+            freq = rule_frequency.get(issue["name"], 1)
+            issue["score"] = calculate_score(sev_numeric, issue.get("complexity", 1), freq)
 
         return issues
-
 
 
 def find_base_dir_path(project_root, target_path, test_dir=False):
