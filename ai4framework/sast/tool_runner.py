@@ -147,6 +147,6 @@ def find_class_file_from_java(java_file_path, build_tool):
         raise ValueError(f"Unsupported build tool: {build_tool}")
     class_path = class_path.replace('.java', '.class')
     elapsed_time = time.time() - start_time
-    logger.debug(f"Time taken to search for class file: {elapsed_time:.2f} seconds")
-    logger.debug(f"Class file path: {class_path}")
+    #logger.debug(f"Time taken to search for class file: {elapsed_time:.2f} seconds")
+    #logger.debug(f"Class file path: {class_path}")
     return class_path

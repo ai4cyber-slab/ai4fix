@@ -114,6 +114,12 @@ class WorkflowFramework:
                 f"{BOLD_BLUE}docker cp {0 or '<container_id>'}:{os.environ.get('PROJECT_PATH') or '/path/in/container'}/.ai4framework \"{0 or '/path/on/local/machine'}\"\n\n"
                 f"{RESET_COLOR}{BOLD_MAGENTA}Ensure you replace <container_id> with the actual container ID and paths as needed.{RESET_COLOR}"
             )
+            logger.debug(
+                f"{BOLD_BLUE}To copy the '.ai4framework' folder from the container to your local machine, "
+                f"use the following command in your local terminal (outside the container):\n\n"
+                f"{BOLD_BLUE}docker cp {0 or '<container_id>'}:{os.environ.get('PROJECT_PATH') or '/path/in/container'}/.ai4framework \"{0 or '/path/on/local/machine'}\"\n\n"
+                f"{RESET_COLOR}{BOLD_MAGENTA}Ensure you replace <container_id> with the actual container ID and paths as needed.{RESET_COLOR}"
+            )
 
     def handle_signal(self, signal_number, frame):
         """Handle termination signals (SIGINT, SIGTERM) for graceful shutdown."""

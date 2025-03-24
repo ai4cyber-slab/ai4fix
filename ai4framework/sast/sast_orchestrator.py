@@ -131,6 +131,7 @@ class SASTOrchestrator:
                 for line in process.stdout:
                     if not validation:
                         print(line.strip())
+                        logger.debug(line.strip())
                 process.wait()
 
             if process.returncode == 0:

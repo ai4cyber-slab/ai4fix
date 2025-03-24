@@ -112,11 +112,16 @@ class PMDRunner:
 
         namespaces = {'pmd': 'http://pmd.sourceforge.net/report/2.0.0'}
         issues = []
+        excluded_categories = {'Code Style', 'Design', 'Documentation'}
         try:
             pmd_root = ET.fromstring(report_content)
             for file_element in pmd_root.findall('.//pmd:file', namespaces):
                 file_name = file_element.get('name', '').replace(f"{self.project_path}/", '', 1)
                 for violation in file_element.findall('.//pmd:violation', namespaces):
+                    ruleset = violation.get('ruleset')
+                    if ruleset in excluded_categories:
+                        continue
+
                     start_line = violation.get('beginline')
                     end_line = violation.get('endline')
                     start_column = violation.get('begincolumn')
