@@ -53,9 +53,11 @@ def parse_build_output(build_tool, result_output):
         'failure_details': [],
         'error_details': [],
         'build_success': True,
-        'reason': ""
+        'reason': "",
+        'error_line': None
     }
     error_message = ""
+    error_line_number = None
 
     if build_tool == 'maven':
         failure_details = re.findall(r'\[ERROR\]\s+Failures:\s+(.*?):(\d+)\s+(.*)', result_output)
@@ -81,13 +83,22 @@ def parse_build_output(build_tool, result_output):
                         if next_line_index < len(lines):
                             next_line = lines[next_line_index]
                             error_message += " " + next_line
+                            match = re.search(r"\[(\d+),(\d+)\]", line)
+                            if match:
+                                error_line_number = match.group(1)
                         break
                 else:
                     if line_counter == 2:
                         split_line = line.split("] ")
                         if len(split_line) > 2:
+                            match = re.search(r"\[(\d+),(\d+)\]", line)
+                            if match:
+                                error_line_number = match.group(1)
                             error_message = split_line[2]
                         else:
+                            match = re.search(r"\[(\d+),(\d+)\]", line)
+                            if match:
+                                error_line_number = match.group(1)
                             error_message = line
                         break
 
@@ -97,8 +108,10 @@ def parse_build_output(build_tool, result_output):
             details['compilation_error_files'] = error_files
             details['build_success'] = False
             details['reason']= error_message
+            details['error_line']= error_line_number
         elif "BUILD SUCCESS" not in result_output:
             details['reason']= error_message
+            details['error_line']= error_line_number
 
         elif "BUILD SUCCESS" in result_output and "COMPILATION ERROR" not in result_output:
             details['build_success'] = True
@@ -178,7 +191,8 @@ def validate_test_and_patch(test_file_path, result_output, build_tool, context_f
         'failure_details': [],
         'error_details': [],
         'test_file_exists': os.path.exists(test_file_path) if test_file_path else False,
-        'reason': ""
+        'reason': "",
+        'error_line': None
     }
 
     # logger.info(f"Test file {'exists' if decisions['test_file_exists'] else 'does not exist'} at path: {test_file_path}")
@@ -190,6 +204,7 @@ def validate_test_and_patch(test_file_path, result_output, build_tool, context_f
     decisions['compilation_error_files'] = parsed['compilation_error_files']
     decisions['build_success'] = parsed['build_success']
     decisions['reason'] = parsed['reason']
+    decisions['error_line']= parsed['error_line']
 
     return decisions
 
@@ -222,6 +237,23 @@ def derive_full_import_from_path(file_path):
 def extract_patch_from_response_worker(response_text):
     content_blocks = re.findall(r'```(?:[^\s]*)?\s*(.*?)\s*```', response_text, re.DOTALL)
     return "\n".join(content_blocks).strip() if content_blocks else response_text.strip()
+
+def fix_unclosed_comments(initial_json_str, updated_json_str):
+    initial = json.loads(initial_json_str) if isinstance(initial_json_str, str) else initial_json_str
+    updated = json.loads(updated_json_str) if isinstance(updated_json_str, str) else updated_json_str
+
+    min_line_initial = min(int(key.split(":")[1]) for key in initial.keys())
+    min_line_updated = min(int(key.split(":")[1]) for key in updated.keys())
+    
+    offset = min_line_initial - min_line_updated
+
+    new_updated = {}
+    for key, value in updated.items():
+        line_num = int(key.split(":")[1])
+        new_key = f"Line:{line_num + offset}"
+        new_updated[new_key] = value
+
+    return json.dumps(new_updated, indent=2)
 
 
 def update_java_file_worker(java_file_path, initial_json, updated_json):
@@ -467,7 +499,7 @@ def get_prompt(explanation, startLine, endLine, attempt, previous_generated_patc
                     {previous_generated_patch}
                     Explanation of the issue: {explanation}
                     the issue is between line {startLine} and line {endLine}
-                    Here is the full original file code in json format with lines as the keys use them when providing the strategy accurately:
+                    Here is the relevant snippet of the original file code in json format with lines as the keys use them when providing the strategy accurately:
                     {extract_json_section}
                     Instructions:
                     Analyze the previous attempt and identify why it did result in incorrect java code.
@@ -1169,8 +1201,7 @@ def process_warning_worker(args):
                     response_elapsed_time = time.time() - response_start_time
 
                     generated_patch = extract_patch_from_response_worker(response['message'])
-
-
+                    generated_patch = fix_unclosed_comments(extract_json_section, generated_patch)
                     update_success = update_java_file_worker(full_file_path, extract_json_section, generated_patch)
                     if not update_success:
                         local_stats['applicable_patch'] = False
@@ -1252,7 +1283,7 @@ def process_warning_worker(args):
                         )
                         local_stats['build_success'] = False
                         local_stats['introduced_new_issue'] = False
-                        if 'class, interface, or enum expected' in decisions['reason']:
+                        if 'class, interface, or enum expected' in decisions['reason'] or 'illegal start of type' in decisions['reason']:
                             try:
                                 with open(full_file_path, 'w') as f:
                                     f.write(initial_content)
@@ -1286,8 +1317,8 @@ def process_warning_worker(args):
                                 local_stats['diff_file_name'] = diff_file_name
                                 local_stats['diff_file_path']= diff_file_path
                                 context_for_diff_file['diffs_output_dir'] = diffs_output_dir
-                                logger.info(f"build failed for ID {warning['id']} due to: {decisions_2['reason']}")
-                                previous_generated_patch += '\n\nPatch Failed due to: ' + decisions_2['reason']
+                                logger.info(f"build failed for ID {warning['id']} due to: {decisions_2['reason']} at line: {decisions_2['error_line']}")
+                                previous_generated_patch += '\n\nPatch Failed due to: ' + decisions_2['reason'] + "at line:" + decisions_2['error_line']
                                 local_stats['build_success'] = False
                                 introduced_issue_str = "No"
                                 introduced_issues_types_str = ""
@@ -1326,6 +1357,10 @@ def process_warning_worker(args):
                             output = output_2
                             decisions = decisions_2
                         else:
+                            previous_generated_patch += '\n\nPatch Failed due to: ' + decisions['reason'] + "at line:" + decisions['error_line']
+                            if "is already defined in" in decisions['reason']:
+                                previous_generated_patch += f"You incorrectly added this line in your previous attempt, which caused a duplicate field declaration error: {decisions['error_line']} This field already exists in the class. You must NOT re-declare it. REMOVE that line from your updated JSON, and only return the correct patch."               
+                            logger.info(f"build failed for ID {warning['id']} due to: {decisions['reason']}  at line:  {decisions['error_line']}")
                             context_for_diff_file['diffs_output_dir'] = diffs_output_dir.replace("patches", "patches_with_build_failure")
                             diff_file_name, diff_file_path = create_diff(context_for_diff_file, f"failed at build process", decisions['reason'])
                             local_stats['diff_file_name'] = diff_file_name
