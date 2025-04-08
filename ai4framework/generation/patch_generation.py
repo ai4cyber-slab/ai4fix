@@ -22,6 +22,7 @@ from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
 import copy
 import math
+from multiprocessing import Value
 
 from utils.logger import logger
 from utils.findMethod import get_method_info_if_any
@@ -39,6 +40,7 @@ from utils.switcher import switch_java_version
 
 
 
+global_single_core_counter = Value('i', 0)
 
 ####################################
 # Helper functions
@@ -1112,7 +1114,9 @@ def process_file_worker(args):
         file_issue_types,
         issue_warnings,
         external_json,
-        patch_path_csv
+        patch_path_csv,
+        num_workers,
+        single_core_counter  
     ) = args
 
     results = []
@@ -1146,7 +1150,7 @@ def process_file_worker(args):
                             file_issue_types,
                             issue_warnings,
                             external_json,
-                            patch_path_csv
+                            patch_path_csv,
                         )
                     )
                     if result:
@@ -1157,6 +1161,14 @@ def process_file_worker(args):
                     processed_in_chunk += 1
                     RESET_COLOR = "\033[0m"
                     CYAN = "\033[96m"
+                    BOLD_MAGENTA = "\033[1;35m"
+
+                    if num_workers == 1 and single_core_counter is not None:
+                        with single_core_counter.get_lock():
+                            single_core_counter.value += 1
+                            current = single_core_counter.value
+                        print(f"{RESET_COLOR}{BOLD_MAGENTA}PROGRESS UPDATE: {current}/{total_warnings}{RESET_COLOR}", flush=True)
+
                     print(
                         f"{CYAN}[{Path(file_path).name}] Progress: {processed_in_chunk}/{total_in_chunk}{RESET_COLOR}",
                         flush=True
@@ -1843,6 +1855,7 @@ class PatchGenerator:
 
     def main(self):
         try:
+            processed_warnings = 0
             self.stats['start_time'] = time.time()
             if self.api_key == '':
                 logger.warning("API key is not set. Skipping patch generation.")
@@ -1903,7 +1916,7 @@ class PatchGenerator:
             issue_warnings = transform_issues(self.config.get("DEFAULT", "config.issues_path"))
             num_workers = min(int(self.cores_to_use), len(self.warnings))
             worker_buckets = distribute_warnings_across_workers(self.warnings, num_workers)
-
+            
             args_list = []
             for worker_group in worker_buckets:
                 for file_key, warnings_for_file in worker_group:
@@ -1925,7 +1938,9 @@ class PatchGenerator:
                         file_issue_types,
                         issue_warnings,
                         self.external_json,
-                        self.patch_path_csv
+                        self.patch_path_csv,
+                        num_workers,
+                        global_single_core_counter if num_workers == 1 else None
                     )
                     args_list.append(args)
 
@@ -1951,28 +1966,35 @@ class PatchGenerator:
                     self.patch_path_csv
                 )
                 args_list.append(args) """
-                
-            processed_warnings = 0
-
-            num_workers = min(len(args_list), int(self.cores_to_use))
+                       
             logger.info(f"Starting multiprocessing with {num_workers} workers...")
 
-            with multiprocessing.Pool(processes=num_workers) as pool:
-                for result_list in pool.imap_unordered(process_file_worker, args_list):
-                    if result_list is None:
-                        logger.error("Worker returned None. Skipping...")
-                        continue
-
+            if num_workers == 1:
+                # Single-threaded fallback, no Pool needed
+                for args in args_list:
+                    result_list = process_file_worker(args)
                     for res in result_list:
                         if res['total_attempts'] == 2 or (res['total_attempts'] == 1 and not res['introduced_new_issue'] and res['build_success'] and res['applicable_patch']):
                             self.process_result(res)
                         self.save_warnings_json()
+            else:
+                # Multiprocessing mode
+                with multiprocessing.Pool(processes=num_workers) as pool:
+                    for result_list in pool.imap_unordered(process_file_worker, args_list):
+                        if result_list is None:
+                            logger.error("Worker returned None. Skipping...")
+                            continue
 
-                    processed_warnings += len(result_list)
+                        for res in result_list:
+                            if res['total_attempts'] == 2 or (res['total_attempts'] == 1 and not res['introduced_new_issue'] and res['build_success'] and res['applicable_patch']):
+                                self.process_result(res)
+                            self.save_warnings_json()
 
-                    RESET_COLOR = "\033[0m"
-                    BOLD_MAGENTA = "\033[1;35m"
-                    print(f"{RESET_COLOR}{BOLD_MAGENTA}PROGRESS UPDATE: {processed_warnings}/{total_warnings}{RESET_COLOR}", flush=True)
+                        processed_warnings += len(result_list)
+                        RESET_COLOR = "\033[0m"
+                        BOLD_MAGENTA = "\033[1;35m"
+                        print(f"{RESET_COLOR}{BOLD_MAGENTA}PROGRESS UPDATE: {processed_warnings}/{total_warnings}{RESET_COLOR}", flush=True)
+                                            
             source_log_file = os.path.join(self.project_path, '.ai4framework', "logs", "ai4framework.log")
             destination_dir = os.path.join(self.project_path, ".ai4framework", "logs", (self.time_for_dirs + "_" + self.model_name))
             destination_log_file = os.path.join(destination_dir, "ai4framework.log")
