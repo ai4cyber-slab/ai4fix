@@ -21,6 +21,7 @@ from tabulate import tabulate
 from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
 import copy
+import math
 
 from utils.logger import logger
 from utils.findMethod import get_method_info_if_any
@@ -237,6 +238,19 @@ def derive_full_import_from_path(file_path):
 def extract_patch_from_response_worker(response_text):
     content_blocks = re.findall(r'```(?:[^\s]*)?\s*(.*?)\s*```', response_text, re.DOTALL)
     return "\n".join(content_blocks).strip() if content_blocks else response_text.strip()
+
+def remove_line_from_json_string(json_string, line_number):
+    try:
+        data = json.loads(json_string)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON string: {e}")
+    
+    key_to_remove = f"Line:{line_number}"
+    if key_to_remove in data:
+        del data[key_to_remove]
+    
+    logger.info(f"Removed line {line_number} from patch because it was already defined in class")
+    return json.dumps(data, indent=2)
 
 def fix_unclosed_comments(initial_json_str, updated_json_str):
     initial = json.loads(initial_json_str) if isinstance(initial_json_str, str) else initial_json_str
@@ -1079,6 +1093,84 @@ def append_stats_to_csv(row_data, csv_path):
 # Main Logic
 ####################################
 
+def process_file_worker(args):
+    (
+        file_path,
+        warnings_for_file,
+        config_data,
+        warning_dict,
+        model_name,
+        provider,
+        api_key,
+        build_tool,
+        jdk_compiler_version,
+        build_mode,
+        base_project_path,
+        diffs_output_dir,
+        single_file,
+        total_warnings,
+        file_issue_types,
+        issue_warnings,
+        external_json,
+        patch_path_csv
+    ) = args
+
+    results = []
+    try:
+        with tempfile.TemporaryDirectory(prefix=f"patch_{Path(file_path).stem}_") as temp_dir:
+            shutil.copytree(base_project_path, temp_dir, dirs_exist_ok=True)
+
+            total_in_chunk = len(warnings_for_file)
+            processed_in_chunk = 0
+
+            for entry in warnings_for_file:
+                warning = entry["warning"]
+                item = entry["item"]
+
+                try:
+                    result = process_warning_worker(
+                        (
+                            warning,
+                            config_data,
+                            warning_dict,
+                            model_name,
+                            provider,
+                            api_key,
+                            build_tool,
+                            jdk_compiler_version,
+                            build_mode,
+                            temp_dir,
+                            diffs_output_dir,
+                            single_file,
+                            total_warnings,
+                            file_issue_types,
+                            issue_warnings,
+                            external_json,
+                            patch_path_csv
+                        )
+                    )
+                    if result:
+                        results.append(result)
+                except Exception as e:
+                    logger.error(f"Error processing warning {warning['id']}: {e}")
+                finally:
+                    processed_in_chunk += 1
+                    RESET_COLOR = "\033[0m"
+                    CYAN = "\033[96m"
+                    print(
+                        f"{CYAN}[{Path(file_path).name}] Progress: {processed_in_chunk}/{total_in_chunk}{RESET_COLOR}",
+                        flush=True
+                    )
+        return results
+
+    except Exception as e:
+        logger.error(f"Something went wrong during processing files: {e}")
+    finally:
+        try:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            logger.info(f"Removed temporary directory: {temp_dir}")
+        except Exception as e:
+            logger.error(f"Error removing temporary directory: {e}")
 
 def process_warning_worker(args):
     (
@@ -1126,10 +1218,10 @@ def process_warning_worker(args):
     }
 
     try:
-        with tempfile.TemporaryDirectory(prefix=f"patch_{warning['id']}_") as temp_dir, tempfile.TemporaryDirectory(prefix=f"patch_{warning['id']}_build_") as temp_dir_for_build_tool:
-            process_project_directory_core = temp_dir
-            shutil.copytree(base_project_path, temp_dir, dirs_exist_ok=True)
-            
+        with tempfile.TemporaryDirectory(prefix=f"patch_build_{warning['id']}_") as temp_dir_for_build_tool:
+            process_project_directory_core = base_project_path
+            temp_dir = base_project_path
+                    
             env = update_build_env_vars(temp_dir_for_build_tool, build_tool)
             local_config = copy.deepcopy(config_data)
             local_config.set('DEFAULT', 'config.project_root', temp_dir)
@@ -1283,7 +1375,7 @@ def process_warning_worker(args):
                         )
                         local_stats['build_success'] = False
                         local_stats['introduced_new_issue'] = False
-                        if 'class, interface, or enum expected' in decisions['reason'] or 'illegal start of type' in decisions['reason']:
+                        if 'class, interface, or enum expected' in decisions['reason'] or 'illegal start of type' in decisions['reason'] or 'is already defined' in decisions['reason']:
                             try:
                                 with open(full_file_path, 'w') as f:
                                     f.write(initial_content)
@@ -1293,8 +1385,12 @@ def process_warning_worker(args):
                             
                             diff_text = ''.join(diff)
                             # Attempt removal of any extra braces
-                            generated_patch = remove_last_extra_closing_brace(generated_patch)
-                            logger.info(f"Build failed. Attempting to remove extra braces for warning ID {warning['id']}...")
+                            if 'is already defined' in decisions['reason']:
+                                generated_patch = remove_line_from_json_string(generated_patch, decisions['error_line'])
+                                logger.info(f"Build failed. remove already defined line for warning {warning['id']}...")
+                            else:
+                                generated_patch = remove_last_extra_closing_brace(generated_patch)
+                                logger.info(f"Build failed. Attempting to remove extra braces for warning ID {warning['id']}...")
                             update_success = update_java_file_worker(full_file_path, extract_json_section, generated_patch)
                             if update_success==False:
                                 local_stats['applicable_patch'] = False
@@ -1311,7 +1407,7 @@ def process_warning_worker(args):
                             test_elapsed_time += test_elapsed_time2
                             decisions_2 = validate_test_and_patch(test_file_path, output_2, build_tool, context_for_diff_file)
                             if not decisions_2.get('build_success', False):
-                                logger.warning(f"Even after parsing, build still fails for warning ID {warning['id']}.")
+                                logger.warning(f"Even after post-processing, build still fails for warning ID {warning['id']}.")
                                 context_for_diff_file['diffs_output_dir'] = diffs_output_dir.replace("patches", "patches_with_build_failure")
                                 diff_file_name, diff_file_path = create_diff(context_for_diff_file, f"failed at build process", decisions_2['reason'])
                                 local_stats['diff_file_name'] = diff_file_name
@@ -1353,7 +1449,7 @@ def process_warning_worker(args):
                                 append_stats_to_csv(row_data, patch_path_csv)
                             else:
                                 local_stats['build_success'] = True
-                                logger.info(f"Build succeeded after removing braces for warning ID {warning['id']}!")
+                                logger.info(f"Build succeeded after post-processing for warning ID {warning['id']}!")
                             output = output_2
                             decisions = decisions_2
                         else:
@@ -1404,7 +1500,9 @@ def process_warning_worker(args):
                         if external_json:
                             original_issue_dict_for_file = issue_warnings.get(file_path, {}).get("warnings_dict_original", {})
                             original_count_for_this_file = sum(original_issue_dict_for_file.values())
+                            validation_start_time = time.perf_counter()
                             check_result = check_new_external_issues(file_path, original_count_for_this_file, temp_dir, warning['id'])
+                            validation_elapsed_time = time.perf_counter() - validation_start_time
                         else:
                             original_issue_dict_for_file = file_issue_types.get(file_path, {})
                             original_count_for_this_file = sum(original_issue_dict_for_file.values())
@@ -1601,11 +1699,17 @@ def process_warning_worker(args):
     except Exception as e:
         logger.error(f"Process {os.getpid()} - Unexpected error processing warning ID {warning['id']}: {e}")
     finally:
+        try:
+            with open(full_file_path, 'w') as f:
+                f.write(initial_content)
+            logger.info(f"Reverted patch in {full_file_path.split('/')[-1]} for warning ID {warning['id']}.")
+        except Exception as e:
+            logger.error(f"Error while restoring original content to {full_file_path}: {e} for warning ID {warning['id']}.")
         if 'test_file_path' in locals() and 'original_test_content' in locals():
             if test_file_path and original_test_content is not None:
                 revert_test_content({'test_file_path': test_file_path, 'original_test_content': original_test_content})
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        logger.info(f"Removed temporary directory: {temp_dir} for warning ID {warning['id']}.")
+        #shutil.rmtree(temp_dir, ignore_errors=True)
+        #logger.info(f"Removed temporary directory: {temp_dir} for warning ID {warning['id']}.")
         if temp_dir_for_build_tool:
             shutil.rmtree(temp_dir_for_build_tool, ignore_errors=True)
             logger.info(f"Removed process project directory: {temp_dir_for_build_tool} for warning ID {warning['id']}.")
@@ -1614,6 +1718,41 @@ def process_warning_worker(args):
 
 def nested_defaultdict_int():
     return defaultdict(int)
+
+def distribute_warnings_across_workers(warnings, num_workers):
+    file_to_warnings = defaultdict(list)
+    for warning in warnings:
+        for item in warning['items']:
+            file_path = item['textrange']['file']
+            file_to_warnings[file_path].append({
+                "warning": warning,
+                "item": item
+            })
+
+    total_issues = sum(len(w_list) for w_list in file_to_warnings.values())
+
+    max_chunk_size = max(1, math.ceil(total_issues / (num_workers * 2)))
+
+    chunked = {}
+    for file_path, warning_list in file_to_warnings.items():
+        if len(warning_list) <= max_chunk_size:
+            chunked[file_path] = warning_list
+        else:
+            for i in range(0, len(warning_list), max_chunk_size):
+                chunk_id = i // max_chunk_size
+                chunked[f"{file_path}__chunk{chunk_id}"] = warning_list[i:i+max_chunk_size]
+
+    worker_buckets = [[] for _ in range(num_workers)]
+    worker_loads = [0] * num_workers
+
+    sorted_chunks = sorted(chunked.items(), key=lambda x: len(x[1]), reverse=True)
+
+    for file_key, warning_group in sorted_chunks:
+        min_worker = worker_loads.index(min(worker_loads))
+        worker_buckets[min_worker].append((file_key, warning_group))
+        worker_loads[min_worker] += len(warning_group)
+
+    return worker_buckets
 
 class PatchGenerator:
     def __init__(self, config, warning_dict, num_of_rounds, single_file=None, external_json=None):
@@ -1762,8 +1901,35 @@ class PatchGenerator:
                 if return_code != 0:
                     logger.warning(f"Orchestrator returned non-zero exit code: {return_code}")
             issue_warnings = transform_issues(self.config.get("DEFAULT", "config.issues_path"))
+            num_workers = min(int(self.cores_to_use), len(self.warnings))
+            worker_buckets = distribute_warnings_across_workers(self.warnings, num_workers)
 
             args_list = []
+            for worker_group in worker_buckets:
+                for file_key, warnings_for_file in worker_group:
+                    args = (
+                        file_key.split("__chunk")[0],
+                        warnings_for_file,
+                        self.config,
+                        self.warnings_dict,
+                        self.model_name,
+                        self.provider,
+                        self.api_key,
+                        self.build_tool,
+                        self.jdk_compiler_version,
+                        self.build_mode,
+                        self.project_path,
+                        self.diffs_output_dir,
+                        self.single_file,
+                        len(self.warnings),
+                        file_issue_types,
+                        issue_warnings,
+                        self.external_json,
+                        self.patch_path_csv
+                    )
+                    args_list.append(args)
+
+            """ args_list = []
             for warning in self.warnings:
                 args = (
                     warning,
@@ -1784,27 +1950,29 @@ class PatchGenerator:
                     self.external_json,
                     self.patch_path_csv
                 )
-                args_list.append(args)
+                args_list.append(args) """
+                
+            processed_warnings = 0
 
             num_workers = min(len(args_list), int(self.cores_to_use))
             logger.info(f"Starting multiprocessing with {num_workers} workers...")
 
-            provessed_warnings = 0 # Only added for Plugin side for the notification bar
-
             with multiprocessing.Pool(processes=num_workers) as pool:
-                for res in pool.imap_unordered(process_warning_worker, args_list):
-                    provessed_warnings += 1 
-                    if res is None:
+                for result_list in pool.imap_unordered(process_file_worker, args_list):
+                    if result_list is None:
                         logger.error("Worker returned None. Skipping...")
                         continue
-                    if res['total_attempts'] == 2 or (res['total_attempts'] == 1 and not res['introduced_new_issue'] and res['build_success'] and res['applicable_patch']):
-                        self.process_result(res)
-                    self.save_warnings_json()
 
-                    # This line is added specifically for the plugin side to enable the notification bar. Note that the print statement is essential, and the text format must include 'PROGRESS UPDATE:' to function correctly.
+                    for res in result_list:
+                        if res['total_attempts'] == 2 or (res['total_attempts'] == 1 and not res['introduced_new_issue'] and res['build_success'] and res['applicable_patch']):
+                            self.process_result(res)
+                        self.save_warnings_json()
+
+                    processed_warnings += len(result_list)
+
                     RESET_COLOR = "\033[0m"
                     BOLD_MAGENTA = "\033[1;35m"
-                    print(f"{RESET_COLOR}{BOLD_MAGENTA}PROGRESS UPDATE: {provessed_warnings}/{total_warnings}{RESET_COLOR}", flush=True)
+                    print(f"{RESET_COLOR}{BOLD_MAGENTA}PROGRESS UPDATE: {processed_warnings}/{total_warnings}{RESET_COLOR}", flush=True)
             source_log_file = os.path.join(self.project_path, '.ai4framework', "logs", "ai4framework.log")
             destination_dir = os.path.join(self.project_path, ".ai4framework", "logs", (self.time_for_dirs + "_" + self.model_name))
             destination_log_file = os.path.join(destination_dir, "ai4framework.log")
