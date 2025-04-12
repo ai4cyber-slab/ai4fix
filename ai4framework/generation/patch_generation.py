@@ -6,6 +6,7 @@ import fcntl
 import os
 import re
 import sys
+import threading
 import time
 import json
 import random
@@ -23,6 +24,7 @@ from dotenv import load_dotenv, find_dotenv
 import copy
 import math
 from multiprocessing import Value
+from queue import Queue, Empty
 
 from utils.logger import logger
 from utils.findMethod import get_method_info_if_any
@@ -867,38 +869,71 @@ def remove_last_extra_closing_brace(json_str: str) -> str:
 
     return json.dumps(data, indent=4)
 
+def enqueue_output(out, queue):
+    for line in iter(out.readline, ''):
+        queue.put((time.time(), line))
+    out.close()
+
 def check_new_issues(file_path, original_file_issue_count, warning_id):
     logger.debug(f"Checking for new issues in {file_path} for warning ID {warning_id}...")
     introduced_new_issue = "False"
     new_warnings_dict = {}
+    collected_output = ""
+
+    cmd = [
+        "python",
+        "/app/orchestrator.py",
+        "--single-file", file_path,
+        "--count-issues"
+    ]
 
     try:
-        cmd = [
-            "python",
-            "/app/orchestrator.py",
-            "--single-file", file_path,
-            "--count-issues"
-        ]
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, check=False
+        process = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
         )
-        if result.returncode != 0:
-            logger.warning(f"Orchestrator returned non-zero exit code: {result.returncode} for warning ID {warning_id}")
 
-        match_count = re.search(r"Total issue count:\s*(\d+)", result.stdout)
+        q = Queue()
+        t = threading.Thread(target=enqueue_output, args=(process.stdout, q))
+        t.daemon = True
+        t.start()
+
+        last_output_time = time.time()
+        while process.poll() is None:
+            try:
+                timestamp, line = q.get(timeout=1)
+                last_output_time = timestamp
+                collected_output += line
+                logger.debug(f"[orchestrator stdout] {line.strip()}")
+            except Empty:
+                if time.time() - last_output_time > 120:
+                    logger.error(f"Build process timed out due to inactivity for warning ID {warning_id}")
+                    process.kill()
+                    process.wait()
+                    return {
+                        "introduced_new_issue": "timeout",
+                        "new_warnings_dict": {}
+                    }
+
+        # Read remaining output if process exited
+        while True:
+            try:
+                _, line = q.get_nowait()
+                collected_output += line
+            except Empty:
+                break
+
+        match_count = re.search(r"Total issue count:\s*(\d+)", collected_output)
         if match_count:
             new_count = int(match_count.group(1))
             logger.info(
                 f"Orchestrator found {new_count} issues in {file_path}; originally had {original_file_issue_count} for warning ID {warning_id}"
             )
-            # If new_count >= original_file_issue_count => we introduced new or same # issues
             if new_count >= original_file_issue_count:
                 introduced_new_issue = "True"
         else:
             introduced_new_issue = "build failed"
 
-        # Grab the dictionary after "warnings_dict_original:"
-        match_dict = re.search(r"warnings_dict_original:\s*(\{.*\})", result.stdout, re.DOTALL)
+        match_dict = re.search(r"warnings_dict_original:\s*(\{.*\})", collected_output, re.DOTALL)
         if match_dict:
             dict_str = match_dict.group(1).strip()
             try:
@@ -1637,6 +1672,44 @@ def process_warning_worker(args):
                             local_stats['validation_passed'] = True
                             local_stats['build_success'] = False
                             issue_resolved=False
+                        elif introduced_new_issue == "timeout":
+                            local_stats['introduced_new_issue'] = False
+                            local_stats['validation_passed'] = True
+                            local_stats['build_success'] = False
+                            issue_resolved=False
+                            context = {
+                                'initial_content': initial_content,
+                                'full_file_path': full_file_path,
+                                'file_path': file_path,
+                                'attempt': attempt,
+                                'diffs_output_dir': diffs_output_dir.replace("patches","patches_with_validation_errors"),
+                                'warning_id': warning['id'],
+                            }
+                            log_helper = f'time_out'
+                            diff_file_name, diff_file_path = create_diff(context, log_helper)
+                            patch_path = local_stats.get('diff_file_path', '')
+                            if attempt == 1:
+                                input_tokens_int = local_stats['input_tokens'][0]
+                                response_tokens_int = local_stats['response_tokens'][0]
+                            else:
+                                input_tokens_int = local_stats['input_tokens'][1]
+                                response_tokens_int = local_stats['response_tokens'][1]    
+                            row_data = [
+                                warning['id'],
+                                name,
+                                attempt,
+                                "No",
+                                "",
+                                "Yes",
+                                "time_out",
+                                "No",
+                                patch_path,
+                                f"{validation_elapsed_time:.2f}",
+                                f"{test_elapsed_time:.2f}",
+                                input_tokens_int,
+                                response_tokens_int
+                            ]
+                            append_stats_to_csv(row_data, patch_path_csv)
                         else:
                             local_stats['build_success'] = True
                             local_stats['introduced_new_issue'] = False
