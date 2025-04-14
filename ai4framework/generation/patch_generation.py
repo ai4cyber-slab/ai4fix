@@ -875,7 +875,7 @@ def enqueue_output(out, queue):
     out.close()
 
 def check_new_issues(file_path, original_file_issue_count, warning_id):
-    logger.debug(f"Checking for new issues in {file_path} for warning ID {warning_id}...")
+    logger.info(f"Checking for new issues in {file_path} for warning ID {warning_id}...")
     introduced_new_issue = "False"
     new_warnings_dict = {}
     collected_output = ""
@@ -905,7 +905,7 @@ def check_new_issues(file_path, original_file_issue_count, warning_id):
                 collected_output += line
                 logger.debug(f"[orchestrator stdout] {line.strip()}")
             except Empty:
-                if time.time() - last_output_time > 120:
+                if time.time() - last_output_time > 500:
                     logger.error(f"Build process timed out due to inactivity for warning ID {warning_id}")
                     process.kill()
                     process.wait()
@@ -952,18 +952,10 @@ def check_new_issues(file_path, original_file_issue_count, warning_id):
     }
 
 def check_new_external_issues(file_path, original_file_issue_count, temp_dir, warning_id):
-    """
-    1. Temporarily set config.project_root to temp_dir
-    2. Spawn the orchestrator with --skip-patches and --external-json, streaming its output
-    3. Extract issue data for the specified file
-    4. Determine if a new issue was introduced based on the counts
-    5. Restore the original config.project_root after the command completes
-    """
     logger.debug(f"Checking for new issues in {temp_dir} for warning ID {warning_id}...")
     introduced_new_issue = "False"
     new_warnings_dict = {}
 
-    # 1) Get the global config
     config_data = ConfigManager.get_config(commit_sha=None)
 
     old_project_root = config_data.get("DEFAULT", "config.project_root", fallback="")
@@ -985,27 +977,54 @@ def check_new_external_issues(file_path, original_file_issue_count, temp_dir, wa
             cwd=temp_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            text=True
+            text=True,
+            bufsize=1
         )
-        stdout, _ = process.communicate()
 
-        if process.returncode != 0:      
-            logger.warning(f"Orchestrator returned non-zero exit code: {process.returncode}")
+        q = Queue()
+        t = threading.Thread(target=enqueue_output, args=(process.stdout, q))
+        t.daemon = True
+        t.start()
+
+        collected_output = ""
+        last_output_time = time.time()
+
+        while process.poll() is None:
+            try:
+                timestamp, line = q.get(timeout=1)
+                last_output_time = timestamp
+                collected_output += line
+                logger.debug(f"[orchestrator stdout] {line.strip()}")
+            except Empty:
+                if time.time() - last_output_time > 500:
+                    logger.error(f"Orchestrator timed out due to inactivity for warning ID {warning_id}")
+                    process.kill()
+                    process.wait()
+                    return {
+                        "introduced_new_issue": "timeout",
+                        "new_warnings_dict": {}
+                    }
+
+        # Read any remaining output
+        while True:
+            try:
+                _, line = q.get_nowait()
+                collected_output += line
+            except Empty:
+                break
+
+        if process.returncode != 0:
+            logger.warning(f"Orchestrator returned non-zero exit code: {process.returncode} for warning ID {warning_id}")
 
         json_file_path = os.path.join(temp_dir, ".ai4framework", "issues.json")
-
-        # 4) Parse issues from the newly generated JSON
         file_issues = extract_issues_for_file(json_file_path, file_path)
 
         if file_issues and file_path in file_issues:
             new_count = file_issues[file_path]["Total issue count"]
             new_warnings_dict = file_issues[file_path]["warnings_dict_original"]
             logger.info(
-                f"Orchestrator found {new_count} issues in {file_path}; "
-                f"originally had {original_file_issue_count}"
+                f"Orchestrator found {new_count} issues in {file_path}; originally had {original_file_issue_count}"
             )
-
-            # Determine if a new issue was introduced
             if new_count >= original_file_issue_count:
                 introduced_new_issue = "True"
         else:
