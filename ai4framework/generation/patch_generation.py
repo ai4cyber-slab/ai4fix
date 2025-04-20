@@ -25,6 +25,7 @@ import copy
 import math
 from multiprocessing import Value
 from queue import Queue, Empty
+from multiprocessing import Pool, Manager, Process
 
 from utils.logger import logger
 from utils.findMethod import get_method_info_if_any
@@ -41,7 +42,8 @@ from utils.switcher import switch_java_version
 
 
 
-
+manager = multiprocessing.Manager()
+result_queue = manager.Queue()
 global_single_core_counter = Value('i', 0)
 
 ####################################
@@ -874,22 +876,29 @@ def enqueue_output(out, queue):
         queue.put((time.time(), line))
     out.close()
 
-def check_new_issues(file_path, original_file_issue_count, warning_id):
+def check_new_issues(file_path, original_file_issue_count, warning_id, temp_dir):
     logger.info(f"Checking for new issues in {file_path} for warning ID {warning_id}...")
     introduced_new_issue = "False"
     new_warnings_dict = {}
     collected_output = ""
 
-    cmd = [
-        "python",
-        "/app/orchestrator.py",
-        "--single-file", file_path,
-        "--count-issues"
-    ]
+    config_data = ConfigManager.get_config(commit_sha=None)
+    old_project_root = config_data.get("DEFAULT", "config.project_root", fallback="")
+    old_env_project_path = os.environ.get("PROJECT_PATH")
 
     try:
+        config_data.set("DEFAULT", "config.project_root", temp_dir)
+        os.environ["PROJECT_PATH"] = temp_dir
+
+        cmd = [
+            "python",
+            "/app/orchestrator.py",
+            "--single-file", file_path,
+            "--count-issues"
+        ]
+
         process = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
+            cmd, cwd=temp_dir, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
         )
 
         q = Queue()
@@ -945,6 +954,14 @@ def check_new_issues(file_path, original_file_issue_count, warning_id):
 
     except Exception as e:
         logger.error(f"Error checking new issues in {file_path}: {e}")
+    finally:
+        if old_project_root:
+            config_data.set("DEFAULT", "config.project_root", old_project_root)
+            logger.info(f"Restored project_root back to: {old_project_root}")
+        if old_env_project_path:
+            os.environ["PROJECT_PATH"] = old_env_project_path
+        else:
+            os.environ.pop("PROJECT_PATH", None)
 
     return {
         "introduced_new_issue": introduced_new_issue,
@@ -1169,11 +1186,9 @@ def process_file_worker(args):
         issue_warnings,
         external_json,
         patch_path_csv,
-        num_workers,
-        single_core_counter  
+        result_queue
     ) = args
 
-    results = []
     try:
         with tempfile.TemporaryDirectory(prefix=f"patch_{Path(file_path).stem}_") as temp_dir:
             shutil.copytree(base_project_path, temp_dir, dirs_exist_ok=True)
@@ -1208,7 +1223,7 @@ def process_file_worker(args):
                         )
                     )
                     if result:
-                        results.append(result)
+                        result_queue.put(result)
                 except Exception as e:
                     logger.error(f"Error processing warning {warning['id']}: {e}")
                 finally:
@@ -1216,27 +1231,34 @@ def process_file_worker(args):
                     RESET_COLOR = "\033[0m"
                     CYAN = "\033[96m"
                     BOLD_MAGENTA = "\033[1;35m"
-
-                    if num_workers == 1 and single_core_counter is not None:
-                        with single_core_counter.get_lock():
-                            single_core_counter.value += 1
-                            current = single_core_counter.value
-                        print(f"{RESET_COLOR}{BOLD_MAGENTA}PROGRESS UPDATE: {current}/{total_warnings}{RESET_COLOR}", flush=True)
-
                     print(
                         f"{CYAN}[{Path(file_path).name}] Progress: {processed_in_chunk}/{total_in_chunk}{RESET_COLOR}",
                         flush=True
                     )
-        return results
 
+    except KeyboardInterrupt:
+        logger.info("Worker received KeyboardInterrupt. Exiting gracefully.")
+        return []
     except Exception as e:
-        logger.error(f"Something went wrong during processing files: {e}")
+        logger.error(f"Unhandled exception in worker: {e}")
+        return []
     finally:
         try:
             shutil.rmtree(temp_dir, ignore_errors=True)
             logger.info(f"Removed temporary directory: {temp_dir}")
         except Exception as e:
             logger.error(f"Error removing temporary directory: {e}")
+
+def result_collector(queue, total_warnings, patch_generator):
+    processed = 0
+    while processed < total_warnings:
+        res = queue.get()
+        if res:
+            if res['total_attempts'] == 2 or (res['total_attempts'] == 1 and not res['introduced_new_issue'] and res['build_success'] and res['applicable_patch']):
+                patch_generator.process_result(res)
+            patch_generator.save_warnings_json()
+            processed += 1
+            print(f"PROGRESS UPDATE: {processed}/{total_warnings}", flush=True)
 
 def process_warning_worker(args):
     (
@@ -1375,13 +1397,13 @@ def process_warning_worker(args):
                     local_stats['input_tokens'].append(response.get('input_tokens', 0))
                     local_stats['response_tokens'].append(response.get('output_tokens', 0))
 
-                    if single_file is not None:
-                        try:
-                            with open(full_file_path, 'r') as f:
-                                new_file_content = f.read()
-                        except Exception as e:
-                            logger.error(f"Error reading file {full_file_path}: {e} for warning ID {warning['id']}.")
-                            return None
+                    # if single_file is not None:
+                        #try:
+                        #    with open(full_file_path, 'r') as f:
+                        #        new_file_content = f.read()
+                        #except Exception as e:
+                        #    logger.error(f"Error reading file {full_file_path}: {e} for warning ID {warning['id']}.")
+                        #    return None
                         
                         # commented out for now as we are not generating test files for next release
                         # diff = difflib.unified_diff(
@@ -1426,22 +1448,9 @@ def process_warning_worker(args):
                     if not decisions['build_success']:
                         logger.warning(f"{build_tool} build failed for warning ID {warning['id']}.")
                     if not decisions.get('build_success', False):
-                        try:
-                            with open(full_file_path, 'r') as f:
-                                new_file_content = f.read()
-                        except Exception as e:
-                            logger.error(f"Error reading file {full_file_path}: {e} for warning ID {warning['id']}.")
-                            return None
-                        diff = difflib.unified_diff(
-                            initial_content.splitlines(keepends=True),
-                            new_file_content.splitlines(keepends=True),
-                            fromfile=file_path,
-                            tofile=file_path,
-                            n=2
-                        )
                         local_stats['build_success'] = False
                         local_stats['introduced_new_issue'] = False
-                        if 'class, interface, or enum expected' in decisions['reason'] or 'illegal start of type' in decisions['reason'] or 'is already defined' in decisions['reason']:
+                        if 'class, interface, or enum expected' in decisions['reason'] or 'illegal start of' in decisions['reason'] or 'is already defined' in decisions['reason']:
                             try:
                                 with open(full_file_path, 'w') as f:
                                     f.write(initial_content)
@@ -1449,14 +1458,12 @@ def process_warning_worker(args):
                             except Exception as e:
                                 logger.error(f"Error while restoring original content to {full_file_path}: {e} for warning ID {warning['id']}.")
                             
-                            diff_text = ''.join(diff)
-                            # Attempt removal of any extra braces
                             if 'is already defined' in decisions['reason']:
-                                generated_patch = remove_line_from_json_string(generated_patch, decisions['error_line'])
                                 logger.info(f"Build failed. remove already defined line for warning {warning['id']}...")
+                                generated_patch = remove_line_from_json_string(generated_patch, decisions['error_line'])
                             else:
-                                generated_patch = remove_last_extra_closing_brace(generated_patch)
                                 logger.info(f"Build failed. Attempting to remove extra braces for warning ID {warning['id']}...")
+                                generated_patch = remove_last_extra_closing_brace(generated_patch)
                             update_success = update_java_file_worker(full_file_path, extract_json_section, generated_patch)
                             if update_success==False:
                                 local_stats['applicable_patch'] = False
@@ -1519,9 +1526,10 @@ def process_warning_worker(args):
                             output = output_2
                             decisions = decisions_2
                         else:
-                            previous_generated_patch += '\n\nPatch Failed due to: ' + decisions['reason'] + "at line:" + decisions['error_line']
-                            if "is already defined in" in decisions['reason']:
-                                previous_generated_patch += f"You incorrectly added this line in your previous attempt, which caused a duplicate field declaration error: {decisions['error_line']} This field already exists in the class. You must NOT re-declare it. REMOVE that line from your updated JSON, and only return the correct patch."               
+                            if decisions['error_line'] is None:
+                                previous_generated_patch += '\n\nPatch Failed due to: ' + decisions['reason']
+                            else:
+                                previous_generated_patch += '\n\nPatch Failed due to: ' + decisions['reason'] + "at line:" + decisions['error_line'] 
                             logger.info(f"build failed for ID {warning['id']} due to: {decisions['reason']}  at line:  {decisions['error_line']}")
                             context_for_diff_file['diffs_output_dir'] = diffs_output_dir.replace("patches", "patches_with_build_failure")
                             diff_file_name, diff_file_path = create_diff(context_for_diff_file, f"failed at build process", decisions['reason'])
@@ -1576,7 +1584,7 @@ def process_warning_worker(args):
                                 try:
                                     fcntl.flock(lock_file, fcntl.LOCK_EX)
                                     validation_start_time = time.perf_counter()
-                                    check_result = check_new_issues(full_file_path, original_count_for_this_file, warning['id'])
+                                    check_result = check_new_issues(full_file_path, original_count_for_this_file, warning['id'], temp_dir)
                                     validation_elapsed_time = time.perf_counter() - validation_start_time
                                 finally:
                                     fcntl.flock(lock_file, fcntl.LOCK_UN)
@@ -1797,8 +1805,8 @@ def process_warning_worker(args):
                             logger.info(f"Moved test file from {test_file_path} to {new_test_path} for warning ID {warning['id']}.")
                     except Exception as e:
                         logger.error(f"Error moving test file to project path: {e} for warning ID {warning['id']}.")
-                else:
-                    logger.info(f"Test file not moved because it does not exist for warning ID {warning['id']}.")
+                #else:
+                #    logger.info(f"Test file not moved because it does not exist for warning ID {warning['id']}.")
 
     except Exception as e:
         logger.error(f"Process {os.getpid()} - Unexpected error processing warning ID {warning['id']}: {e}")
@@ -1946,8 +1954,8 @@ class PatchGenerator:
             logger.info("Saving the visualization and metrics ...")
 
     def main(self):
+        stop_event = threading.Event()
         try:
-            processed_warnings = 0
             self.stats['start_time'] = time.time()
             if self.api_key == '':
                 logger.warning("API key is not set. Skipping patch generation.")
@@ -2030,9 +2038,7 @@ class PatchGenerator:
                         file_issue_types,
                         issue_warnings,
                         self.external_json,
-                        self.patch_path_csv,
-                        num_workers,
-                        global_single_core_counter if num_workers == 1 else None
+                        self.patch_path_csv
                     )
                     args_list.append(args)
 
@@ -2060,33 +2066,63 @@ class PatchGenerator:
                 args_list.append(args) """
                        
             logger.info(f"Starting multiprocessing with {num_workers} workers...")
+            manager = multiprocessing.Manager()
+            result_queue = manager.Queue()
 
-            if num_workers == 1:
-                # Single-threaded fallback, no Pool needed
-                for args in args_list:
-                    result_list = process_file_worker(args)
-                    for res in result_list:
-                        if res['total_attempts'] == 2 or (res['total_attempts'] == 1 and not res['introduced_new_issue'] and res['build_success'] and res['applicable_patch']):
-                            self.process_result(res)
-                        self.save_warnings_json()
-            else:
-                # Multiprocessing mode
-                with multiprocessing.Pool(processes=num_workers) as pool:
-                    for result_list in pool.imap_unordered(process_file_worker, args_list):
-                        if result_list is None:
-                            logger.error("Worker returned None. Skipping...")
-                            continue
+            def result_collector(queue, total_warnings, patch_generator, stop_evt):
+                processed = 0
+                RESET_COLOR = "\033[0m"
+                BOLD_MAGENTA = "\033[1;35m"
 
-                        for res in result_list:
-                            if res['total_attempts'] == 2 or (res['total_attempts'] == 1 and not res['introduced_new_issue'] and res['build_success'] and res['applicable_patch']):
-                                self.process_result(res)
-                            self.save_warnings_json()
+                while processed < total_warnings and not stop_evt.is_set():
+                    try:
+                        res = queue.get(timeout=1)
+                    except Empty:
+                        continue
+                    except (EOFError, OSError):
+                        logger.warning("Queue connection lost. Exiting collector loop.")
+                        break
 
-                        processed_warnings += len(result_list)
-                        RESET_COLOR = "\033[0m"
-                        BOLD_MAGENTA = "\033[1;35m"
-                        print(f"{RESET_COLOR}{BOLD_MAGENTA}PROGRESS UPDATE: {processed_warnings}/{total_warnings}{RESET_COLOR}", flush=True)
-                                            
+                    if res is None:
+                        continue
+
+                    if (res['total_attempts'] == 2 or
+                    (res['total_attempts'] == 1
+                        and not res['introduced_new_issue']
+                        and res['build_success']
+                        and res['applicable_patch'])):
+                        patch_generator.process_result(res)
+
+                    patch_generator.save_warnings_json()
+                    processed += 1
+                    print(f"{RESET_COLOR}{BOLD_MAGENTA}PROGRESS UPDATE: {processed}/{total_warnings}{RESET_COLOR}", flush=True)
+
+            collector = threading.Thread(target=result_collector, args=(result_queue, total_warnings, self, stop_event))
+            collector.start()
+
+            # Add result_queue to the args
+            updated_args_list = []
+            for args in args_list:
+                updated_args_list.append(args + (result_queue,))
+
+            with multiprocessing.Pool(processes=num_workers) as pool:
+                try:
+                    pool.map(process_file_worker, updated_args_list)
+                except KeyboardInterrupt:
+                    logger.warning("Main received KeyboardInterrupt. Terminating pool.")
+                    pool.terminate()
+                except Exception as e:
+                    logger.error(f"Unhandled error during multiprocessing: {e}")
+                finally:
+                    try:
+                        pool.join()
+                    except ValueError as ve:
+                        if "Pool is still running" in str(ve):
+                            logger.warning("Skipping pool.join() because pool is still running.")
+                        else:
+                            raise
+
+            collector.join()
             source_log_file = os.path.join(self.project_path, '.ai4framework', "logs", "ai4framework.log")
             destination_dir = os.path.join(self.project_path, ".ai4framework", "logs", (self.time_for_dirs + "_" + self.model_name))
             destination_log_file = os.path.join(destination_dir, "ai4framework.log")
@@ -2098,12 +2134,18 @@ class PatchGenerator:
                 logger.info(f"Log file not found: {source_log_file}")
 
         except KeyboardInterrupt:
-            logger.error("Keyboard interrupt detected in main. Saving progress and stopping the script gracefully.")
+            logger.info("Keyboard interrupt detected in main. Saving progress and stopping the script gracefully.")
             self.save_warnings_json()
             raise
         except Exception as e:
             logger.error(f"Unexpected error in main: {e}", exc_info=True)
         finally:
+            try:
+                stop_event.set()
+                if collector.is_alive():
+                    collector.join()
+            except Exception as e:
+                logger.warning(f"Error during collector thread join: {e}")
             elapsed_time = time.time() - self.start_time
             self.stats['elapsed_time'] = elapsed_time
             if hasattr(self, 'issue_introduction_stats') and self.issue_introduction_stats:
