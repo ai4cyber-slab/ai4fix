@@ -3,7 +3,6 @@ import shutil
 from ai4test.ai4test_config import dataset_dir, result_dir, project_dir, ai4test_dir
 import os
 import json
-import psutil
 import tiktoken
 
 enc = tiktoken.get_encoding("o200k_base")
@@ -26,16 +25,6 @@ def count_tokens(strings):
     tokens = encoding.encode(strings)
     cnt = len(tokens)
     return cnt
-
-
-def find_processes_created_by(pid):
-    """
-    Find the process's and all subprocesses' pid
-    """
-    parent_process = psutil.Process(pid)
-    child_processes = parent_process.children(recursive=True)
-    pids = [process.pid for process in child_processes]
-    return pids.append(pid)
 
 
 def get_latest_file(file_dir, rounds=None, suffix=None):
