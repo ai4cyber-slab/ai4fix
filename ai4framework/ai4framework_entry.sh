@@ -224,6 +224,97 @@ function validate_port() {
     return 0
 }
 
+function create_docker_network {
+    local network_name="$1"
+    
+    # Check if network already exists
+    local network_exists=$(docker network ls --filter name=$network_name -q)
+    
+    if [[ -z "$network_exists" ]]; then
+        echo "Creating Docker network: $network_name..." 
+        docker network create $network_name
+        if [[ $? -ne 0 ]]; then
+            echo "Error: Failed to create Docker network."
+            exit 1
+        fi
+        echo "Docker network created successfully."
+    else
+        echo "Using existing Docker network: $network_name"
+    fi
+}
+
+function start_mysql_container {
+    local network_name="$1"
+    local container_name="${2:-mysql8}"
+    local root_password="${3:-root}"
+    local database_name="${4:-testdb}"
+    
+    # Check if MySQL container already exists
+    local container_exists=$(docker ps -a --filter name=$container_name -q)
+    local used_port=0
+    
+    if [[ -n "$container_exists" ]]; then
+        local container_running=$(docker ps --filter name=$container_name -q)
+        if [[ -z "$container_running" ]]; then
+            echo "Starting existing MySQL container: $container_name..."
+            docker start $container_name
+            if [[ $? -ne 0 ]]; then
+                echo "Error: Failed to start existing MySQL container."
+                exit 1
+            fi
+        else
+            echo "MySQL container is already running: $container_name"
+        fi
+        
+        # Get the port mapping for the existing container
+        local port_mapping=$(docker port $container_name 3306)
+        if [[ -n "$port_mapping" ]]; then
+            if [[ $port_mapping =~ 0.0.0.0:([0-9]+) ]]; then
+                used_port=${BASH_REMATCH[1]}
+                echo "MySQL container is using port: $used_port"
+            else
+                echo "MySQL container is running without port mapping"
+            fi
+        fi
+    else
+        echo "Starting new MySQL container: $container_name..."
+        
+        # Try ports from 3306 to 3310
+        local port_found=false
+        for port in {3306..3310}; do
+            if ! (echo >/dev/tcp/localhost/$port) 2>/dev/null; then
+                # Port is available, use it
+                docker run -d --name $container_name --network $network_name \
+                    -e MYSQL_ROOT_PASSWORD=$root_password -e MYSQL_DATABASE=$database_name \
+                    -p ${port}:3306 mysql:8
+                
+                if [[ $? -eq 0 ]]; then
+                    used_port=$port
+                    port_found=true
+                    echo "MySQL container started successfully on port $port."
+                    break
+                fi
+            else
+                echo "MySQL port $port is already in use. Trying next port..."
+            fi
+        done
+        
+        if [[ "$port_found" != true ]]; then
+            echo "All ports from 3306 to 3310 are in use. Running container without port mapping..."
+            docker run -d --name $container_name --network $network_name \
+                -e MYSQL_ROOT_PASSWORD=$root_password -e MYSQL_DATABASE=$database_name mysql:8
+            
+            if [[ $? -ne 0 ]]; then
+                echo "Error: Failed to start MySQL container."
+                exit 1
+            fi
+            echo "MySQL container started successfully without port mapping."
+        fi
+    fi
+    
+    echo $used_port
+}
+
 show_banner
 
 manage_config_properties
@@ -236,13 +327,20 @@ if [[ $? -ne 0 ]]; then
 fi
 echo "Docker image built successfully."
 
+# Create Docker network
+network_name="ai4framework-net"
+create_docker_network "$network_name"
+
+# Start MySQL container
+mysql_port=$(start_mysql_container "$network_name")
+
 echo "Starting the Docker container..."
 if ! validate_port "$PORT"; then
     echo "Please choose a different port"
     exit 1
 fi
 
-DOCKER_RUN_ARGS=("-dit" "-p" "$PORT:8080" "-e" "PROJECT_PATH=$CONTAINER_PROJECT_PATH" "-e" "PORT=8080")
+DOCKER_RUN_ARGS=("-dit" "-p" "$PORT:8080" "-e" "PROJECT_PATH=$CONTAINER_PROJECT_PATH" "-e" "PORT=8080" "--network" "$network_name")
 
 if [[ -n "$MAVEN_REPO_PATH" ]] && validate_maven_repo "$MAVEN_REPO_PATH"; then
     echo "Using Maven repository from: $MAVEN_REPO_PATH"
@@ -278,6 +376,18 @@ if [[ $? -ne 0 ]]; then
     exit 1
 fi
 echo "Project copied successfully to the container."
+
+echo "Database connection information:" 
+echo "  Host: mysql8" 
+echo "  Port: 3306 (internal container port)" 
+if [[ $mysql_port -gt 0 ]]; then
+    echo "  Host Port Mapping: localhost:$mysql_port -> container:3306" 
+else
+    echo "  No host port mapping (accessible only within Docker network)" 
+fi
+echo "  Database: testdb" 
+echo "  Username: root" 
+echo "  Password: root" 
 
 if [[ "$RUN_WITH_BASH" == true ]]; then
     echo "Attaching to the container with bash in $CONTAINER_PROJECT_PATH..."
