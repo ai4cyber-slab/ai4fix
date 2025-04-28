@@ -6,6 +6,7 @@ from ai4test.tools import *
 import random
 import concurrent.futures
 import javalang
+import re
 import jinja2
 from ai4test.task import Task
 import json
