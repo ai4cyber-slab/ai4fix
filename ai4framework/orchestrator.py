@@ -13,6 +13,7 @@ try:
     from generation.patch_applier import PatchApplier
     from generation.patch_generation import PatchGenerator
     from classification.security_classifier import SecurityClassifier
+    from ai4test import run
 except KeyboardInterrupt:
     sys.exit(0)
 
@@ -129,6 +130,26 @@ class WorkflowFramework:
         sys.exit(0)
 
 
+
+def run_ai4test(args):
+
+    ai4test_args = []
+    if args.scope_test:
+        ai4test_args.append("--scope-test")
+    if args.class_name:
+        ai4test_args += ["--class-name", args.class_name]
+    if args.method_name:
+        ai4test_args += ["--method-name", args.method_name]
+    if args.multiprocess:
+        ai4test_args.append("--multiprocess")
+    if args.no_repair:
+        ai4test_args.append("--no-repair")
+    if args.confirmed:
+        ai4test_args.append("--confirmed")
+
+    run.main(ai4test_args)
+
+
 if __name__ == "__main__":
     try:
         parser = argparse.ArgumentParser(description="Executes the security analysis workflow.")
@@ -140,19 +161,35 @@ if __name__ == "__main__":
         parser.add_argument("--single-file", help="The path of the file to be analyzed.")
         parser.add_argument("--count-issues", action="store_true", help="If provided, only the count of the issues found will be returned.")
         parser.add_argument("--external-json", action="store_true", help="If provided, working with an exteral JSON file named output.json.")
+        parser.add_argument("--skip-ai4fix", action="store_true", help="If provided, only AI4Test will run, skipping the security analysis workflow.")
+
+        parser.add_argument("--ai4test", action="store_true", help="Run AI4Test process.")
+        parser.add_argument("--scope-test", action="store_true", help="Enable scope test mode (for ai4test)")
+        parser.add_argument("--class-name", type=str, help="Class name to use in ai4test scope test mode")
+        parser.add_argument("--method-name", type=str, help="Method name to use in ai4test scope test mode")
+        parser.add_argument("--multiprocess", action="store_true", help="Enable multiprocessing (for ai4test)")
+        parser.add_argument("--no-repair", dest="no_repair", action="store_true", help="Disable repair (for ai4test)")
+        parser.add_argument("--confirmed", action="store_true", help="Skip user confirmation (for ai4test)")
+
         args = parser.parse_args()
+        if args.ai4test and args.scope_test and not args.class_name:
+            parser.error("--class-name is required when --scope-test is used with --ai4test")
 
-        framework = WorkflowFramework(
-            commit_sha=args.commit_sha,
-            skip_patches=args.skip_patches,
-            sast_rerun=args.sast_rerun,
-            automatic_application=args.auto,
-            single_file=args.single_file,
-            count_issues=args.count_issues,
-            external_json=args.external_json
-        )
+        if not args.skip_ai4fix:
+            framework = WorkflowFramework(
+                commit_sha=args.commit_sha,
+                skip_patches=args.skip_patches,
+                sast_rerun=args.sast_rerun,
+                automatic_application=args.auto,
+                single_file=args.single_file,
+                count_issues=args.count_issues,
+                external_json=args.external_json
+            )
+            framework.execute_workflow()
+            
+        if args.ai4test or args.skip_ai4fix:
+            run_ai4test(args)
 
-        framework.execute_workflow()
     except KeyboardInterrupt:
         logger.info("Operation cancelled by user.")
     except Exception as e:
