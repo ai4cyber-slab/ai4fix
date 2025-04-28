@@ -81,7 +81,6 @@ def run(scope_test=False, class_name=None, method_name=None, multiprocess=False,
 
 
 def main(custom_args=None):
-    print("Make sure the config file is correctly configured.")
     for _ in tqdm(range(2), desc="Starting in", unit="s"):
         time.sleep(2)
 
@@ -123,7 +122,6 @@ def main(custom_args=None):
 
 
 if __name__ == '__main__':
-    print("Make sure the config file is correctly configured.")
     for _ in tqdm(range(2), desc="Starting in", unit="s"):
         time.sleep(2)
 
