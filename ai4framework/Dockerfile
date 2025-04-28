@@ -61,10 +61,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tk-dev \
     uuid-dev \
     default-mysql-client \
-    libxml2-dev \
-    libxslt1-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # First copy the JDK files
 COPY bins/j2sdk-1_4_2_19-linux-i586.bin /tmp/jdk4.bin
