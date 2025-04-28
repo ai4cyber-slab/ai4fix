@@ -9,6 +9,8 @@ import shutil
 from ai4test.generate_html_report import generate_report
 from ai4test.ai4test_config import result_dir, dataset_dir, project_dir
 import os
+import re
+import datetime
 
 
 
