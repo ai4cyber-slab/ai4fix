@@ -18,9 +18,9 @@ MAX_PROMPT_TOKENS = eval(config.get("ai4test-defaults", "MAX_PROMPT_TOKENS"))
 MIN_ERROR_TOKENS = eval(config.get("ai4test-defaults", "MIN_ERROR_TOKENS"))
 TIMEOUT = 30
 
-TEMPLATE_NO_DEPS = "d1_4.jinja2"
-TEMPLATE_WITH_DEPS = "d3_4.jinja2"
-TEMPLATE_ERROR = "error_3.jinja2"
+TEMPLATE_NO_DEPS = "no_dep_template.jinja2"
+TEMPLATE_WITH_DEPS = "with_dep_template.jinja2"
+TEMPLATE_ERROR = "error_template.jinja2"
 
 
 JUNIT_JAR = dep_config.get("DEFAULT", "JUNIT_JAR")
