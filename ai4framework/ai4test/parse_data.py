@@ -11,12 +11,8 @@ try:
     import orjson as _json
     _loads = _json.loads
 except ModuleNotFoundError:
-    try:
-        import ujson as _json
-        _loads = _json.loads
-    except ModuleNotFoundError:
-        import json as _json
-        _loads = _json.loads
+    import json as _json
+    _loads = _json.loads
 
 from ai4test.database import database
 from ai4test.ai4test_logger import logger
