@@ -242,6 +242,104 @@ function Validate-Port {
     }
 }
 
+function Create-DockerNetwork {
+    param([string]$NetworkName)
+    
+    # Check if network already exists
+    $networkExists = docker network ls --filter name=$NetworkName -q
+    
+    if (-not $networkExists) {
+        Write-Host "Creating Docker network: $NetworkName..." -ForegroundColor Green
+        docker network create $NetworkName
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Error: Failed to create Docker network." -ForegroundColor Red
+            exit 1
+        }
+        Write-Host "Docker network created successfully." -ForegroundColor Green
+    } else {
+        Write-Host "Using existing Docker network: $NetworkName" -ForegroundColor Green
+    }
+}
+
+function Start-MySQLContainer {
+    param(
+        [string]$NetworkName,
+        [string]$ContainerName = "mysql8",
+        [string]$RootPassword = "root",
+        [string]$DatabaseName = "testdb"
+    )
+    
+    # Check if MySQL container already exists
+    $containerExists = docker ps -a --filter name=$ContainerName -q
+    $usedPort = 0
+    
+    if ($containerExists) {
+        $containerRunning = docker ps --filter name=$ContainerName -q
+        if (-not $containerRunning) {
+            Write-Host "Starting existing MySQL container: $ContainerName..." -ForegroundColor Yellow
+            docker start $ContainerName
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "Error: Failed to start existing MySQL container." -ForegroundColor Red
+                exit 1
+            }
+        } else {
+            Write-Host "MySQL container is already running: $ContainerName" -ForegroundColor Green
+        }
+        
+        # Get the port mapping for the existing container
+        $portMapping = docker port $ContainerName 3306
+        if ($portMapping) {
+            $portMatch = $portMapping -match '0.0.0.0:(\d+)'
+            if ($portMatch) {
+                $usedPort = [int]$Matches[1]
+                Write-Host "MySQL container is using port: $usedPort" -ForegroundColor Green
+            } else {
+                Write-Host "MySQL container is running without port mapping" -ForegroundColor Yellow
+            }
+        }
+    } else {
+        Write-Host "Starting new MySQL container: $ContainerName..." -ForegroundColor Green
+        
+        # Try ports from 3306 to 3310
+        $portFound = $false
+        for ($port = 3306; $port -le 3310; $port++) {
+            try {
+                $listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, $port)
+                $listener.Start()
+                $listener.Stop()
+                
+                # Port is available, use it
+                docker run -d --name $ContainerName --network $NetworkName `
+                    -e MYSQL_ROOT_PASSWORD=$RootPassword -e MYSQL_DATABASE=$DatabaseName `
+                    -p ${port}:3306 mysql:8
+                
+                if ($LASTEXITCODE -eq 0) {
+                    $usedPort = $port
+                    $portFound = $true
+                    Write-Host "MySQL container started successfully on port $port." -ForegroundColor Green
+                    break
+                }
+            } catch {
+                Write-Host "MySQL port $port is already in use. Trying next port..." -ForegroundColor Yellow
+            }
+        }
+        
+        if (-not $portFound) {
+            Write-Host "All ports from 3306 to 3310 are in use. Running container without port mapping..." -ForegroundColor Yellow
+            docker run -d --name $ContainerName --network $NetworkName `
+                -e MYSQL_ROOT_PASSWORD=$RootPassword -e MYSQL_DATABASE=$DatabaseName mysql:8
+            
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "Error: Failed to start MySQL container." -ForegroundColor Red
+                exit 1
+            }
+            Write-Host "MySQL container started successfully without port mapping." -ForegroundColor Green
+        }
+    }
+    
+    return $usedPort
+}
+
 Show-Banner
 
 Manage-ConfigProperties
@@ -254,6 +352,13 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "Docker image built successfully."
 
+# Create Docker network
+$networkName = "ai4framework-net"
+Create-DockerNetwork -NetworkName $networkName
+
+# Start MySQL container
+$mysqlPort = Start-MySQLContainer -NetworkName $networkName
+
 Write-Host "Starting the Docker container..."
 if (-not (Validate-Port $PORT)) {
     exit 1
@@ -264,6 +369,7 @@ $dockerRunArgs = @(
     "-p", "${PORT}:8080"
     "-e", "PROJECT_PATH=$CONTAINER_PROJECT_PATH"
     "-e", "PORT=8080"
+    "--network", $networkName
 )
 
 if ($MAVEN_REPO_PATH -and (Validate-MavenRepo $MAVEN_REPO_PATH)) {
@@ -299,6 +405,18 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 Write-Host "Project copied successfully to the container."
+
+Write-Host "Database connection information:" -ForegroundColor Cyan
+Write-Host "  Host: mysql8" -ForegroundColor Yellow
+Write-Host "  Port: 3306 (internal container port)" -ForegroundColor Yellow
+if ($mysqlPort -gt 0) {
+    Write-Host "  Host Port Mapping: localhost:$mysqlPort -> container:3306" -ForegroundColor Yellow
+} else {
+    Write-Host "  No host port mapping (accessible only within Docker network)" -ForegroundColor Yellow
+}
+Write-Host "  Database: testdb" -ForegroundColor Yellow
+Write-Host "  Username: root" -ForegroundColor Yellow
+Write-Host "  Password: root" -ForegroundColor Yellow
 
 if ($RunWithBash) {
     Write-Host "Attaching to the container, running orchestrator.py in $CONTAINER_PROJECT_PATH..."
