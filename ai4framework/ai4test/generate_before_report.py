@@ -4,35 +4,41 @@ import sys
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from ai4test.ai4test_config import ai4test_dir
+from utils.switcher import switch_java_version
 
 
-def generate_before_report(project_root, jacoco_agent_path, jacoco_cli_path):
+def generate_before_report(project_root, jacoco_agent_path, jacoco_cli_path, config=None):
     project_root = Path(project_root).resolve()
     ai4test_root = Path(ai4test_dir).resolve()
     report_dir = ai4test_root / "pre-reports"
     exec_file = report_dir / "jacoco-pre.exec"
     report_file = report_dir / "jacoco-pre.xml"
+    build_mode = config.get('DEFAULT', 'config.build_mode', fallback='online').strip().lower() if config else 'online'
+    jdk_build_version = str(config.get('DEFAULT', 'config.jdk_compiler_version'))
 
     os.makedirs(report_dir, exist_ok=True)
 
     print(f"[INFO] Project root: {project_root}")
 
-    # Show what will be built
-    print("[INFO] Showing modules to be built:")
-    subprocess.run(["mvn", "-B", "validate"], cwd=project_root)
-
     print("[INFO] Cleaning project...")
     subprocess.run(["mvn", "clean"], cwd=project_root, check=True, stdout=subprocess.DEVNULL)
+
+    # Switch to the specified Java version for running tests
+    switch_java_version(jdk_build_version)
 
     print("[INFO] Running tests with JaCoCo agent (mvn test)...")
     env = os.environ.copy()
     env["MAVEN_OPTS"] = f"-javaagent:{jacoco_agent_path}=destfile={exec_file}"
     env["USER"] = ""  # to make Struts tests pass
-    result = subprocess.run(["mvn", "test"], cwd=project_root, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    command = ['mvn', 'test']
+    if build_mode == 'offline':
+        command = ['mvn', '-o', 'test', '-T', f'{os.cpu_count() or 1}', '-Dmaven.compiler.incremental=true']
+    else:
+        command = ['mvn', 'test', '-T', f'{os.cpu_count() or 1}', '-Dmaven.compiler.incremental=true']
+    result = subprocess.run(command, cwd=project_root, env=env)
     print("[INFO] mvn test finished with exit code", result.returncode)
     if result.returncode != 0:
         print("[WARN] Some tests failed. Proceeding to generate report anyway.")
-        print("[STDERR]", result.stderr.decode())
 
     print("[INFO] Finding class and source files...")
     classfiles = []
@@ -49,7 +55,8 @@ def generate_before_report(project_root, jacoco_agent_path, jacoco_cli_path):
     if not classfiles or not sourcefiles:
         print("[ERROR] Could not find class or source files.")
         sys.exit(1)
-
+    # Ensure Java 11 is used for JaCoCo report generation
+    switch_java_version('11')
     cmd = [
         "java", "-jar", str(jacoco_cli_path), "report", str(exec_file),
         *[f"--classfiles={c}" for c in classfiles],
