@@ -28,10 +28,27 @@ def clear_dataset():
     if os.path.exists(dataset_dir):
         shutil.rmtree(dataset_dir)
 
-def run(scope_test=False, class_name=None, method_name=None, multiprocess=False, repair=True, confirmed=False):
+def run(scope_test=False, class_name=None, method_name=None, multiprocess=False, repair=True, confirmed=False, config=None):
     """
-    Generate the test cases with one-click.
+    AI4Test entry point.
+    
+    Args:
+        scope_test (bool): Whether to run in scope test mode
+        class_name (str): Class name to test in scope test mode
+        method_name (str): Method name to test in scope test mode
+        multiprocess (bool): Whether to use multiprocessing
+        repair (bool): Whether to perform test repair
+        confirmed (bool): Whether to skip user confirmation
+        config (ConfigParser): Configuration object
     """
+
+    if config.get("DEFAULT", "config.build_tool").strip().lower() != 'maven':
+        print("[ERROR] AI4Test supports Maven projects only.")
+        sys.exit(5)
+    
+    for _ in tqdm(range(2), desc="Starting in", unit="s"):
+        time.sleep(2)
+
     print(f"Current database in use is '{db_name}'.")
 
     drop_table()
@@ -66,7 +83,7 @@ def run(scope_test=False, class_name=None, method_name=None, multiprocess=False,
         # import pdb; pdb.set_trace()
         refresh()
         # generate coverage report before running the process
-        jacoco_report_path, sourcefiles = generate_before_report(project_root=project_dir, jacoco_agent_path=JACOCO_AGENT, jacoco_cli_path=JACOCO_CLI)
+        jacoco_report_path, sourcefiles = generate_before_report(project_root=project_dir, jacoco_agent_path=JACOCO_AGENT, jacoco_cli_path=JACOCO_CLI, config=config)
         cobertura_report_path = jacoco2cobertura(filename=jacoco_report_path, state="pre")
 
 
@@ -80,9 +97,7 @@ def run(scope_test=False, class_name=None, method_name=None, multiprocess=False,
     return versions
 
 
-def main(custom_args=None):
-    for _ in tqdm(range(2), desc="Starting in", unit="s"):
-        time.sleep(2)
+def main(custom_args=None, config=None):
 
     parser = argparse.ArgumentParser(description="Test case generator")
     parser.add_argument('--scope-test', action='store_true', help='Enable scope test mode')
@@ -104,7 +119,8 @@ def main(custom_args=None):
         method_name=args.method_name,
         multiprocess=args.multiprocess,
         repair=args.repair,
-        confirmed=args.confirmed
+        confirmed=args.confirmed,
+        config=config
     )
 
     pom_path = os.path.join(project_dir, 'pom.xml')
@@ -116,52 +132,6 @@ def main(custom_args=None):
     }
 
     dep_guide_path = os.path.join(ai4test_dir, 'dependencies-guide.txt')
-    generate_report(pom_path, expected_versions, output_file=dep_guide_path)
-
-    print(f"[INFO] Dependency check completed. Report saved to {dep_guide_path}")
-
-
-if __name__ == '__main__':
-    for _ in tqdm(range(2), desc="Starting in", unit="s"):
-        time.sleep(2)
-
-
-    parser = argparse.ArgumentParser(description="Test case generator")
-    parser.add_argument('--scope-test', action='store_true', help='Enable scope test mode')
-    parser.add_argument('--class-name', type=str, help='Class name to use in scope test mode')
-    parser.add_argument('--method-name', type=str, help='Method name to use in scope test mode')
-    parser.add_argument('--multiprocess', action='store_true', help='Enable multiprocessing (default: False)')
-    parser.add_argument('--no-repair', dest='repair', action='store_false', help='Disable repair (default: True)')
-    parser.add_argument('--confirmed', action='store_true', help='By adding it, manual stdout user confirmation to proceed will be skipped (default: False)')
-
-    parser.set_defaults(repair=True)
-
-    args = parser.parse_args()
-
-    # Validation
-    if args.scope_test and not args.class_name:
-        parser.error("--class-name is required when --scope-test is used")
-
-    versions = run(
-        scope_test=args.scope_test,
-        class_name=args.class_name,
-        method_name=args.method_name,
-        multiprocess=args.multiprocess,
-        repair=args.repair,
-        confirmed=args.confirmed
-    )
-
-
-    pom_path = f"{project_dir}/pom.xml"
-    expected_versions = {
-        "mockito-core": versions["mockito"],
-        "mockito-junit-jupiter": versions["mockito"],
-        "mockito-inline": versions["mockito"],
-        "junit": versions["junit"]
-    }
-
-    # dep guide
-    dep_guide_path = f"{os.path.join(ai4test_dir, 'dependencies-guide.txt')}"
     generate_report(pom_path, expected_versions, output_file=dep_guide_path)
 
     print(f"[INFO] Dependency check completed. Report saved to {dep_guide_path}")
