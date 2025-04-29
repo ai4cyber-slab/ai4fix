@@ -131,7 +131,7 @@ class WorkflowFramework:
 
 
 
-def run_ai4test(args):
+def run_ai4test(args, config=None):
 
     ai4test_args = []
     if args.scope_test:
@@ -147,7 +147,7 @@ def run_ai4test(args):
     if args.confirmed:
         ai4test_args.append("--confirmed")
 
-    run.main(ai4test_args)
+    run.main(ai4test_args, config=config)
 
 
 if __name__ == "__main__":
@@ -188,7 +188,11 @@ if __name__ == "__main__":
             framework.execute_workflow()
             
         if args.ai4test or args.skip_ai4fix:
-            run_ai4test(args)
+            if not args.skip_ai4fix:
+                run_ai4test(args, framework.config)
+            else:
+                config = ConfigManager.get_config(args.commit_sha)
+                run_ai4test(args, config)
 
     except KeyboardInterrupt:
         logger.info("Operation cancelled by user.")
