@@ -4,6 +4,7 @@ from ai4test.class_parser import ClassParser
 from ai4test.tools import *
 from ai4test.ai4test_logger import logger
 from ai4test.ai4test_config import ai4test_dir
+from utils.switcher import switch_java_version
 import os
 
 class Task:
@@ -48,8 +49,7 @@ class TestTask:
         """
         Only run tests.
         """
-        if check_java_version() != 11:
-            raise Exception("Wrong java version! Need: java 11")
+        switch_java_version('11')
         return self.runner.start_single_test()
 
     def all_test(self, source_files=[]):
@@ -57,8 +57,7 @@ class TestTask:
         Run all test cases.
         target_path: target project path
         """
-        if check_java_version() != 11:
-            raise Exception("Wrong java version! Need: java 11")
+        switch_java_version('11')
         return self.runner.start_all_test(source_files)
 
 
