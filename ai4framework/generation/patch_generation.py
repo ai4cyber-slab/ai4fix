@@ -37,13 +37,6 @@ from generation.warnings_mapping import ALL_WARNINGS
 from generation.test_generation import TestGenerator
 from utils.switcher import switch_java_version
 
-
-
-
-
-
-manager = multiprocessing.Manager()
-result_queue = manager.Queue()
 global_single_core_counter = Value('i', 0)
 
 ####################################
@@ -620,6 +613,10 @@ def create_diff(context, extra="", err_message=""):
     try:
         with open(diff_file_path, 'w') as diff_file:
             diff_file.write(diff_text)
+        if 'json_file_path' in context:
+            context["diff_file_name"] = diff_file_name
+            context["diff_file_path"] = diff_file_path
+            save_warnings_to_json(context, context['json_file_path'], diffs_output_dir)
         return diff_file_name, diff_file_path
     except Exception as e:
         logger.error(f"Error writing diff to {diff_file_path}: {e}")
@@ -1135,36 +1132,75 @@ def append_stats_to_csv(row_data, csv_path):
     """
     file_exists = os.path.exists(csv_path)
 
-    with open(csv_path, 'a', newline='') as csvfile:
-        fcntl.flock(csvfile, fcntl.LOCK_EX)
-        try:
-            writer = csv.writer(csvfile)
-            if not file_exists:
-                writer.writerow([
-                    "warning_id",
-                    "issue_type", 
-                    "attempt", 
-                    "introduced_issue", 
-                    "introduced_issues_types", 
-                    "build_failed", 
-                    "build_failed_reason", 
-                    "issue_solved", 
-                    "patch_path",
-                    'validation_elapsed_time',
-                    'test_elapsed_time',
-                    "input_tokens",
-                    "output_tokens"
-                ])
+    try:
+        with open(csv_path, 'a', newline='') as csvfile:
+            fcntl.flock(csvfile, fcntl.LOCK_EX)
+            try:
+                writer = csv.writer(csvfile)
+                if not file_exists:
+                    writer.writerow([
+                        "warning_id",
+                        "issue_type", 
+                        "attempt", 
+                        "introduced_issue", 
+                        "introduced_issues_types", 
+                        "build_failed", 
+                        "build_failed_reason", 
+                        "issue_solved", 
+                        "patch_path",
+                        'validation_elapsed_time',
+                        'test_elapsed_time',
+                        "input_tokens",
+                        "output_tokens"
+                    ])
+                writer.writerow(row_data)
 
-            writer.writerow(row_data)
+            finally:
+                fcntl.flock(csvfile, fcntl.LOCK_UN)
+    except Exception as e:
+        logger.warning(f"Error while appending stats to CSV {csv_path}: {e}")
 
-        finally:
-            fcntl.flock(csvfile, fcntl.LOCK_UN)
 
 
 ####################################
 # Main Logic
 ####################################
+
+def save_warnings_to_json(result, json_file_path, diffs_output_dir):
+    stats = result["local_stats"]
+    should_save = (
+        (not stats.get('introduced_new_issue', False) and
+        stats.get('build_success', False) and
+        stats.get('applicable_patch', False))
+    )
+    if should_save:
+        try:
+            if os.path.exists(json_file_path):
+                with open(json_file_path, 'r') as f:
+                    warnings_list = json.load(f)
+            else:
+                warnings_list = []
+
+            for w in warnings_list:
+                if w.get('id') == result.get('warning_id'):
+                    for itm in w.setdefault('items', []):
+                        itm.setdefault('patches', []).append({
+                            'path': result['diff_file_path'],
+                            'explanation': result.get('explanation', '')
+                        })
+                        if result.get('test_file_path'):
+                            itm.setdefault('tests', []).append({
+                                'path': result['test_file_path']
+                            })
+                    break
+            else:
+                logger.warning(f"No matching warning for ID {result.get('warning_id')}")
+
+            with open(json_file_path, 'w') as f:
+                json.dump(warnings_list, f, indent=4)
+            logger.info(f"Saved updated warnings to {json_file_path}")
+        except Exception as e:
+            logger.error(f"Something went wrong during saving updtaed json to {json_file_path}")
 
 def process_file_worker(args):
     (
@@ -1186,79 +1222,55 @@ def process_file_worker(args):
         issue_warnings,
         external_json,
         patch_path_csv,
-        result_queue
+        num_workers,
+        single_core_counter,
+        json_file_path
     ) = args
 
+    results = []
     try:
         with tempfile.TemporaryDirectory(prefix=f"patch_{Path(file_path).stem}_") as temp_dir:
             shutil.copytree(base_project_path, temp_dir, dirs_exist_ok=True)
 
-            total_in_chunk = len(warnings_for_file)
-            processed_in_chunk = 0
-
-            for entry in warnings_for_file:
+            for processed_in_chunk, entry in enumerate(warnings_for_file, start=1):
                 warning = entry["warning"]
                 item = entry["item"]
 
                 try:
-                    result = process_warning_worker(
-                        (
-                            warning,
-                            config_data,
-                            warning_dict,
-                            model_name,
-                            provider,
-                            api_key,
-                            build_tool,
-                            jdk_compiler_version,
-                            build_mode,
-                            temp_dir,
-                            diffs_output_dir,
-                            single_file,
-                            total_warnings,
-                            file_issue_types,
-                            issue_warnings,
-                            external_json,
-                            patch_path_csv,
-                        )
-                    )
-                    if result:
-                        result_queue.put(result)
+                    total_in_chunk = len(warnings_for_file)
+                    result = process_warning_worker((
+                        warning, config_data, warning_dict, model_name, provider,
+                        api_key, build_tool, jdk_compiler_version, build_mode,
+                        temp_dir, diffs_output_dir, single_file, total_warnings,
+                        file_issue_types, issue_warnings, external_json, patch_path_csv, json_file_path
+                    ))
+                    
+                    if not result:
+                        continue
+                    results.append(result)
                 except Exception as e:
-                    logger.error(f"Error processing warning {warning['id']}: {e}")
+                    logger.error(f"Error processing warning {warning.get('id')}: {e}")
+
                 finally:
                     processed_in_chunk += 1
                     RESET_COLOR = "\033[0m"
                     CYAN = "\033[96m"
                     BOLD_MAGENTA = "\033[1;35m"
+
+                    if num_workers == 1 and single_core_counter is not None:
+                        with single_core_counter.get_lock():
+                            single_core_counter.value += 1
+                            current = single_core_counter.value
+                        print(f"{RESET_COLOR}{BOLD_MAGENTA}PROGRESS UPDATE: {current}/{total_warnings}{RESET_COLOR}", flush=True)
+
                     print(
                         f"{CYAN}[{Path(file_path).name}] Progress: {processed_in_chunk}/{total_in_chunk}{RESET_COLOR}",
                         flush=True
                     )
-
-    except KeyboardInterrupt:
-        logger.info("Worker received KeyboardInterrupt. Exiting gracefully.")
-        return []
+        return results
     except Exception as e:
-        logger.error(f"Unhandled exception in worker: {e}")
+        logger.error(f"Something went wrong during processing files: {e}")
         return []
-    finally:
-        try:
-            shutil.rmtree(temp_dir, ignore_errors=True)
-            logger.info(f"Removed temporary directory: {temp_dir}")
-        except Exception as e:
-            logger.error(f"Error removing temporary directory: {e}")
-
-def result_collector(queue, total_warnings, patch_generator):
-    processed = 0
-    while processed < total_warnings:
-        res = queue.get()
-        if res:
-            if res['total_attempts'] == 2 or (res['total_attempts'] == 1 and not res['introduced_new_issue'] and res['build_success'] and res['applicable_patch']):
-                patch_generator.process_result(res)
-            patch_generator.save_warnings_json()
-            processed += 1
-            print(f"PROGRESS UPDATE: {processed}/{total_warnings}", flush=True)
 
 def process_warning_worker(args):
     (
@@ -1278,7 +1290,8 @@ def process_warning_worker(args):
         file_issue_types,
         issue_warnings,
         external_json,
-        patch_path_csv
+        patch_path_csv,
+        json_file_path
     ) = args
 
     local_stats = {
@@ -1518,7 +1531,6 @@ def process_warning_worker(args):
                                     input_tokens_int,
                                     response_tokens_int
                                 ]
-                                # Write to CSV using fcntl.flock
                                 append_stats_to_csv(row_data, patch_path_csv)
                             else:
                                 local_stats['build_success'] = True
@@ -1741,6 +1753,7 @@ def process_warning_worker(args):
                             local_stats['build_success'] = True
                             local_stats['introduced_new_issue'] = False
                             issue_resolved = True
+                            local_stats['applicable_patch'] = True
                     context = {
                         'test_file_path': test_file_path,
                         'original_test_content': original_test_content,
@@ -1768,7 +1781,9 @@ def process_warning_worker(args):
                         'output_tokens': local_stats['response_tokens'],
                         'input_tokens': local_stats['input_tokens'],
                         'validation_elapsed_time': validation_elapsed_time,
-                        'test_elapsed_time': test_elapsed_time
+                        'test_elapsed_time': test_elapsed_time,
+                        'json_file_path': json_file_path,
+                        'explanation': explanation
                     }
 
                     compilation_result = handle_compilation_error(context, issue_resolved)
@@ -1778,7 +1793,14 @@ def process_warning_worker(args):
                         continue
                     
                     if decisions.get('build_success', False):
-                        validation_result = handle_build_success(context, issue_resolved, attempt)
+                        lock_path = diffs_output_dir + '.handle_build_success.lock'
+                        with open(lock_path, 'w') as lock_file:
+                            fcntl.flock(lock_file, fcntl.LOCK_EX)
+                            try:
+                                validation_result = handle_build_success(context, issue_resolved, attempt)
+                            finally:
+                                fcntl.flock(lock_file, fcntl.LOCK_UN)
+
                         if validation_result is True:
                             break
                         elif validation_result is False:
@@ -1810,6 +1832,31 @@ def process_warning_worker(args):
 
     except Exception as e:
         logger.error(f"Process {os.getpid()} - Unexpected error processing warning ID {warning['id']}: {e}")
+        if attempt == 1:
+            input_tokens_int = local_stats['input_tokens'][0]
+            response_tokens_int = local_stats['response_tokens'][0]
+        else:
+            input_tokens_int = local_stats['input_tokens'][1]
+            response_tokens_int = local_stats['response_tokens'][1]    
+        row_data = [
+            warning['id'],
+            name,
+            attempt,
+            "",
+            "No",
+            "",
+            "No",
+            "",
+            "No",
+            "",
+            0,
+            0,
+            input_tokens_int,
+            response_tokens_int
+        ]
+        append_stats_to_csv(row_data, patch_path_csv)
+        local_stats['applicable_patch'] = False
+        attempt += 1
     finally:
         try:
             with open(full_file_path, 'w') as f:
@@ -1931,13 +1978,50 @@ class PatchGenerator:
 
     def generate_visualizations_and_metrics(self, elapsed_time):
         try:
+            build_failures = 0
+            introduced_new_issue = 0
+            validation_failures = 0
+            successful_patches = 0
+            non_applicabale_diffs = 0
+            solved_issues_counter = defaultdict(int)
+
+            if os.path.exists(self.patch_path_csv):
+                with open(self.patch_path_csv, newline='') as csvfile:
+                    reader = csv.DictReader(csvfile)
+                    for row in reader:
+                        attempt = int(row.get('attempt', 0))
+                        introduced_issue = row.get('introduced_issue', '').strip()
+                        build_failed = row.get('build_failed', '').strip()
+                        issue_solved = row.get('issue_solved', '').strip()
+                        issue_type = row.get('issue_type', '').strip()
+
+                        if issue_solved == 'Yes':
+                            successful_patches += 1
+                            if issue_type:
+                                solved_issues_counter[issue_type] += 1
+                        if attempt == 2 and build_failed == 'Yes':
+                            build_failures += 1
+                        if attempt == 2 and introduced_issue == 'Yes':
+                            validation_failures += 1
+                            introduced_new_issue += 1
+                        if introduced_issue == 'No' and build_failed == 'No' and issue_solved == 'No':
+                            non_applicabale_diffs += 1
+            else:
+                logger.warning(f"Patch stats CSV not found at {self.patch_path_csv}")
+            warnings_dict_updated = {}
+            for issue_type, original_count in self.mutable_warnings.items():
+                solved_count = solved_issues_counter.get(issue_type, 0)
+                remaining = max(0, original_count - solved_count)
+                warnings_dict_updated[issue_type] = remaining
+            self.warnings_dict = warnings_dict_updated
+
             self.visualizer.update_metrics(self.model_name, {
                 'total_issues': self.stats['total_issues'],
-                'build_failures': self.compilation_or_test_errors,
-                'introduced_new_issue': self.introduced_new_issue,
-                'validation_failures': self.validation_errors,
-                'successful_patches': self.successful_patches,
-                'non_applicabale_diffs': self.non_applicabale_diffs,
+                'build_failures': build_failures,
+                'introduced_new_issue': introduced_new_issue,
+                'validation_failures': validation_failures,
+                'successful_patches': successful_patches,
+                'non_applicabale_diffs': non_applicabale_diffs,
                 'warnings_dict': self.warnings_dict,
                 'total_attempts': self.stats['total_attempts'],
                 'prompt_tokens': int(statistics.mean(self.input_tokens)) if self.input_tokens and statistics.mean(self.input_tokens) is not None else 0,
@@ -1949,13 +2033,15 @@ class PatchGenerator:
             self.visualizer.generate_comparison_charts(self.visualize_path)
             self.visualizer.save_metrics(os.path.join(self.visualize_path, f'benchmark_metrics_round_{self.num_of_rounds}.json'))
             logger.info(f"Benchmarking results saved to {self.visualize_path}")
+
         except Exception as e:
-            logger.warning("Interruption during visualization and metrics generation. "+e)
+            logger.warning(f"Interruption during visualization and metrics generation. {e}")
             logger.info("Saving the visualization and metrics ...")
 
+
     def main(self):
-        stop_event = threading.Event()
         try:
+            processed_warnings = 0
             self.stats['start_time'] = time.time()
             if self.api_key == '':
                 logger.warning("API key is not set. Skipping patch generation.")
@@ -2038,91 +2124,41 @@ class PatchGenerator:
                         file_issue_types,
                         issue_warnings,
                         self.external_json,
-                        self.patch_path_csv
+                        self.patch_path_csv,
+                        num_workers,
+                        global_single_core_counter if num_workers == 1 else None,
+                        self.json_file_path
                     )
                     args_list.append(args)
-
-            """ args_list = []
-            for warning in self.warnings:
-                args = (
-                    warning,
-                    self.config,
-                    self.warnings_dict,
-                    self.model_name,
-                    self.provider,
-                    self.api_key,
-                    self.build_tool,
-                    self.jdk_compiler_version,
-                    self.build_mode,
-                    self.project_path,
-                    self.diffs_output_dir,
-                    self.single_file,
-                    total_warnings,
-                    file_issue_types,
-                    issue_warnings,
-                    self.external_json,
-                    self.patch_path_csv
-                )
-                args_list.append(args) """
                        
             logger.info(f"Starting multiprocessing with {num_workers} workers...")
-            manager = multiprocessing.Manager()
-            result_queue = manager.Queue()
 
-            def result_collector(queue, total_warnings, patch_generator, stop_evt):
-                processed = 0
-                RESET_COLOR = "\033[0m"
-                BOLD_MAGENTA = "\033[1;35m"
+            if num_workers == 1:
+                # Single-threaded fallback, no Pool needed
+                for args in args_list:
+                    result_list = process_file_worker(args)
+                    for res in result_list:
+                        if res['total_attempts'] == 2 or (res['total_attempts'] == 1 and not res['introduced_new_issue'] and res['build_success'] and res['applicable_patch']):
+                            self.process_result(res)
+                        #self.save_warnings_json()
+            else:
+                # Multiprocessing mode
+                with multiprocessing.Pool(processes=num_workers) as pool:
+                    for result_list in pool.imap_unordered(process_file_worker, args_list):
+                        if result_list is None:
+                            logger.error("Worker returned None. Skipping...")
+                            continue
 
-                while processed < total_warnings and not stop_evt.is_set():
-                    try:
-                        res = queue.get(timeout=1)
-                    except Empty:
-                        continue
-                    except (EOFError, OSError):
-                        logger.warning("Queue connection lost. Exiting collector loop.")
-                        break
+                        for res in result_list:
+                            if res['total_attempts'] == 2 or (res['total_attempts'] == 1 and not res['introduced_new_issue'] and res['build_success'] and res['applicable_patch']):
+                                self.process_result(res)
+                            #self.save_warnings_json()
 
-                    if res is None:
-                        continue
-
-                    if (res['total_attempts'] == 2 or
-                    (res['total_attempts'] == 1
-                        and not res['introduced_new_issue']
-                        and res['build_success']
-                        and res['applicable_patch'])):
-                        patch_generator.process_result(res)
-
-                    patch_generator.save_warnings_json()
-                    processed += 1
-                    print(f"{RESET_COLOR}{BOLD_MAGENTA}PROGRESS UPDATE: {processed}/{total_warnings}{RESET_COLOR}", flush=True)
-
-            collector = threading.Thread(target=result_collector, args=(result_queue, total_warnings, self, stop_event))
-            collector.start()
-
-            # Add result_queue to the args
-            updated_args_list = []
-            for args in args_list:
-                updated_args_list.append(args + (result_queue,))
-
-            with multiprocessing.Pool(processes=num_workers) as pool:
-                try:
-                    pool.map(process_file_worker, updated_args_list)
-                except KeyboardInterrupt:
-                    logger.warning("Main received KeyboardInterrupt. Terminating pool.")
-                    pool.terminate()
-                except Exception as e:
-                    logger.error(f"Unhandled error during multiprocessing: {e}")
-                finally:
-                    try:
-                        pool.join()
-                    except ValueError as ve:
-                        if "Pool is still running" in str(ve):
-                            logger.warning("Skipping pool.join() because pool is still running.")
-                        else:
-                            raise
-
-            collector.join()
+                        processed_warnings += len(result_list)
+                        RESET_COLOR = "\033[0m"
+                        BOLD_MAGENTA = "\033[1;35m"
+                        print(f"{RESET_COLOR}{BOLD_MAGENTA}PROGRESS UPDATE: {processed_warnings}/{total_warnings}{RESET_COLOR}", flush=True)
+                                            
             source_log_file = os.path.join(self.project_path, '.ai4framework', "logs", "ai4framework.log")
             destination_dir = os.path.join(self.project_path, ".ai4framework", "logs", (self.time_for_dirs + "_" + self.model_name))
             destination_log_file = os.path.join(destination_dir, "ai4framework.log")
@@ -2134,18 +2170,12 @@ class PatchGenerator:
                 logger.info(f"Log file not found: {source_log_file}")
 
         except KeyboardInterrupt:
-            logger.info("Keyboard interrupt detected in main. Saving progress and stopping the script gracefully.")
-            self.save_warnings_json()
+            print("Keyboard interrupt detected in main. Saving progress and stopping the script gracefully.")
+            #self.save_warnings_json()
             raise
         except Exception as e:
             logger.error(f"Unexpected error in main: {e}", exc_info=True)
         finally:
-            try:
-                stop_event.set()
-                if collector.is_alive():
-                    collector.join()
-            except Exception as e:
-                logger.warning(f"Error during collector thread join: {e}")
             elapsed_time = time.time() - self.start_time
             self.stats['elapsed_time'] = elapsed_time
             if hasattr(self, 'issue_introduction_stats') and self.issue_introduction_stats:
@@ -2178,7 +2208,7 @@ class PatchGenerator:
             except Exception as e:
                 logger.warning(f"Error moving log file : {e}")
             try:
-                self.save_warnings_json()
+                #self.save_warnings_json()
                 self.generate_visualizations_and_metrics(elapsed_time)
             except Exception as e:
                 logger.error(f"Error generating visualizations and metrics: {e}")
