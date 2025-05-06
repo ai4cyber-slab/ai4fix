@@ -64,6 +64,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+RUN ln -sf /usr/bin/python3.11 /usr/bin/python
 # First copy the JDK files
 COPY bins/j2sdk-1_4_2_19-linux-i586.bin /tmp/jdk4.bin
 COPY bins/jdk-1_5_0_22-linux-i586.bin /tmp/jdk5.bin
