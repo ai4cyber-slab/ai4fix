@@ -32,9 +32,9 @@ def generate_before_report(project_root, jacoco_agent_path, jacoco_cli_path, con
     env["USER"] = ""  # to make Struts tests pass
     command = ['mvn', 'test']
     if build_mode == 'offline':
-        command = ['mvn', '-o', 'test', '-T', f'{os.cpu_count() or 1}', '-Dmaven.compiler.incremental=true']
+        command = ['mvn', '-o', 'test', '-T', f'{os.cpu_count() or 1}']
     else:
-        command = ['mvn', 'test', '-T', f'{os.cpu_count() or 1}', '-Dmaven.compiler.incremental=true']
+        command = ['mvn', 'test', '-T', f'{os.cpu_count() or 1}']
     result = subprocess.run(command, cwd=project_root, env=env)
     print("[INFO] mvn test finished with exit code", result.returncode)
     if result.returncode != 0:
