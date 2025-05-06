@@ -31,8 +31,9 @@ class JSONProcessor:
             try:
                 with open(json_file, 'r') as infile:
                     data = json.load(infile)
-            except Exception:
-                return {}
+            except Exception as e:
+                logger.error(f"AI4VULN ISSUES EXTRACTION ERROR: {e}")
+                return []
 
             cleaned_issues = []
 
@@ -60,7 +61,8 @@ class JSONProcessor:
             logger.info(f"Extracted and cleaned JSON saved to {output_file}")
             return extract_issue_counts(issues)
         except Exception as e:
-            return {}
+            logger.error(f"AI4VULN ISSUES EXTRACTION ERROR: {e}")
+            return []
 
     
 def extract_issue_counts(data):

@@ -58,4 +58,5 @@ class SymbolicExecution:
             cleaned_json_file = os.path.join(self.results_path, self.project_name, 'java', 'now', 'ai4vuln_issues.json') if not validation else os.path.join(self.results_path, self.project_name, 'java', 'now', 'ai4vuln_issues_temp.json')
             return JSONProcessor.extract_and_clean_json(json_file, cleaned_json_file, self.project_path)
         except Exception as e:
-            return {}
+            logger.error(f"AI4VULN ERROR: {e}")
+            return []
