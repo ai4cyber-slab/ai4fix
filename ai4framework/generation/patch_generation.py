@@ -6,6 +6,7 @@ import fcntl
 import os
 import re
 import sys
+import psutil
 import threading
 import time
 import json
@@ -316,7 +317,7 @@ def run_tests_worker(build_tool, cwd, env, jdk_compiler_version, build_mode):
             command = ['mvn']
             if build_mode.lower() == 'offline':
                 command.append('-o')
-            command.extend(['clean', 'test', '-Dmaven.compiler.incremental=true'])
+            command.extend(['clean', 'test', '-X'])
             if is_parallel_build_supported(build_tool):
                 command.extend(['-T', str(os.cpu_count())])
         elif build_tool.lower() == 'gradle':
@@ -522,22 +523,24 @@ def get_prompt(explanation, startLine, endLine, attempt, previous_generated_patc
 
     return prompt
 
-def update_build_env_vars(temp_dir_for_build_tool, build_tool):
+def update_build_env_vars(temp_dir_for_build_tool, build_tool, max_parallel_processes=4):
     env = os.environ.copy()
     env["TMPDIR"] = temp_dir_for_build_tool
     env["TEMP"] = temp_dir_for_build_tool
     env["TMP"] = temp_dir_for_build_tool
 
+    # Dynamically allocate JVM memory per process (80% of total / N)
+    total_mem_mb = psutil.virtual_memory().total // (1024 * 1024)
+    mem_per_proc_mb = int((total_mem_mb * 0.8) / max_parallel_processes)
+    jvm_opts = f"-Xms512m -Xmx{mem_per_proc_mb}m -Djava.io.tmpdir={temp_dir_for_build_tool}"
+
     if build_tool == 'maven':
-        env["MAVEN_OPTS"] = "-Xms512m -Xmx2048m"
-        env["MAVEN_OPTS"] += f" -Djava.io.tmpdir={temp_dir_for_build_tool}"
+        env["MAVEN_OPTS"] = jvm_opts
     elif build_tool == 'gradle':
-        env["GRADLE_OPTS"] = "-Xms512m -Xmx2048m"
-        env["GRADLE_OPTS"] += f" -Djava.io.tmpdir={temp_dir_for_build_tool}"
+        env["GRADLE_OPTS"] = jvm_opts
     elif build_tool == 'javac':
-        env["JAVA_TOOL_OPTIONS"] = "-Xms512m -Xmx2048m"
-        env["JAVA_TOOL_OPTIONS"] += f" -Djava.io.tmpdir={temp_dir_for_build_tool}"
-        env["JAVAC_OPTS"] = "-Xms512m -Xmx2048m"
+        env["JAVA_TOOL_OPTIONS"] = jvm_opts
+        env["JAVAC_OPTS"] = jvm_opts
     return env
 
 
