@@ -95,7 +95,7 @@ class SASTOrchestrator:
             logger.info(f"{build_tool.capitalize()} compile started...")
             if build_tool.lower() == 'maven':
                 # Then run the actual compile command
-                command = ['mvn', 'compile', '-Dmaven.compiler.incremental=true', '-DskipTests']
+                command = ['mvn', 'compile', '-X', '-DskipTests']
                 if self.build_mode == 'offline':
                     command.insert(1, '-o')
                 if is_parallel_build_supported('maven'):
