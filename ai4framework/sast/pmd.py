@@ -22,9 +22,7 @@ class PMDRunner:
         self.config = config
         self.project_path = self.config.get('DEFAULT', 'config.project_root')
         self.report_path = os.path.join(self.project_path, '.ai4framework','out', 'pmd.xml')
-        self.cache_dir = os.path.join(os.sep, 'tmp', 'pmd-cache')
         os.makedirs(os.path.dirname(self.report_path), exist_ok=True)
-        os.makedirs(self.cache_dir, exist_ok=True)
 
     def run(self, files_to_analyze):
         """
@@ -59,7 +57,6 @@ class PMDRunner:
                 "-r", self.report_path,
                 "--no-fail-on-violation",
                 "--no-fail-on-error",
-                "--cache", self.cache_dir,
                 "--threads", str(os.cpu_count())
             ]
 
