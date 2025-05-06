@@ -1325,8 +1325,10 @@ def process_warning_worker(args):
         with tempfile.TemporaryDirectory(prefix=f"patch_build_{warning['id']}_") as temp_dir_for_build_tool:
             process_project_directory_core = base_project_path
             temp_dir = base_project_path
+            cores_to_use = config_data.get('DEFAULT', 'config.parallel_workers', fallback='1')
+            num_workers = min(int(cores_to_use), int(total_warnings))
                     
-            env = update_build_env_vars(temp_dir_for_build_tool, build_tool)
+            env = update_build_env_vars(temp_dir_for_build_tool, build_tool, num_workers)
             local_config = copy.deepcopy(config_data)
             local_config.set('DEFAULT', 'config.project_root', temp_dir)
             test_generator = TestGenerator(temp_dir, local_config)
