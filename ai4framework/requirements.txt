@@ -10,7 +10,7 @@ matplotlib
 anthropic
 commentjson
 tabulate
-
+psutil
 # ai4test
 javalang==0.13.0
 Jinja2==3.1.2
