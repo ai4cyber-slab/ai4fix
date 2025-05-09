@@ -44,7 +44,7 @@ global_single_core_counter = Value('i', 0)
 # Helper functions
 ####################################
 
-def parse_build_output(build_tool, result_output):
+def parse_build_output(build_tool, result_output, return_code):
     """
     Parse the build output depending on the build tool.
     """
@@ -73,12 +73,7 @@ def parse_build_output(build_tool, result_output):
                 if "cannot" in line:
                     if line_counter == 2:
                         split_line = line.split("] ")
-                        if len(split_line) > 2:
-                            error_message_key = split_line[2]
-                            error_message = error_message_key
-                        else:
-                            error_message = line
-                        
+                        error_message = split_line[2] if len(split_line) > 2 else line
                         lines = result_output.split("\n")
                         next_line_index = lines.index(line) + 1
                         if next_line_index < len(lines):
@@ -103,7 +98,11 @@ def parse_build_output(build_tool, result_output):
                             error_message = line
                         break
 
-        if "COMPILATION ERROR" in result_output:
+        if return_code != 0:
+            details['build_success'] = False
+            details['reason'] = error_message or "Build failed (non-zero return code)"
+            details['error_line'] = error_line_number
+        elif "COMPILATION ERROR" in result_output:
             details['compilation_error'] = True
             error_files = re.findall(r'\[ERROR\] (.*?\.java):', result_output)
             details['compilation_error_files'] = error_files
@@ -111,10 +110,10 @@ def parse_build_output(build_tool, result_output):
             details['reason']= error_message
             details['error_line']= error_line_number
         elif "BUILD SUCCESS" not in result_output:
-            details['reason']= error_message
-            details['error_line']= error_line_number
-
-        elif "BUILD SUCCESS" in result_output and "COMPILATION ERROR" not in result_output:
+            details['build_success'] = False
+            details['reason'] = error_message
+            details['error_line'] = error_line_number
+        else:
             details['build_success'] = True
 
     elif build_tool == 'gradle':
@@ -181,7 +180,7 @@ def parse_build_output(build_tool, result_output):
 
     return details
 
-def validate_test_and_patch(test_file_path, result_output, build_tool, context_for_diff_file):
+def validate_test_and_patch(test_file_path, result_output, build_tool, context_for_diff_file, return_code):
     """
     Validate test and patch results. 
     Uses parse_build_output to handle build_tool specific logic.
@@ -198,7 +197,7 @@ def validate_test_and_patch(test_file_path, result_output, build_tool, context_f
 
     # logger.info(f"Test file {'exists' if decisions['test_file_exists'] else 'does not exist'} at path: {test_file_path}")
 
-    parsed = parse_build_output(build_tool, result_output)
+    parsed = parse_build_output(build_tool, result_output, return_code)
     decisions['failure_details'] = parsed['failure_details']
     decisions['error_details'] = parsed['error_details']
     decisions['compilation_error'] = parsed['compilation_error']
@@ -455,8 +454,7 @@ def is_parallel_build_supported(build_tool):
 
 def run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode):
     result = run_tests_worker(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
-    output = result.stdout + result.stderr
-    return output
+    return result
 
 
 def get_prompt(explanation, startLine, endLine, attempt, previous_generated_patch, SOLVE_COMMAND, extract_json_section):
@@ -662,7 +660,7 @@ def handle_test_error(context, issue_resolved):
         revert_test_content(context)
 
     output_after_revert = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
-    re_decisions = parse_build_output(build_tool, output_after_revert)
+    re_decisions = parse_build_output(build_tool, output_after_revert, output_after_revert.returncode)
     decisions['build_success'] = re_decisions['build_success']
     if re_decisions['build_success'] and not re_decisions['compilation_error']:
         if issue_resolved:
@@ -805,7 +803,7 @@ def handle_test_failures(context, issue_resolved):
             revert_test_content(context)
 
         output_after_test_drop = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
-        re_decisions = parse_build_output(build_tool, output_after_test_drop)
+        re_decisions = parse_build_output(build_tool, output_after_test_drop, output_after_test_drop.returncode)
         if re_decisions['build_success'] and not re_decisions['compilation_error']:
             if issue_resolved:
                 local_stats['validation_passed'] = True
@@ -1452,7 +1450,8 @@ def process_warning_worker(args):
 
                     logger.info(f"Process {os.getpid()} - Running '{build_tool} test' for warning ID {warning['id']}...")
                     test_start_time = time.perf_counter()
-                    output = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
+                    result = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
+                    output = result.stdout + result.stderr
                     test_elapsed_time = time.perf_counter() - test_start_time 
                     context_for_diff_file = {
                             'initial_content': initial_content,
@@ -1462,7 +1461,7 @@ def process_warning_worker(args):
                             'diffs_output_dir': diffs_output_dir,
                             'warning_id': warning['id'],
                         }
-                    decisions = validate_test_and_patch(test_file_path, output, build_tool, context_for_diff_file)
+                    decisions = validate_test_and_patch(test_file_path, output, build_tool, context_for_diff_file, result.returncode)
                     if not decisions['build_success']:
                         logger.warning(f"{build_tool} build failed for warning ID {warning['id']}.")
                     if not decisions.get('build_success', False):
@@ -1493,10 +1492,11 @@ def process_warning_worker(args):
                                     logger.error(f"Error while restoring original content to {full_file_path}: {e} for warning ID {warning['id']}.")
                                 continue
                             test_start_time2 = time.perf_counter()
-                            output_2 = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
+                            result_2 = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
+                            output_2 = result_2.stdout + result_2.stderr
                             test_elapsed_time2 = time.perf_counter() - test_start_time2
                             test_elapsed_time += test_elapsed_time2
-                            decisions_2 = validate_test_and_patch(test_file_path, output_2, build_tool, context_for_diff_file)
+                            decisions_2 = validate_test_and_patch(test_file_path, output, build_tool, context_for_diff_file, result_2.returncode)
                             if not decisions_2.get('build_success', False):
                                 logger.warning(f"Even after post-processing, build still fails for warning ID {warning['id']}.")
                                 context_for_diff_file['diffs_output_dir'] = diffs_output_dir.replace("patches", "patches_with_build_failure")
