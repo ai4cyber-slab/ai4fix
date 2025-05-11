@@ -1452,6 +1452,7 @@ def process_warning_worker(args):
                     test_start_time = time.perf_counter()
                     result = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
                     output = result.stdout + result.stderr
+                    logger.debug(output)
                     test_elapsed_time = time.perf_counter() - test_start_time 
                     context_for_diff_file = {
                             'initial_content': initial_content,
@@ -1494,6 +1495,7 @@ def process_warning_worker(args):
                             test_start_time2 = time.perf_counter()
                             result_2 = run_tests_and_collect_output(build_tool, process_project_directory_core, env, jdk_compiler_version, build_mode)
                             output_2 = result_2.stdout + result_2.stderr
+                            logger.debug(output_2)
                             test_elapsed_time2 = time.perf_counter() - test_start_time2
                             test_elapsed_time += test_elapsed_time2
                             decisions_2 = validate_test_and_patch(test_file_path, output, build_tool, context_for_diff_file, result_2.returncode)
