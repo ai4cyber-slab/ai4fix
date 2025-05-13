@@ -95,11 +95,11 @@ class SASTOrchestrator:
             logger.info(f"{build_tool.capitalize()} compile started...")
             if build_tool.lower() == 'maven':
                 # Then run the actual compile command
-                command = ['mvn', 'compile', '-X', '-DskipTests']
+                command = ['mvn', 'compile', '-DskipTests']
                 if self.build_mode == 'offline':
                     command.insert(1, '-o')
-                if is_parallel_build_supported('maven'):
-                    command.extend(['-T', str(os.cpu_count())])
+                # if is_parallel_build_supported('maven'):
+                #     command.extend(['-T', str(os.cpu_count())])
 
             elif build_tool.lower() == 'gradle':
                 command = ['gradle', '--no-daemon']

@@ -316,9 +316,9 @@ def run_tests_worker(build_tool, cwd, env, jdk_compiler_version, build_mode):
             command = ['mvn']
             if build_mode.lower() == 'offline':
                 command.append('-o')
-            command.extend(['clean', 'test', '-X'])
-            if is_parallel_build_supported(build_tool):
-                command.extend(['-T', str(os.cpu_count())])
+            command.extend(['clean', 'test'])
+            # if is_parallel_build_supported(build_tool):
+            #     command.extend(['-T', str(os.cpu_count())])
         elif build_tool.lower() == 'gradle':
             command = ['gradle']
             if build_mode.lower() == 'offline':
