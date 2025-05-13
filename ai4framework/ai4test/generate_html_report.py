@@ -107,12 +107,10 @@ th:first-child,td:first-child{text-align:left}
 .code{border:1px solid #ddd;background:#fafafa;margin-bottom:2rem;overflow:auto}
 .ln{color:#888;padding-right:8px;border-right:1px solid #ddd}
 .covergain{background:#e6ffe6}
-.coverloss{background:#ffe6e6}
 .mono{font-family:monospace;font-size:0.85rem;white-space:pre}
 a{color:#0645ad;text-decoration:none}
 a:hover{text-decoration:underline}
 .deltaplus  { color: #006400; font-weight: bold; }
-.deltaminus { color: #8B0000; font-weight: bold; }
 </style>
 """
 
@@ -129,7 +127,7 @@ def render_source(fname, gain, lost):
         return f"<p><em>source unavailable – {E(fname)}</em></p>"
     html_lines=[]
     for i,l in enumerate(lines,1):
-        cls="covergain" if i in gain else "coverloss" if i in lost else ""
+        cls="covergain" if i in gain else "" 
         html_lines.append(f'<span class="ln">{i:>4}</span>'
                           f'<span class="mono {cls}">{E(l)}</span>')
     return '<div class="code"><div class="mono">\n'+"\n".join(html_lines)+"\n</div></div>"
@@ -168,8 +166,8 @@ def write_html(pre_tot, post_tot, rows, gain, lost, outfile):
                           f"{bq:.2f}%" if bq is not None else "N/A")
             bd_s = f"{bd:+.2f}" if bd is not None else "N/A"
             # choose classes based on delta sign
-            ld_class = "deltaplus" if ld > 0 else "deltaminus" if ld < 0 else ""
-            bd_class = "deltaplus" if bd and bd > 0 else "deltaminus" if bd and bd < 0 else ""
+            ld_class = "deltaplus" if ld > 0 else ""
+            bd_class = "deltaplus" if bd and bd > 0 else ""
 
             # wrap deltas in spans
             ld_span = f'<span class="{ld_class}">{ld:+.2f}</span>'
@@ -180,8 +178,7 @@ def write_html(pre_tot, post_tot, rows, gain, lost, outfile):
             f'<td>{bp_s}</td><td>{bq_s}</td><td>{bd_span}</td></tr>')
         w("</table>")
 
-        w("<p><span class='covergain'>&nbsp;&nbsp;</span> coverage increased "
-          "<span class='coverloss'>&nbsp;&nbsp;</span> coverage decreased</p>")
+        w("<p><span class='covergain'>&nbsp;&nbsp;</span> coverage increased</p>")
 
         # code blocks
         for idx,(f,_,_,_,_,_,_) in enumerate(rows):
