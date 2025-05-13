@@ -67,11 +67,11 @@ def run(scope_test=False, class_name=None, method_name=None, multiprocess=False,
             SELECT id FROM method WHERE project_name='{project_name}' 
             AND class_name='{class_name}' 
             {"AND method_name='" + method_name + "'" if method_name else ""}
-            AND is_constructor=0;
+            AND is_constructor=0 AND is_public=1;
         """
     else:
         sql_query = f"""
-            SELECT id FROM method WHERE project_name='{project_name}';
+            SELECT id FROM method WHERE project_name='{project_name}' AND is_public=1 AND is_constructor=0;
         """
     try:
         pom_path = find_main_pom(project_dir)
