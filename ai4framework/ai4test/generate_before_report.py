@@ -19,43 +19,46 @@ def generate_before_report(project_root, jacoco_agent_path, jacoco_cli_path, con
     os.makedirs(report_dir, exist_ok=True)
 
     print(f"[INFO] Project root: {project_root}")
-
     print("[INFO] Cleaning project...")
     subprocess.run(["mvn", "clean"], cwd=project_root, check=True, stdout=subprocess.DEVNULL)
 
-    # Switch to the specified Java version for running tests
     switch_java_version(jdk_build_version)
 
-    print("[INFO] Running tests with JaCoCo agent (mvn test)...")
-    env = os.environ.copy()
-    env["MAVEN_OPTS"] = f"-javaagent:{jacoco_agent_path}=destfile={exec_file}"
-    env["USER"] = ""  # to make Struts tests pass
-    command = ['mvn', 'test']
-    if build_mode == 'offline':
-        command = ['mvn', '-o', 'test', '-T', f'{os.cpu_count() or 1}']
-    else:
-        command = ['mvn', 'test', '-T', f'{os.cpu_count() or 1}']
-    result = subprocess.run(command, cwd=project_root, env=env)
-    print("[INFO] mvn test finished with exit code", result.returncode)
+    print("[INFO] Running Maven with JaCoCo agent via -DargLine (universal)...")
+    arg_line = f"-javaagent:{jacoco_agent_path}=destfile={exec_file}"
+    threads = f"-T{1 or 1}"
+    common_flags = [
+        "install",
+        f"-DargLine={arg_line}",
+        "-DskipTests=false",
+        "-Dmaven.test.failure.ignore=true",
+        "-Dgpg.skip=true",
+        "-Dmaven.javadoc.skip=true",
+        threads
+    ]
+
+    command = ['mvn', '-o'] + common_flags if build_mode == 'offline' else ['mvn'] + common_flags
+    result = subprocess.run(command, cwd=project_root)
+    print("[INFO] mvn install finished with exit code", result.returncode)
     if result.returncode != 0:
-        print("[WARN] Some tests failed. Proceeding to generate report anyway.")
+        print("[WARN] Some tests failed or the build did not complete successfully. Proceeding to generate report anyway.")
 
     print("[INFO] Finding class and source files...")
     classfiles = []
     sourcefiles = []
     for root, dirs, files in os.walk(project_root):
         path = Path(root)
-        if path.match("*/target/classes"):
+        if "target/classes" in str(path).replace("\\", "/"):
             print(f"[FOUND] Class directory: {root}")
             classfiles.append(str(path))
-        if path.match("*/src/main/java"):
+        if "src/main/java" in str(path).replace("\\", "/"):
             print(f"[FOUND] Source directory: {root}")
             sourcefiles.append(str(path))
 
     if not classfiles or not sourcefiles:
         print("[ERROR] Could not find class or source files.")
         sys.exit(1)
-    # Ensure Java 11 is used for JaCoCo report generation
+
     switch_java_version('11')
     cmd = [
         "java", "-jar", str(jacoco_cli_path), "report", str(exec_file),
@@ -71,7 +74,6 @@ def generate_before_report(project_root, jacoco_agent_path, jacoco_cli_path, con
         print("[STDERR]", result.stderr.decode())
         sys.exit(result.returncode)
 
-
     print("[INFO] Post-processing report paths to be absolute...")
     tree = ET.parse(report_file)
     root = tree.getroot()
@@ -79,11 +81,11 @@ def generate_before_report(project_root, jacoco_agent_path, jacoco_cli_path, con
     count_updated = 0
 
     for package in root.findall(".//package"):
-        pkg_path = Path(package.get("name"))  # e.g., org/apache/tiles/web/util
+        pkg_path = Path(package.get("name").replace('.', '/'))
 
         for clazz in package.findall("class"):
-            filename = clazz.get("sourcefilename")  # e.g., TilesDispatchServlet.java
-            rel_path = pkg_path / filename  # e.g., org/apache/tiles/web/util/TilesDispatchServlet.java
+            filename = clazz.get("sourcefilename")
+            rel_path = pkg_path / filename
             resolved = False
 
             for src in sourcefiles:
