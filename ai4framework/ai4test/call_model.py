@@ -13,6 +13,8 @@ import json
 from typing import Any
 from ai4test.ai4test_logger import logger
 from ai4test.ai4test_config import MAX_PROMPT_TOKENS, key, model, MAX_PROMPT_TOKENS, max_rounds, TEMPLATE_ERROR, MIN_ERROR_TOKENS, TEMPLATE_NO_DEPS, TEMPLATE_WITH_DEPS, test_number, process_number, dep_config, azure_api_version, azure_endpoint, provider
+from ai4test.testgen_tracker import TestGenTracker      # NEW
+tracker = TestGenTracker()                      # NEW
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config.llm_configuration import llm_response
@@ -267,10 +269,21 @@ def whole_process(test_num, base_name, base_dir, repair, submits, total):
     run_temp_dir = os.path.join(save_dir, "runtemp")
 
     steps, rounds = 0, 0
+
+    test_passed = False
+    fatal_error = False
+    error_type = ""
+    passed_round = 0
+
     method_id, project_name, class_name, method_name = parse_file_name(base_name)
 
     with open(get_dataset_path(method_id, project_name, class_name, method_name, "raw"), "r") as f:
         raw_data = json.load(f)
+    
+    # # ─── tracker: register + start ────────────────────────────────
+    # tracker.add_method(method_id, code_string=raw_data.get("source_code", ""))
+    # tracker.start_timer(method_id)
+    # # ───────────────────────────────────────────────────────────────
 
     package = raw_data["package"]
     imports = raw_data["imports"]
@@ -279,6 +292,16 @@ def whole_process(test_num, base_name, base_dir, repair, submits, total):
         context_d_1 = json.load(f)
     with open(get_dataset_path(method_id, project_name, class_name, method_name, 3), "r") as f:
         context_d_3 = json.load(f)
+
+
+    # ─── tracker: pick code_string from direction 1 or 3, then start ────
+    if context_d_3.get("full_fm"):
+        class_code = context_d_3["full_fm"]
+    else:
+        class_code = context_d_1["information"]
+    tracker.add_method(method_id, code_string=class_code)
+    tracker.start_timer(method_id)
+    # ───────────────────────────────────────────────────────────────
 
     def _remove_imports_context(strings):
         if imports:
@@ -368,6 +391,7 @@ def whole_process(test_num, base_name, base_dir, repair, submits, total):
 
             status = call_model(messages, model_file_name)
             if not status:
+                error_type = "model"
                 logger.error(f"{progress}, model Fail processing messages")
                 break
 
@@ -384,6 +408,7 @@ def whole_process(test_num, base_name, base_dir, repair, submits, total):
                                                        package)
 
             if test_passed:
+                passed_round = rounds
                 logger.info(f"{progress}, {method_id} test_{str(test_num)} steps {steps} rounds {rounds} test passed")
                 break
 
@@ -402,9 +427,11 @@ def whole_process(test_num, base_name, base_dir, repair, submits, total):
                                                        project_name,
                                                        package)
             if test_passed:
+                passed_round = rounds
                 logger.info(f"{progress}, {method_id} test_{str(test_num)} steps {steps} rounds {rounds} test passed")
                 break
             if fatal_error:
+                error_type = "fatal"
                 logger.error(f"{progress}, {method_id} test_{str(test_num)} steps {steps} rounds {rounds} fatal error")
                 break
 
@@ -413,19 +440,29 @@ def whole_process(test_num, base_name, base_dir, repair, submits, total):
                 break
     except Exception as e:
         logger.error(f"{progress} {str(e)}")
-    if os.path.exists(run_temp_dir):
-        run_temp_dir = os.path.abspath(run_temp_dir)
-        shutil.rmtree(run_temp_dir)
+    finally:
+        # ─── stop timer no matter what ──────────────────────────────
+        tracker.stop_timer(
+            method_id,
+            passed=test_passed,
+            rounds=rounds,
+            passed_round=passed_round,
+            fatal_error=fatal_error,
+            error_type=error_type,
+        )
+        if os.path.exists(run_temp_dir):
+            run_temp_dir = os.path.abspath(run_temp_dir)
+            shutil.rmtree(run_temp_dir)
 
 
 def start_whole_process(source_dir, result_path, method_ids=None, multiprocess=False, repair=True):
     file_paths = []
-    for root, dirs, files in os.walk(source_dir):
+    for root, _, files in os.walk(source_dir):
         for file in files:
             if not file.endswith(".json"):
                 continue
-            method_id = file.split("%")[0]
-            if method_ids is not None and method_id not in method_ids:
+            mid = file.split("%")[0]
+            if method_ids and mid not in method_ids:
                 continue
             file_paths.append(os.path.join(root, file))
 
@@ -434,19 +471,22 @@ def start_whole_process(source_dir, result_path, method_ids=None, multiprocess=F
 
     if multiprocess:
         logger.info("Multi process executing!")
-        with concurrent.futures.ProcessPoolExecutor(max_workers=process_number) as executor:
-            for idx, file_path in enumerate(file_paths):
+        with concurrent.futures.ProcessPoolExecutor(max_workers=process_number) as ex:
+            for file_path in file_paths:
                 _, base_name = os.path.split(file_path.replace("/dataset/", "/result/"))
                 base_dir = os.path.join(result_path, base_name.split(".json")[0])
                 for test_num in range(1, test_number + 1):
                     submits += 1
-                    executor.submit(whole_process, test_num, base_name, base_dir, repair, submits, total)
+                    ex.submit(whole_process, test_num, base_name, base_dir, repair, submits, total)
         logger.info("Main process executing!")
     else:
         logger.info("Single process executing!")
-        for idx, file_path in enumerate(file_paths):
+        for file_path in file_paths:
             _, base_name = os.path.split(file_path.replace("/dataset/", "/result/"))
             base_dir = os.path.join(result_path, base_name.split(".json")[0])
             for test_num in range(1, test_number + 1):
                 submits += 1
                 whole_process(test_num, base_name, base_dir, repair, submits, total)
+
+        # ─── write CSV + TXT once all single-process work is done ───
+        tracker.report()
