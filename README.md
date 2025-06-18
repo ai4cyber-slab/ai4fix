@@ -26,6 +26,7 @@ This guide provides detailed instructions on how to set up and use the framework
     - [Option 2: Using Command Line Access (Headless Mode)](#option-2-using-command-line-access-headless-mode)
 10. [Example Scenario: Running AI4Framework on macOS in Headless Mode](#example-scenario-running-ai4framework-on-macos-in-headless-mode)
     - [Reviewing and Retrieving the Results](#reviewing-and-retrieving-the-results)
+6. [Automatic Test Generation](#automatic-test-generation)
 11. [Need Support?](#need-support)
 
 ---
@@ -409,6 +410,47 @@ docker cp <container_id>:/project/.ai4framework "/Users/username/path/to/chosen/
 Replace `<container_id>` with the actual container ID.
 
 ---
+
+## Automatic Test Generation
+
+Automatic Test Generation is powered by the **AI4Test** module bundled in AI4Framework. It produces ready‑to‑run **JUnit** test classes and, where needed, uses **Mockito** to mock external dependencies. The generator analyses your code’s public surface, crafts representative inputs, stubs collaborating objects, and writes assertions that capture expected behaviour. If a generated test fails and automatic repair is enabled, AI4Test iterates once more to stabilise it.
+
+### How It Works
+
+1. **Static inspection** – Byte‑code and source files are scanned to discover methods, argument types, and observable effects.
+2. **LLM prompt** – A concise summary of the target unit is sent to an LLM that returns a JUnit‑style skeleton enriched with Mockito stubs where needed.
+3. **Compilation & execution** – The suggested test is compiled and executed inside the container. If it fails and repair is enabled, a quick‑fix cycle starts and the test is rerun.
+
+### Invocation Cheat‑Sheet
+
+| Scenario                        | Base Command                                          | When to Choose                                      |
+| ------------------------------- | ----------------------------------------------------- | --------------------------------------------------- |
+| **Case 1 – Only AI4Test**       | `python /app/orchestrator.py --skip-ai4fix --ai4test` | You just want tests, no patch generation.       |
+| **Case 2 – Security + AI4Test** | `python /app/orchestrator.py --ai4test`               | You want a full static scan and patch generation *then* test generation. |
+
+### Testing Flags (append after the base command)
+
+* `--scope-test` – Limit generation to a single class or method.
+* `--class-name YourClass` – Required if `--scope-test` is set.
+* `--method-name yourMethod` – Further narrow the target (optional).
+* `--multiprocess` – Speed up generation using several workers.
+* `--no-repair` – Skip the automatic repair pass.
+* `--confirmed` – Suppress interactive prompts (handy for CI).
+
+#### Examples
+
+```bash
+# Case 1: Generate tests for the whole project, skipping security analysis
+python /app/orchestrator.py --skip-ai4fix --ai4test
+
+# Case 2: Generate tests only for MyClass.myMethod
+python /app/orchestrator.py --skip-ai4fix --ai4test \
+    --scope-test --class-name MyClass --method-name myMethod
+
+# Case 3: Full security scan, then generate tests for whole project
+python /app/orchestrator.py --ai4test 
+```
+
 
 ## Need Support?
 
