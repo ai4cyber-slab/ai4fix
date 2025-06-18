@@ -107,6 +107,26 @@ config.pmd_ruleset=/app/utils/PMD-config.xml # Leave as default or change if nee
 [PLUGIN]
 plugin.use_diff_mode=view Diffs # Do not change
 plugin.script_path=/app # Do not change
+
+[ai4test-defaults]
+process_number=2
+max_rounds = 3
+MAX_PROMPT_TOKENS = 2700
+MIN_ERROR_TOKENS = 500
+
+[ai4test-model]
+key = api-key
+model = gpt-4.1-nano
+provider= openai
+azure_endpoint=https://xxxxxx.azure.com/openai/deployments/xxxxxx
+azure_api_version=2024-08-01-preview
+
+[ai4test-database]
+host= mysql8
+port = 3306
+database = testdb
+user = root
+password = root
 ```
 
 ### Key Configuration Options
@@ -137,6 +157,21 @@ plugin.script_path=/app # Do not change
    - Use `--PORT` to specify a custom port (range: 1024-65535)
    - Default is 8080
    - The script will validate port availability
+
+6. **`[ai4test-defaults]`**
+
+* `process_number`: number of parallel processes **during data extraction** (changeable)
+* `max_rounds`: test repair retries (recommended: 3)
+* `MAX_PROMPT_TOKENS, MIN_ERROR_TOKENS`: control how many tokens the LLM can take and use (you can increase or decrease to balance quality vs cost)
+
+7. **`[ai4test-model]`**
+
+* This section duplicates the `[API]` section — in case you want to use a different provider, model, **or API key** for test generation (to avoid burning the same key/credits used for patch generation).
+
+8. **`[ai4test-database]`**
+
+* Used for **data exploration and export** to have fast, efficient access to methods within the class, and internal logging.
+* Default `host`, `port`, `user`, `password`: usually leave as-is or change.
 
 ### Offline Build Setup
 
