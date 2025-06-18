@@ -2,10 +2,11 @@ import json
 import os
 from utils.logger import logger
 from pathlib import Path
+import re
 
 class JSONProcessor:
     @staticmethod
-    def extract_and_clean_json(input_file, output_file, base_path='/user_project'):
+    def extract_and_clean_json(input_file, output_file, base_path='/project'):
         """
         Extracts issues from an input JSON file, cleans them, and saves to an output file.
 
@@ -29,8 +30,24 @@ class JSONProcessor:
                       an empty list will be returned.
             """
             try:
-                with open(json_file, 'r') as infile:
-                    data = json.load(infile)
+                with open(json_file, 'r', encoding='utf-8') as f:
+                    raw = f.read()
+
+                raw = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', raw)
+                raw = re.sub(r',\s*(?=[}\]])', '', raw)
+                raw = re.sub(
+                    r'("explanation"\s*:\s*"[^"\r\n]*?)(,)(\r?\n)',
+                    lambda m: m.group(1) + '"' + m.group(2) + m.group(3),
+                    raw
+                )
+                raw = re.sub(r'}\s*{', '},\n{', raw)
+
+                def escape_newlines_in_strings(match):
+                    content = match.group(1)
+                    return '"' + content.replace('\n', '\\n') + '"'
+                raw = re.sub(r'"([^"\\]*(?:\\.[^"\\]*)*)"', escape_newlines_in_strings, raw)
+
+                data = json.loads(raw)
             except Exception as e:
                 logger.error(f"AI4VULN ISSUES EXTRACTION ERROR: {e}")
                 return []
