@@ -8,114 +8,128 @@ from utils.switcher import switch_java_version
 
 
 def generate_before_report(project_root, jacoco_agent_path, jacoco_cli_path, config=None):
-    project_root = Path(project_root).resolve()
-    ai4test_root = Path(ai4test_dir).resolve()
-    report_dir = ai4test_root / "pre-reports"
-    exec_file = report_dir / "jacoco-pre.exec"
-    report_file = report_dir / "jacoco-pre.xml"
-    build_mode = config.get('DEFAULT', 'config.build_mode', fallback='online').strip().lower() if config else 'online'
-    jdk_build_version = str(config.get('DEFAULT', 'config.jdk_compiler_version'))
+    # -------------------------------------------------------------------------
+    # 1) Setup paths & configuration
+    # -------------------------------------------------------------------------
+    project_root   = Path(project_root).resolve()
+    ai4test_root   = Path(ai4test_dir).resolve()
+    report_dir     = ai4test_root / "pre-reports"
+    exec_file      = report_dir / "jacoco-pre.exec"
+    report_file    = report_dir / "jacoco-pre.xml"
 
-    os.makedirs(report_dir, exist_ok=True)
+    build_mode = (config.get("DEFAULT", "config.build_mode", fallback="online")
+                        .strip().lower()) if config else "online"
+    jdk_build_version = str(config.get("DEFAULT", "config.jdk_compiler_version", fallback="11"))
 
+    report_dir.mkdir(parents=True, exist_ok=True)          # make sure both dirs exist
+    exec_file.touch(exist_ok=True)                         # placeholder lets agent create file
+
+    # -------------------------------------------------------------------------
+    # 2) Clean project and switch to the compiler JVM
+    # -------------------------------------------------------------------------
     print(f"[INFO] Project root: {project_root}")
-    print("[INFO] Cleaning project...")
-    subprocess.run(["mvn", "clean"], cwd=project_root, check=True, stdout=subprocess.DEVNULL)
+    print("[INFO] Cleaning project ...")
+    subprocess.run(["mvn", "clean", "-q"], cwd=project_root, check=True)
 
     switch_java_version(jdk_build_version)
 
-    print("[INFO] Running Maven with JaCoCo agent via -DargLine (universal)...")
-    arg_line = f"-javaagent:{jacoco_agent_path}=destfile={exec_file}"
-    threads = f"-T{1 or 1}"
+    # -------------------------------------------------------------------------
+    # 3) Build / test with *universal* JaCoCo agent injection
+    # -------------------------------------------------------------------------
+    agent_flag = f"-javaagent:{jacoco_agent_path}=destfile={exec_file},append=false"
+    maven_props = [
+        f"-DargLine={agent_flag}",          # vanilla surefire/failsafe
+        f"-Djacoco.argLine={agent_flag}",   # pom.xml prepared by jacoco-maven-plugin
+        f"-Dfailsafe.argLine={agent_flag}", # integration-test argLine (from 3.0.0-M5)
+    ]
+
+    threads = f"-T{os.cpu_count() or 1}"
     common_flags = [
-        "install",
-        f"-DargLine={arg_line}",
+        "install",                          # use 'test' if you don't need packaging
         "-DskipTests=false",
         "-Dmaven.test.failure.ignore=true",
         "-Dgpg.skip=true",
         "-Dmaven.javadoc.skip=true",
-        threads
+        threads,
+        *maven_props,
     ]
 
-    command = ['mvn', '-o'] + common_flags if build_mode == 'offline' else ['mvn'] + common_flags
+    command = (["mvn", "-o"] if build_mode == "offline" else ["mvn"]) + common_flags
+    print("[INFO] Launching Maven build with JaCoCo agent ...")
     result = subprocess.run(command, cwd=project_root)
-    print("[INFO] mvn install finished with exit code", result.returncode)
+    print("[INFO] mvn finished with exit code", result.returncode)
     if result.returncode != 0:
-        print("[WARN] Some tests failed or the build did not complete successfully. Proceeding to generate report anyway.")
+        print("[WARN] Build or tests failed – continuing to generate report.")
 
-    print("[INFO] Finding class and source files...")
-    classfiles = []
-    sourcefiles = []
-    for root, dirs, files in os.walk(project_root):
-        path = Path(root)
-        if "target/classes" in str(path).replace("\\", "/"):
-            print(f"[FOUND] Class directory: {root}")
-            classfiles.append(str(path))
-        if "src/main/java" in str(path).replace("\\", "/"):
-            print(f"[FOUND] Source directory: {root}")
-            sourcefiles.append(str(path))
+    # -------------------------------------------------------------------------
+    # 4) Locate class / source roots
+    # -------------------------------------------------------------------------
+    print("[INFO] Scanning for class and source directories ...")
+    classfiles, sourcefiles = [], []
+    for root, _, _ in os.walk(project_root):
+        path = Path(root).as_posix()
+        if path.endswith("/target/classes"):
+            print(f"[FOUND] Class dir  : {root}")
+            classfiles.append(root)
+        elif path.endswith("/src/main/java"):
+            print(f"[FOUND] Source dir : {root}")
+            sourcefiles.append(root)
 
     if not classfiles or not sourcefiles:
-        print("[ERROR] Could not find class or source files.")
-        sys.exit(1)
+        sys.exit("[ERROR] No classfiles or sourcefiles found – aborting.")
 
-    switch_java_version('11')
-    cmd = [
+    # -------------------------------------------------------------------------
+    # 5) Generate XML report with JaCoCo CLI
+    # -------------------------------------------------------------------------
+    switch_java_version("11")                              # cli still runs fine on 11
+    cli_cmd = [
         "java", "-jar", str(jacoco_cli_path), "report", str(exec_file),
         *[f"--classfiles={c}" for c in classfiles],
         *[f"--sourcefiles={s}" for s in sourcefiles],
-        f"--xml={report_file}"
+        f"--xml={report_file}",
     ]
 
-    print("[INFO] Generating XML report...")
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print("[INFO] Jacoco CLI finished with exit code", result.returncode)
-    if result.returncode != 0:
+    print("[INFO] Generating XML report ...")
+    result = subprocess.run(cli_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.returncode:
         print("[STDERR]", result.stderr.decode())
         sys.exit(result.returncode)
+    print("[INFO] JaCoCo CLI finished successfully.")
 
-    print("[INFO] Post-processing report paths to be absolute...")
-    tree = ET.parse(report_file)
-    root = tree.getroot()
-    unresolved = []
-    count_updated = 0
+    # -------------------------------------------------------------------------
+    # 6) Make <sourcefilename> paths absolute (helps IDEs & CI viewers)
+    # -------------------------------------------------------------------------
+    print("[INFO] Rewriting paths inside XML ...")
+    tree  = ET.parse(report_file)
+    root_ = tree.getroot()
+    unresolved, updated = [], 0
 
-    for package in root.findall(".//package"):
-        pkg_path = Path(package.get("name").replace('.', '/'))
-
+    for package in root_.findall(".//package"):
+        pkg_rel_path = Path(package.get("name").replace(".", "/"))
         for clazz in package.findall("class"):
             filename = clazz.get("sourcefilename")
-            rel_path = pkg_path / filename
-            resolved = False
-
-            for src in sourcefiles:
-                full_path = Path(src) / rel_path
-                if full_path.exists():
-                    abs_path = str(full_path.resolve())
-                    print(f"[UPDATE] {rel_path} → {abs_path}")
-                    clazz.set("sourcefilename", abs_path)
-                    count_updated += 1
-                    resolved = True
+            candidate = pkg_rel_path / filename
+            for src_root in sourcefiles:
+                full = Path(src_root) / candidate
+                if full.exists():
+                    clazz.set("sourcefilename", str(full.resolve()))
+                    updated += 1
                     break
-
-            if not resolved:
-                unresolved.append(str(rel_path))
+            else:
+                unresolved.append(str(candidate))
 
     tree.write(report_file, encoding="utf-8", xml_declaration=True)
-
-    print(f"[INFO] {count_updated} file paths updated to absolute.")
+    print(f"[INFO] Updated {updated} source paths.")
     if unresolved:
-        print(f"[WARN] Could not resolve {len(unresolved)} classes:")
-        for path in unresolved:
-            print(f"  - {path}")
+        print("[WARN] Unresolved sources:", *unresolved, sep="\n  - ")
 
-    print(f"[DONE] Final report available at {report_file}")
+    print(f"[DONE] Coverage XML report ready: {report_file}")
     return report_file, sourcefiles
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
-        print("Usage: python generate_before_report.py <project_root> <jacoco_agent_path> <jacoco_cli_path>")
+        print("Usage: python generate_before_report.py <project_root> <jacoco_agent_jar> <jacoco_cli_jar>")
         sys.exit(1)
 
     generate_before_report(sys.argv[1], sys.argv[2], sys.argv[3])
